@@ -1,0 +1,33 @@
+# Python
+*.pyc
+*.pyo
+__pycache__/
+*.so
+
+# QGIS
+*.qm
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build
+*.zip
+build/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Documentation (except README)
+*.md
+!README.md
+
