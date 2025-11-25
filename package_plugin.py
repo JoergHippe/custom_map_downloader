@@ -13,7 +13,22 @@ import fnmatch
 
 # Plugin directory name (PEP 8 compliant: lowercase with underscores)
 PLUGIN_NAME = "custom_map_downloader"
-VERSION = "0.1"
+
+# Read version from metadata.txt
+def get_version_from_metadata():
+    """Read version from metadata.txt file."""
+    metadata_path = os.path.join(os.path.dirname(__file__), 'metadata.txt')
+    try:
+        with open(metadata_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('version='):
+                    return line.split('=')[1].strip()
+    except Exception as e:
+        print(f"Warning: Could not read version from metadata.txt: {e}")
+        return "0.1.0"
+    return "0.1.0"
+
+VERSION = get_version_from_metadata()
 
 # Files and patterns to exclude (in addition to .gitignore)
 EXCLUDE_PATTERNS = [

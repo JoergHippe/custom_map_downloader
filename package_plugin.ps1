@@ -2,7 +2,21 @@
 # This script creates a properly formatted ZIP file for QGIS plugin repository
 
 $PluginName = "custom_map_downloader"
-$Version = "0.1"
+
+# Read version from metadata.txt
+$MetadataPath = Join-Path $PSScriptRoot "metadata.txt"
+$Version = "0.1.0"  # Default fallback
+
+if (Test-Path $MetadataPath) {
+    $MetadataContent = Get-Content $MetadataPath
+    foreach ($line in $MetadataContent) {
+        if ($line -match '^version=(.+)$') {
+            $Version = $matches[1].Trim()
+            break
+        }
+    }
+}
+
 $ZipFileName = "$PluginName-$Version.zip"
 
 # Get paths

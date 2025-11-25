@@ -211,6 +211,12 @@ See [LICENSE](LICENSE) for more details.
 
 ## Changelog
 
+### Version 0.1.1 (2025-11-25)
+
+- Added LICENSE file (GPL v2)
+- Fixed plugin packaging for QGIS repository
+- Cleaned up metadata and documentation
+
 ### Version 0.1 (Initial Release)
 
 - Export georeferenced GeoTIFF from any QGIS layer
