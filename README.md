@@ -235,6 +235,43 @@ No extra third-party Python dependencies are required.
 
 ---
 
+## Development Setup (Optional .venv)
+
+For plugin runtime, QGIS uses its own Python environment.  
+A local `.venv` is optional and only recommended for development tooling (linting/formatting and non-QGIS tests).
+
+### 1. Local tooling environment (without QGIS)
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+python -m unittest -v test.test_init test.test_validation test.test_exporter_validation test.test_progress_keys
+```
+
+Linux/macOS:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m unittest -v test.test_init test.test_validation test.test_exporter_validation test.test_progress_keys
+```
+
+### 2. QGIS integration tests (with QGIS Python)
+
+Run these in a QGIS/OSGeo shell (not in the local `.venv`):
+
+```bash
+python -m unittest discover -s test/integration -v
+```
+
+See also `test/integration/README.md` for Windows helpers and network test flags.
+
+---
+
 ## Troubleshooting
 
 ### Export is empty / fully transparent

@@ -1,7 +1,40 @@
 import unittest
+import sys
+import types
 
 from core.constants import GSD_MIN, GSD_MAX, LARGE_RASTER_STRONG_MAX_DIM_PX, LARGE_RASTER_STRONG_TOTAL_PX
 from core.errors import ValidationError
+
+
+def install_qgis_stubs():
+    """Install minimal qgis.core stubs needed by core.validation imports."""
+    qgis_mod = types.ModuleType("qgis")
+    core_mod = types.ModuleType("qgis.core")
+
+    class Qgis:
+        class DistanceUnit:
+            Meters = 1
+
+    class QgsUnitTypes:
+        @staticmethod
+        def toString(_units):
+            return "meters"
+
+    class QgsCoordinateReferenceSystem:
+        def mapUnits(self):
+            return Qgis.DistanceUnit.Meters
+
+    core_mod.Qgis = Qgis
+    core_mod.QgsUnitTypes = QgsUnitTypes
+    core_mod.QgsCoordinateReferenceSystem = QgsCoordinateReferenceSystem
+
+    qgis_mod.core = core_mod
+    sys.modules["qgis"] = qgis_mod
+    sys.modules["qgis.core"] = core_mod
+
+
+install_qgis_stubs()
+
 from core.validation import validate_gsd, validate_pixel_limits, validate_output_path
 
 
