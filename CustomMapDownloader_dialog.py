@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 import os
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import QTimer, Qt, QLocale, QCoreApplication, QSettings
@@ -46,9 +46,10 @@ from qgis.gui import QgsExtentWidget
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "CustomMapDownloader_dialog_base.ui")
 )
+FORM_CLASS = cast(type, FORM_CLASS)
 
 
-class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
+class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[misc, valid-type]
     """Parameter dialog for the CustomMapDownloader plugin."""
 
     def __init__(self, iface, parent=None):
@@ -133,9 +134,22 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
         self._last_layer_id: str | None = None
         self._load_settings()
 
-    def tr(self, text: str) -> str:
+    def tr(
+        self,
+        text: str,
+        disambiguation: Optional[str] = None,
+        n: int = -1,
+    ) -> str:
         """Qt translation helper."""
-        return QCoreApplication.translate("CustomMapDownloaderDialog", text)
+        return QCoreApplication.translate("CustomMapDownloaderDialog", text, disambiguation, n)
+
+    @staticmethod
+    def _project() -> QgsProject:
+        """Return current QGIS project instance."""
+        project = QgsProject.instance()
+        if project is None:
+            raise RuntimeError("QgsProject instance is unavailable.")
+        return project
 
     # ------------------------------------------------------------------
     # UI helpers
@@ -332,7 +346,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
 
     def _init_crs_widgets(self) -> None:
         """Initialize CRS selector widget with project CRS."""
-        project_crs = QgsProject.instance().crs()
+        project_crs = self._project().crs()
         if hasattr(self, "mQgsProjectionSelectionWidget"):
             self.mQgsProjectionSelectionWidget.setCrs(project_crs)
 
@@ -341,7 +355,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
         if not hasattr(self, "extentGroupBox"):
             return
 
-        project = QgsProject.instance()
+        project = self._project()
         canvas = self.iface.mapCanvas()
 
         try:
@@ -475,7 +489,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
         wanted_id = self._last_layer_id
         self.comboBox_layer.clear()
 
-        layers = list(QgsProject.instance().mapLayers().values())
+        layers = list(self._project().mapLayers().values())
         for layer in layers:
             self.comboBox_layer.addItem(layer.name(), layer)
 
@@ -552,12 +566,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
         if rect_out is None or rect_out.isEmpty() or rect_out.width() <= 0.0 or rect_out.height() <= 0.0:
             return None
 
-        project_crs = QgsProject.instance().crs()
+        project_crs = self._project().crs()
 
         rect_proj = QgsRectangle(rect_out)
         if output_crs and output_crs.isValid() and project_crs.isValid() and output_crs != project_crs:
             try:
-                tr_proj = QgsCoordinateTransform(output_crs, project_crs, QgsProject.instance())
+                tr_proj = QgsCoordinateTransform(output_crs, project_crs, self._project())
                 rect_proj = tr_proj.transformBoundingBox(rect_out)
             except Exception:
                 rect_proj = QgsRectangle(rect_out)
@@ -952,7 +966,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
         if rect is None or rect.isEmpty() or rect.width() <= 0.0 or rect.height() <= 0.0:
             return 0.0, 0.0, False
 
-        project_crs = QgsProject.instance().crs()
+        project_crs = self._project().crs()
         source_crs = output_crs if output_crs and output_crs.isValid() else project_crs
 
         metric_crs = source_crs
@@ -961,7 +975,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):
 
         try:
             if source_crs.isValid() and metric_crs.isValid() and source_crs != metric_crs:
-                tr = QgsCoordinateTransform(source_crs, metric_crs, QgsProject.instance())
+                tr = QgsCoordinateTransform(source_crs, metric_crs, self._project())
                 rect_m = tr.transformBoundingBox(rect)
             else:
                 rect_m = rect

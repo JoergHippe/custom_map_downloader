@@ -30,7 +30,6 @@ from qgis.core import (
     QgsProject,
     QgsRasterLayer,
     QgsNetworkAccessManager,
-    QgsMapLayer,
 )
 
 from .resources import *  # noqa: F401,F403
@@ -71,6 +70,14 @@ class CustomMapDownloader:
     def tr(self, message: str) -> str:
         """Translate a message."""
         return QCoreApplication.translate("CustomMapDownloader", message)
+
+    @staticmethod
+    def _project() -> QgsProject:
+        """Return current QGIS project instance."""
+        project = QgsProject.instance()
+        if project is None:
+            raise RuntimeError("QgsProject instance is unavailable.")
+        return project
 
     def add_action(
         self,
@@ -146,7 +153,7 @@ class CustomMapDownloader:
             return
 
         # Determine render CRS (prefer a metric CRS)
-        project_crs = QgsProject.instance().crs()
+        project_crs = self._project().crs()
         try:
             project_is_meters = project_crs.mapUnits() == Qgis.DistanceUnit.Meters
         except Exception:
@@ -304,7 +311,7 @@ class CustomMapDownloader:
                 raster_layer = QgsRasterLayer(saved_path, layer_name)
 
                 if raster_layer.isValid():
-                    QgsProject.instance().addMapLayer(raster_layer)
+                    self._project().addMapLayer(raster_layer)
                     QMessageBox.information(
                         self.iface.mainWindow(),
                         self.tr("Success"),
@@ -458,8 +465,8 @@ class CustomMapDownloader:
 
         conflicts: list[tuple[str, str, str]] = []
 
-        for lyr in QgsProject.instance().mapLayers().values():
-            if lyr.type() != QgsMapLayer.RasterLayer:
+        for lyr in self._project().mapLayers().values():
+            if not isinstance(lyr, QgsRasterLayer):
                 continue
 
             try:

@@ -1,6 +1,7 @@
 # Custom Map Downloader (QGIS Plugin)
 
 ## Overview
+
 Custom Map Downloader is a QGIS plugin to export map content from layers and map services
 (WMS, WMTS, XYZ, raster and vector layers) with precise control over extent, resolution
 (GSD), output CRS and tiling.
@@ -128,6 +129,7 @@ A dedicated group for **tiling-related settings**:
 
 Implementation note:
 When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
+
 - equally sized tiles are written
 - a `.vrt` file referencing these tiles (via relative paths) is created
 - no merged single raster is produced

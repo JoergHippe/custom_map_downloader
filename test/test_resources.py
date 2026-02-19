@@ -14,11 +14,16 @@ __copyright__ = 'Copyright 2025, Abhinav Jayswal'
 
 import unittest
 
-from qgis.PyQt.QtGui import QIcon
+try:
+    from qgis.PyQt.QtGui import QIcon
+    HAS_QGIS = True
+except Exception:
+    HAS_QGIS = False
 
 
 
-class CustomMapDownloaderDialogTest(unittest.TestCase):
+@unittest.skipUnless(HAS_QGIS, "QGIS not available; skipping resources test")
+class CustomMapDownloaderResourcesTest(unittest.TestCase):
     """Test rerources work."""
 
     def setUp(self):
