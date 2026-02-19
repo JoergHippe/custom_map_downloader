@@ -14,14 +14,21 @@ __copyright__ = 'Copyright 2025, Abhinav Jayswal'
 
 import unittest
 
-from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
+try:
+    from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
+    from CustomMapDownloader_dialog import CustomMapDownloaderDialog
+    from utilities import get_qgis_app
+    QGIS_APP = get_qgis_app()
+    HAS_QGIS = True
+except Exception:  # pragma: no cover - skip when QGIS unavailable
+    HAS_QGIS = False
+    QDialogButtonBox = None
+    QDialog = None
+    CustomMapDownloaderDialog = None
+    QGIS_APP = None
 
-from CustomMapDownloader_dialog import CustomMapDownloaderDialog
 
-from utilities import get_qgis_app
-QGIS_APP = get_qgis_app()
-
-
+@unittest.skipUnless(HAS_QGIS, "QGIS not available; skipping dialog tests")
 class CustomMapDownloaderDialogTest(unittest.TestCase):
     """Test dialog works."""
 

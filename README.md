@@ -1,232 +1,317 @@
-# Custom Map Downloader
+# Custom Map Downloader (QGIS Plugin)
 
-A QGIS plugin for downloading high-resolution, georeferenced map imagery from any loaded layer.
+## Overview
+Custom Map Downloader is a QGIS plugin to export map content from layers and map services
+(WMS, WMTS, XYZ, raster and vector layers) with precise control over extent, resolution
+(GSD), output CRS and tiling.
+
+---
 
 ## Description
 
-Custom Map Downloader allows users to generate georeferenced GeoTIFF images from any loaded map layer in QGIS. By providing a center point (latitude/longitude), desired Ground Sampling Distance (GSD), and output dimensions, the plugin automatically computes the correct map extent, renders the specified layer at the requested resolution, and exports a fully geotagged TIFF file.
+Custom Map Downloader allows users to export **georeferenced GeoTIFF** images from any loaded layer in QGIS.
 
-Perfect for extracting satellite imagery, creating training datasets, generating offline maps, or producing custom map exports for simulation and analysis workflows.
+The plugin works purely **extent-based**:
 
-## Screenshot
+- The geographic rectangle is selected interactively via the QGIS-native `QgsExtentGroupBox` (layer extent, canvas extent, CRS transformation handled by QGIS).
+- The plugin derives the center internally from the selected extent (no separate “Center Mode” in the UI anymore).
+- Output resolution is controlled by a single **GSD** value (map units per pixel); pixel width/height are derived from extent and GSD.
 
-![Plugin Interface](menu-screenshot.png)
+The selected layer is rendered at the requested output resolution and stored as a fully georeferenced **GeoTIFF**.  
+Optionally, an additional **world file (.tfw)** can be written next to the GeoTIFF.
 
-*Custom Map Downloader plugin interface*
+Typical use cases include:
+
+- Extracting satellite imagery or base maps
+- Exporting XYZ/WMTS/WMS layers for offline usage
+- Preparing analysis rasters for specific regions
+- Generating image datasets for ML/AI workflows
+
+---
 
 ## Features
 
-- ✅ **Export Any Layer** - Works with satellite imagery, XYZ tiles, raster layers, and vector tile layers
-- ✅ **Precise Positioning** - Specify center point using latitude/longitude coordinates (EPSG:4326)
-- ✅ **Custom Resolution** - Configure Ground Sampling Distance (GSD) in meters per pixel
-- ✅ **Flexible Dimensions** - Set custom output dimensions (width × height in pixels)
-- ✅ **Optional Georeferencing** - Toggle between georeferenced GeoTIFF or plain TIFF export
-- ✅ **Automatic Layer Loading** - Optionally load exported image directly into QGIS
-- ✅ **Progress Feedback** - Visual progress dialog during export
-- ✅ **Proper Metadata** - Full GDAL georeferencing with EPSG:3857 projection
-- ✅ **Optimized Output** - LZW compression and tiling for efficient storage
+- ✔ **Export any visible QGIS layer** (XYZ/WMTS/WMS, raster, vector, etc.) :contentReference[oaicite:1]{index=1}  
+- ✔ **QGIS-native extent control** using `QgsExtentGroupBox`
+- ✔ **Extent-based workflow only**:
+  - Extent defined via layer extent, canvas extent, or manual extent box
+  - Center is derived internally from the chosen extent
+- ✔ **Single resolution parameter**:
+  - **GSD** (map units per pixel, typically meters per pixel)
+  - Pixel **width/height are derived** from extent and GSD
+- ✔ **Selectable CRS** via `QgsProjectionSelectionWidget`
+- ✔ **Selectable output format: GeoTIFF, PNG, JPEG**
+- ✔ **Always georeferenced output**
+  - *GeoTIFF*: internal georeferencing + world file
+  - *PNG/JPEG*: world file + .prj sidecar
+- ✔ **Optional automatic loading of exported raster into QGIS**
+- ✔ **Progress reporting** during render/export
+- ✔ **LZW-compressed, tiled GeoTIFF output**
+- ✔ **Internal tiling support** (large projects are chunked into tiles internally; preview of tile grid in the dialog)
+
+---
 
 ## Installation
 
-### From QGIS Plugin Repository (Recommended)
+### From QGIS Plugin Repository (recommended)
 
-1. Open QGIS
-2. Go to `Plugins` → `Manage and Install Plugins`
-3. Search for "Custom Map Downloader"
-4. Click `Install Plugin`
+1. Open QGIS  
+2. Go to `Plugins → Manage and Install Plugins`  
+3. Search for **Custom Map Downloader**  
+4. Click **Install**
 
-### Manual Installation
+### Manual Install
 
-1. Download the latest release from [GitHub Releases](https://github.com/ashroo/custom_map_downloader/releases)
-2. Extract the ZIP file
-3. Copy the `custommapdownloader` folder to your QGIS plugins directory:
-   - **Windows**: `C:\Users\[username]\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins`
-   - **macOS**: `~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins`
-   - **Linux**: `~/.local/share/QGIS/QGIS3/profiles/default/python/plugins`
-4. Restart QGIS
-5. Enable the plugin in `Plugins` → `Manage and Install Plugins` → `Installed`
+1. Download the latest ZIP from the repository
+2. Extract it
+3. Place the folder into your QGIS plugin directory
+4. Restart QGIS and enable the plugin
+
+---
+
+## User Interface Overview
+
+The dialog consists of several main sections. The exact layout may evolve, but the semantics remain stable. :contentReference[oaicite:2]{index=2}
+
+### 1. Source and Output
+
+- **Layer selection**
+  - Pick the QGIS layer that should be rendered (XYZ/WMTS/WMS, raster, vector, etc.).
+- **CRS selection**
+  - `QgsProjectionSelectionWidget` for choosing the output/render CRS.
+  - By default, the project CRS is used; if it does not use meters, the exporter may fall back to `EPSG:3857` internally.
+- **Output path**
+  - Output directory (folder)
+  - Output file prefix
+  - Final file name is typically `<prefix>.tif`.
+
+### 2. Extent
+
+- Uses the native **`QgsExtentGroupBox`**:
+  - Buttons for:
+    - Current map canvas extent
+    - (Where available) extent from a selected layer or other built-in sources
+  - Extent CRS and transformations are handled by QGIS.
+- Internally, the plugin computes:
+  - West/East/South/North in project CRS
+  - Center (X/Y) for downstream logic
+- A small information label shows:
+  - Physical size in meters (`Extent: xx.xx m × yy.yy m`)
+  - Derived pixel size (`Size: width_px × height_px`)
+
+There is **no separate “Use Center” / “Center Mode” UI** anymore; extent is the single source of truth.
+
+### 3. Resolution
+
+- **GSD (map units / pixel)**
+  - Single `QDoubleSpinBox` for GSD (e.g. meters per pixel).
+  - Extent + GSD → derived pixel width/height.
+- **Extent information label**
+  - Updated whenever extent or GSD changes.
+  - Shows physical size and resulting pixel size.
+
+### 4. VRT / Tiling
+
+A dedicated group for **tiling-related settings**:
+
+- **Create VRT / tiling checkbox**
+  - Enables/disables tiling related controls.
+- **Tile size presets**
+  - Combo box with common tile sizes (e.g. 512, 1024, 2048, 4096).
+- **Max columns / rows (px)**
+  - Numeric fields that define the maximum tile width/height in pixels.
+  - Currently used to control internal tile size in the exporter.
+- **Tile grid info**
+  - Label showing the resulting tile grid:
+    - number of columns × rows
+    - total number of tiles
+
+Implementation note:
+When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
+- equally sized tiles are written
+- a `.vrt` file referencing these tiles (via relative paths) is created
+- no merged single raster is produced
+
+### 5. Options
+
+- **Load result as layer**
+  - When enabled, the exported raster is added to the QGIS project after export.
+
+---
 
 ## Usage
 
 ### Quick Start
 
-1. **Load a Map Layer**
+1. Add one or more layers to QGIS.
+2. Open the plugin:
+   - Toolbar icon  
+   - Or `Plugins → MapDownloader → Download GeoTIFF from Map`.
+3. In the dialog:
+   - Choose the **layer**.
+   - Choose **output folder** and **file prefix**.
+   - Optionally adjust the **output CRS**.
+4. Define the **extent**:
+   - Use canvas extent, layer extent, or manually adjust the extent box.
+5. Set the **GSD** (map units per pixel).
+6. Optionally configure **tiling** and **world file** options.
+7. Click **OK**.
 
-   - Add any map layer to QGIS (e.g., Google Satellite, OpenStreetMap, Bing Maps)
-   - Ensure the layer is visible in the Layers panel
-2. **Open the Plugin**
-
-   - Click the Custom Map Downloader icon in the toolbar, or
-   - Go to `Plugins` → `MapDownloader` → `Download GeoTIFF from Map`
-3. **Configure Parameters**
-
-   - **Coordinates**: Enter latitude and longitude in decimal degrees
-     - Example: Latitude: `28.6139`, Longitude: `77.2090` (New Delhi)
-   - **Resolution**: Set Ground Sampling Distance (GSD) in meters/pixel
-     - Default: `5.0` m/pixel
-   - **Dimensions**: Specify output width and height in pixels
-     - Default: `5000 × 5000` pixels
-4. **Select Layer**
-
-   - Choose the layer to export from the dropdown menu
-   - The list automatically refreshes to show all loaded layers
-5. **Choose Output Path**
-
-   - Click `Browse...` to select where to save the file
-   - Recommended format: `.tif` or `.tiff`
-6. **Configure Export Options**
-
-   - ☑️ **Add georeferencing metadata**: Creates proper GeoTIFF with spatial reference (recommended)
-   - ☑️ **Load exported image as layer in QGIS**: Automatically adds result to your project
-7. **Export**
-
-   - Click `OK` to start the export
-   - A progress dialog will show during rendering
-   - Success message will confirm completion
-
-### Default Settings
-
-| Parameter      | Default Value    |
-| -------------- | ---------------- |
-| GSD            | 5.0 meters/pixel |
-| Width          | 5000 pixels      |
-| Height         | 5000 pixels      |
-| Georeferencing | Enabled          |
-| Load as Layer  | Enabled          |
-
-## Output Formats
-
-### With Georeferencing (GeoTIFF)
-
-- **Format**: GeoTIFF with full GDAL metadata
-- **Projection**: EPSG:3857 (Web Mercator)
-- **Geotransform**: Includes pixel size and geographic extent
-- **Compression**: LZW compression with tiling
-- **Bands**: 4 (RGBA)
-- **Compatibility**: Works with all GIS software (QGIS, ArcGIS, GDAL, etc.)
-
-### Without Georeferencing (TIFF)
-
-- **Format**: Standard TIFF image
-- **No spatial metadata**
-- **Smaller file size**
-- **Faster export**
-- **Use case**: When you only need the image without coordinates
-
-## Use Cases
-
-- 🎯 **Machine Learning**: Generate training datasets for computer vision models
-- 🗺️ **Offline Maps**: Extract map tiles for field work without internet
-- 📊 **Reports & Presentations**: Create custom map exports at specific resolutions
-- 🚁 **Simulation**: Generate georeferenced imagery for UAV/drone simulations
-- 🔬 **Research**: Export precise areas for spatial analysis
-- 📱 **Mobile Apps**: Create map tiles for mobile applications
-
-## Technical Details
-
-### Coordinate Systems
-
-- **Input**: EPSG:4326 (WGS84 - Latitude/Longitude)
-- **Processing**: EPSG:3857 (Web Mercator)
-- **Output**: EPSG:3857 with proper geotransform
-
-### Rendering
-
-- Uses `QgsMapRendererParallelJob` for efficient parallel rendering
-- Supports all QGIS-compatible layer types
-- Renders at exact specified resolution
-
-### Georeferencing
-
-- GDAL-based georeferencing with proper geotransform matrix
-- Includes spatial reference system (SRS) metadata
-- Pixel size calculated from GSD parameter
-- Geographic extent computed from center point and dimensions
-
-## Requirements
-
-- **QGIS**: Version 3.0 or higher
-- **Python**: 3.6+ (included with QGIS)
-- **Dependencies**:
-  - `numpy` (included with QGIS)
-  - `GDAL/OGR` (included with QGIS)
-  - `PyQt5` (included with QGIS)
-
-## Troubleshooting
-
-### Layer not appearing in dropdown
-
-- **Solution**: The plugin refreshes layers each time it opens. If a layer is missing, close and reopen the dialog.
-
-### Export fails with "Invalid coordinates"
-
-- **Solution**: Ensure latitude is between -90 and 90, longitude between -180 and 180. Use decimal degrees format.
-
-### Exported image has no georeferencing
-
-- **Solution**: Make sure "Add georeferencing metadata" checkbox is enabled before export.
-
-### Image appears in wrong location
-
-- **Solution**: Verify your input coordinates are correct and in decimal degrees (not DMS format).
-
-### Large exports are slow
-
-- **Solution**: This is normal for high-resolution exports. The progress dialog shows the process is working. Consider reducing dimensions or GSD for faster exports.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
-
-See [LICENSE](LICENSE) for more details.
-
-## Author
-
-**Abhinav Jayswal**
-
-- Email: abhinavjayaswal10@gmail.com
-- GitHub: [@ashroo](https://github.com/ashroo)
-
-## Acknowledgments
-
-- Built using the QGIS Plugin Builder
-- Uses QGIS API and GDAL for geospatial operations
-- Thanks to the QGIS community for excellent documentation
-
-## Support
-
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/ashroo/custom_map_downloader/issues)
-- 💡 **Feature Requests**: [GitHub Issues](https://github.com/ashroo/custom_map_downloader/issues)
-- 📧 **Email**: abhinavjayaswal10@gmail.com
-
-## Changelog
-
-### Version 0.1.1 (2025-11-25)
-
-- Added LICENSE file (GPL v2)
-- Fixed plugin packaging for QGIS repository
-- Cleaned up metadata and documentation
-
-### Version 0.1 (Initial Release)
-
-- Export georeferenced GeoTIFF from any QGIS layer
-- Configurable GSD and dimensions
-- Optional georeferencing toggle
-- Automatic layer loading
-- Progress dialog with visual feedback
-- Support for EPSG:3857 projection
-- LZW compression and tiling
+A progress dialog appears during rendering.  
+After completion, the exported image can optionally be loaded directly into QGIS.
 
 ---
 
-**⭐ If you find this plugin useful, please consider giving it a star on GitHub!**
+## Default Settings
+
+(Default values may be adjusted per implementation.)
+
+| Parameter             | Default (example)          |
+|-----------------------|---------------------------|
+| GSD                   | 1 map unit/pixel          |
+| Load as layer         | Enabled                   |
+| VRT / tiling          | Disabled by default       |
+| Tile size preset      | 1024 × 1024 px (example)  |
+
+---
+
+## Output Formats
+
+World files are always written.
+
+### GeoTIFF
+
+- Full GDAL georeferencing:
+  - GeoTransform
+  - Projection (CRS)
+- LZW compression
+- Internal tiling (`TILED=YES`)
+- Compatible with common GIS tools
+- Correct pixel → map coordinate transform
+- GeoTIFF: internal georeferencing + additional world file
+
+### PNG/JPEG
+
+- PNG/JPEG: world file + .prj sidecar
+
+### World file
+
+- Plain text sidecar file
+- Contains pixel size and upper-left pixel center coordinate
+- World files are always written
+
+---
+
+## Internal Processing Pipeline
+
+1. **Parameter validation**
+   - Checks layer, extent, GSD, output path, etc.
+2. **Extent resolution**
+   - Extent in project CRS
+   - Transformation into render CRS (project CRS if metric, otherwise `EPSG:3857`)
+3. **Pixel size computation**
+   - GSD × extent → width/height (px)
+4. **Tiling decision**
+   - If width/height exceed tile limits, internal tiling is used.
+5. **Rendering**
+   - `QgsMapRendererParallelJob` renders the selected layer for the requested extent at the derived resolution.
+6. **GeoTIFF writing (GDAL)**
+   - RGBA arrays are written tile by tile (full image or per tile).
+   - GeoTransform and projection are stored.
+7. **World file (optional)**
+   - If enabled, `.tfw` is written next to the GeoTIFF.
+8. **Post-processing**
+   - Optional layer loading into QGIS.
+   - Progress dialog is closed, messages shown.
+
+---
+
+## Requirements
+
+- **QGIS 3.x**
+- GDAL, PyQt, Qt, QGIS Python API (bundled with QGIS)
+
+No extra third-party Python dependencies are required.
+
+---
+
+## Troubleshooting
+
+### Export is empty / fully transparent
+
+- The source service may restrict resolution or output size.
+- Try:
+  - Smaller extent
+  - Larger GSD (i.e. lower resolution)
+  - Enabling tiling with smaller tile sizes
+
+### Export is rejected as too large
+
+- Extremely large rasters are blocked to avoid crashes. Reduce extent or increase GSD. Use VRT/tiling for large areas.
+
+### GSD outside allowed range
+
+- GSD must be within the allowed range (current defaults: 0.1–1000 map units/pixel). Extremely small or large values are rejected; adjust GSD accordingly.
+
+### Output path errors
+
+- Ensure the output directory exists and is writable.
+- Only GeoTIFF/PNG/JPEG are supported for single exports; VRT mode always writes `.vrt` plus GeoTIFF tiles.
+
+### Export is shifted or misaligned
+
+- Check that the **output CRS** is correct.
+- Ensure the project CRS and layer CRS are correctly defined.
+- The plugin assumes all coordinates/extent are in the selected output/project CRS.
+
+### Very slow rendering
+
+- Very small GSD and large extents yield massive rasters.
+- Try increasing GSD or enabling tiling with smaller tile sizes.
+- Some web services may throttle or slow down large requests.
+
+---
+
+## Changelog
+
+### Version 0.3 (2025-XX-XX, current work)
+
+- Simplified UI to a **pure extent-based workflow** (no explicit “Center Mode”).
+- Extent exclusively controlled via `QgsExtentGroupBox`.
+- Resolution controlled by **GSD only**; width/height are derived and displayed.
+- Introduced **VRT/Tiling section**:
+  - Tile size presets
+  - Max columns/rows per tile (px)
+  - Tile grid preview (columns, rows, total tiles)
+- GeoTIFF is **always georeferenced**.
+- “Write world file” now means:
+  - additionally write a `.tfw` file next to the GeoTIFF.
+- Improved error handling and progress reporting.
+
+### Version 0.2
+
+- Major UI redesign with `QgsExtentGroupBox`.
+- Added CRS selector (`QgsProjectionSelectionWidget`).
+- Reworked parameter model (center and extent).
+- Added GSD/extent preview label.
+- Improved exporter interface and stability. :contentReference[oaicite:3]{index=3}  
+
+### Version 0.1 (Initial Release)
+
+- Basic center-based export.
+- GSD + pixel-size rendering.
+- GeoTIFF export with progress dialog.
+
+---
+
+## License
+
+GPL v2 or later  
+See `LICENSE` for full terms.
+
+---
+
+## Author
+
+Originally created by **Abhinav Jayswal**  
+Extended, redesigned and maintained by project contributors.

@@ -1,4 +1,6 @@
+# CustomMapDownloader/__init__.py
 # -*- coding: utf-8 -*-
+
 """
 /***************************************************************************
  CustomMapDownloader
@@ -25,12 +27,17 @@
 
 
 # noinspection PyPep8Naming
-def classFactory(iface):  # pylint: disable=invalid-name
-    """Load CustomMapDownloader class from file CustomMapDownloader.
-
-    :param iface: A QGIS interface instance.
-    :type iface: QgsInterface
-    """
-    #
-    from .CustomMapDownloader import CustomMapDownloader
-    return CustomMapDownloader(iface)
+def classFactory(iface):
+    """Load plugin and log import errors to QGIS message log."""
+    try:
+        from .CustomMapDownloader import CustomMapDownloader
+        return CustomMapDownloader(iface)
+    except Exception:
+        import traceback
+        from qgis.core import QgsMessageLog, Qgis
+        QgsMessageLog.logMessage(
+            traceback.format_exc(),
+            "custom_map_downloader",
+            Qgis.Critical,
+        )
+        raise

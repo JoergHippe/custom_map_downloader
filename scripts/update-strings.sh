@@ -1,56 +1,49 @@
 #!/bin/bash
-LOCALES=$*
+set -e
 
-# Get newest .py files so we don't update strings unnecessarily
+# Usage: scripts/update-strings.sh de af
+LOCALES="$@"
+if [ -z "${LOCALES}" ]; then
+  echo "Usage: $0 <locale1> [locale2 ...]"
+  exit 1
+fi
 
+BASE="CustomMapDownloader"
+
+# Collect all Python/UI files
+PYTHON_FILES=$(find . -type f \( -name "*.py" -o -name "*.ui" \))
+
+# Determine newest timestamp of source files
 CHANGED_FILES=0
-PYTHON_FILES=`find . -regex ".*\(ui\|py\)$" -type f`
-for PYTHON_FILE in $PYTHON_FILES
-do
-  CHANGED=$(stat -c %Y $PYTHON_FILE)
-  if [ ${CHANGED} -gt ${CHANGED_FILES} ]
-  then
+for PYTHON_FILE in ${PYTHON_FILES}; do
+  CHANGED=$(stat -c %Y "${PYTHON_FILE}")
+  if [ ${CHANGED} -gt ${CHANGED_FILES} ]; then
     CHANGED_FILES=${CHANGED}
   fi
 done
 
-# Qt translation stuff
-# for .ts file
 UPDATE=false
-for LOCALE in ${LOCALES}
-do
-  TRANSLATION_FILE="i18n/$LOCALE.ts"
-  if [ ! -f ${TRANSLATION_FILE} ]
-  then
-    # Force translation string collection as we have a new language file
-    touch ${TRANSLATION_FILE}
+for LOCALE in ${LOCALES}; do
+  TRANSLATION_FILE="i18n/${BASE}_${LOCALE}.ts"
+  if [ ! -f "${TRANSLATION_FILE}" ]; then
+    touch "${TRANSLATION_FILE}"
     UPDATE=true
-    break
+    continue
   fi
-
-  MODIFICATION_TIME=$(stat -c %Y ${TRANSLATION_FILE})
-  if [ ${CHANGED_FILES} -gt ${MODIFICATION_TIME} ]
-  then
-    # Force translation string collection as a .py file has been updated
+  MODIFICATION_TIME=$(stat -c %Y "${TRANSLATION_FILE}")
+  if [ ${CHANGED_FILES} -gt ${MODIFICATION_TIME} ]; then
     UPDATE=true
-    break
   fi
 done
 
-if [ ${UPDATE} == true ]
-# retrieve all python files
-then
-  echo ${PYTHON_FILES}
-  # update .ts
-  echo "Please provide translations by editing the translation files below:"
-  for LOCALE in ${LOCALES}
-  do
-    echo "i18n/"${LOCALE}".ts"
-    # Note we don't use pylupdate with qt .pro file approach as it is flakey
-    # about what is made available.
-    pylupdate4 -noobsolete ${PYTHON_FILES} -ts i18n/${LOCALE}.ts
+if [ "${UPDATE}" = true ]; then
+  echo "Updating translation sources for locales: ${LOCALES}"
+  for LOCALE in ${LOCALES}; do
+    OUTFILE="i18n/${BASE}_${LOCALE}.ts"
+    echo " -> ${OUTFILE}"
+    pylupdate5 -noobsolete ${PYTHON_FILES} -ts "${OUTFILE}"
   done
+  echo "Edit the TS files above, then run scripts/compile-strings.sh to build QM files."
 else
-  echo "No need to edit any translation files (.ts) because no python files"
-  echo "has been updated since the last update translation. "
+  echo "Translations up-to-date; no .ts files regenerated."
 fi

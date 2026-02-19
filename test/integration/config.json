@@ -1,0 +1,122 @@
+{
+  "network_required": true,
+  "defaults": {
+    "crs": "EPSG:25833",
+    "extent": {
+      "west": 458000,
+      "east": 462000,
+      "south": 5657000,
+      "north": 5661000
+    },
+    "gsd": 1.0,
+    "create_vrt": false,
+    "output_extension": ".tif"
+  },
+  "sources": [
+    {
+      "name": "basemap_gray",
+      "provider": "wms",
+      "uri": "url=https://sgx.geodatenzentrum.de/wms_basemapde?&layers=de_basemapde_web_raster_grau&format=image/png&crs=EPSG:3857&styles=",
+      "default_crs": "EPSG:25833"
+    },
+    {
+      "name": "basemap_color",
+      "provider": "wms",
+      "uri": "url=https://sgx.geodatenzentrum.de/wms_basemapde?&layers=de_basemapde_web_raster_farbe&format=image/png&crs=EPSG:3857&styles=",
+      "default_crs": "EPSG:25833"
+    },
+    {
+      "name": "geosn_ortho_color",
+      "provider": "wms",
+      "uri": "contextualWMSLegend=0&crs=EPSG:25833&dpiMode=7&featureCount=10&format=image/png&layers=sn_dop_020&styles=&tilePixelRatio=0&url=https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest",
+      "default_crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 460000,
+        "south": 5658500,
+        "north": 5659500
+      },
+      "gsd": 2.0
+    },
+    {
+      "name": "geosn_ortho_gray",
+      "provider": "wms",
+      "uri": "contextualWMSLegend=0&crs=EPSG:25833&dpiMode=7&featureCount=10&format=image/png&layers=sn_dop_020&styles=gray&tilePixelRatio=0&url=https://geodienste.sachsen.de/wms_geosn_dop-rgb/guest",
+      "default_crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 460000,
+        "south": 5658500,
+        "north": 5659500
+      },
+      "gsd": 2.0
+    },
+    {
+      "name": "osm_xyz",
+      "provider": "wms",
+      "uri": "type=xyz&url=https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "default_crs": "EPSG:3857"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "basemap_gray_tif",
+      "source": "basemap_gray",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 461000,
+        "south": 5658000,
+        "north": 5660000
+      },
+      "gsd": 2.0,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "basemap_color_vrt",
+      "source": "basemap_color",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 458500,
+        "east": 461500,
+        "south": 5657500,
+        "north": 5660500
+      },
+      "gsd": 1.5,
+      "create_vrt": true,
+      "vrt_preset_size": 512,
+      "output_extension": ".vrt"
+    },
+    {
+      "name": "geosn_ortho_color",
+      "source": "geosn_ortho_color",
+      "crs": "EPSG:25833",
+      "gsd": 0.2,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "geosn_ortho_gray",
+      "source": "geosn_ortho_gray",
+      "crs": "EPSG:25833",
+      "gsd": 0.2,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "osm_tif",
+      "source": "osm_xyz",
+      "crs": "EPSG:3857",
+      "extent": {
+        "west": 13.68,
+        "east": 13.78,
+        "south": 51.00,
+        "north": 51.08
+      },
+      "gsd": 5.0,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    }
+  ]
+}

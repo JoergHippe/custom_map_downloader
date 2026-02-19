@@ -5,12 +5,12 @@
 [general]
 name=MapDownloader
 qgisMinimumVersion=3.0
-description=Download georeferenced maps from any layer
-version=0.1.1
+description=Extent-based export of georeferenced rasters (GeoTIFF/PNG/JPEG) with GSD control and optional VRT tiling
+version=0.3.0
 author=Abhinav Jayswal
 email=abhinavjayaswal10@gmail.com
 
-about=Custom Map Downloader is a QGIS plugin that allows users to generate high-resolution, georeferenced GeoTIFF images from any loaded map layer. By providing a single latitude–longitude point, desired GSD (ground sampling distance), and output dimensions, the plugin automatically computes the correct map extent, renders the specified layer at the requested resolution, and exports a fully geotagged TIFF file. It supports satellite imagery, XYZ tiles, raster layers, and vector tile layers, making it ideal for simulation, training data generation, offline map extraction, and custom analysis workflows. Features include optional georeferencing toggle, automatic layer loading, progress feedback, and GDAL-based geospatial metadata.
+about=Custom Map Downloader exports visible QGIS layers extent-based: pick a layer, choose an output CRS, set ground sampling distance (map units per pixel) and export a georeferenced raster. Pixel width/height are derived from extent and GSD; world files are always written. Optional VRT mode writes tiled GeoTIFFs plus a portable VRT instead of a merged raster. Designed for XYZ/WMTS/WMS, raster and vector layers with progress feedback and automatic layer loading.
 
 tracker=https://github.com/ashroo/custom_map_downloader/issues
 repository=https://github.com/ashroo/custom_map_downloader
