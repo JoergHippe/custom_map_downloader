@@ -35,9 +35,15 @@ def classFactory(iface):
     except Exception:
         import traceback
         from qgis.core import QgsMessageLog, Qgis
+
+        # Keep compatibility across QGIS/stub variants.
+        critical_level = getattr(Qgis, "Critical", None)
+        if critical_level is None:
+            message_level = getattr(Qgis, "MessageLevel", None)
+            critical_level = getattr(message_level, "Critical", 2)
         QgsMessageLog.logMessage(
             traceback.format_exc(),
             "custom_map_downloader",
-            Qgis.Critical,
+            critical_level,
         )
         raise
