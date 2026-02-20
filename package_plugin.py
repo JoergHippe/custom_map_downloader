@@ -37,7 +37,6 @@ EXCLUDE_PATTERNS = [
     '__pycache__',
     '*.pyc',
     '*.pyo',
-    '*.qm',
     '.vscode',
     '.idea',
     '*.swp',

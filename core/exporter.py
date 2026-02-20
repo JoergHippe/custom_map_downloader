@@ -258,7 +258,7 @@ class GeoTiffExporter:
             dataset = None
 
         # Sidecars: always write worldfile; for PNG/JPEG also write .prj
-        self._write_sidecars_safe(output_path, geotransform, output_crs)
+        self._write_sidecars(output_path, geotransform, output_crs)
 
         self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return output_path
@@ -656,7 +656,7 @@ class GeoTiffExporter:
                     ds = None
 
                 # Sidecars per tile (always; for PNG/JPEG required)
-                self._write_sidecars_safe(str(tile_path), tile_gt, output_crs)
+                self._write_sidecars(str(tile_path), tile_gt, output_crs)
 
                 tile_paths_abs.append(str(tile_path))
                 self._wait_with_events(rate_limit_s, cancel_token=cancel_token)
@@ -916,7 +916,7 @@ class GeoTiffExporter:
             dataset = None
 
         # Sidecars (always; PNG/JPEG required)
-        self._write_sidecars_safe(output_path, geotransform, output_crs)
+        self._write_sidecars(output_path, geotransform, output_crs)
 
         if blank_tiles == total_tiles:
             raise ExportError(
@@ -1080,20 +1080,26 @@ class GeoTiffExporter:
             fh.write(f"{x_center:.12f}\n")
             fh.write(f"{y_center:.12f}\n")
 
-    def _write_sidecars_safe(
+    def _write_sidecars(
         self,
         path: str,
         geotransform: list[float],
         crs: QgsCoordinateReferenceSystem,
     ) -> None:
-        """Write world file and .prj safely (ignore failures)."""
+        """Write world file and .prj or fail with a clear export error."""
         try:
             self._write_world_file(path, geotransform)
-        except Exception:
-            pass
+        except Exception as ex:
+            raise ExportError(
+                "ERR_SIDECAR_WRITE_FAILED",
+                f"Failed to write world file for '{path}': {ex}",
+            )
 
         try:
             self._write_prj_file(path, crs)
-        except Exception:
-            pass
+        except Exception as ex:
+            raise ExportError(
+                "ERR_SIDECAR_WRITE_FAILED",
+                f"Failed to write .prj for '{path}': {ex}",
+            )
 
