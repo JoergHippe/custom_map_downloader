@@ -18,10 +18,8 @@ Notes:
 from __future__ import annotations
 
 import os
-import random
 import re
 import tempfile
-import time
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -61,7 +59,13 @@ from .gdal_io import (
     write_world_file,
 )
 from .models import CancelToken, ExportParams
-from .tiling import pad_extent_to_full_tiles, pick_tile_size
+from .rendering import (
+    layer_extent_in_render_crs,
+    render_tile_rgba,
+    render_tile_with_retry,
+    wait_with_events,
+)
+from .tiling import build_tile_specs, pad_extent_to_full_tiles, pick_tile_size
 from .validation import (
     validate_gsd,
     validate_output_path,
@@ -569,26 +573,17 @@ class GeoTiffExporter:
 
         px_w = extent.width() / float(width)
         px_h = extent.height() / float(height)
-
-        cols = (width + tile_w_px - 1) // tile_w_px
-        rows = (height + tile_h_px - 1) // tile_h_px
-        total_tiles = rows * cols
-
-        # Optional optimization: skip retry escalation if tile doesn't overlap.
-        layer_extent_render = None
-        try:
-            layer_extent = layer.extent()
-            if layer.crs().isValid() and render_crs.isValid() and layer.crs() != render_crs:
-                tr = QgsCoordinateTransform(layer.crs(), render_crs, QgsProject.instance())
-                layer_extent_render = tr.transformBoundingBox(layer_extent)
-            else:
-                layer_extent_render = layer_extent
-        except Exception:
-            layer_extent_render = None
-
-        max_retries = 3
-        base_backoff_s = 0.7
-        max_backoff_s = 8.0
+        tile_specs = build_tile_specs(
+            extent,
+            width_px=width,
+            height_px=height,
+            tile_width_px=tile_w_px,
+            tile_height_px=tile_h_px,
+            base_percent=15,
+            span_percent=75,
+        )
+        total_tiles = len(tile_specs)
+        layer_extent_render = layer_extent_in_render_crs(layer, render_crs=render_crs)
         rate_limit_s = 0.05
 
         tile_paths_abs: list[str] = []
@@ -596,143 +591,86 @@ class GeoTiffExporter:
 
         self._report(progress_cb, 15, "STEP_RENDER", {"step": 3, "total": 6})
 
-        for r in range(rows):
-            for c in range(cols):
-                self._check_cancel(cancel_token)
+        for tile in tile_specs:
+            self._check_cancel(cancel_token)
+            arr, was_blank = render_tile_with_retry(
+                tile=tile,
+                layer=layer,
+                render_crs=render_crs,
+                output_dpi=params.output_dpi,
+                cancel_token=cancel_token,
+                layer_extent_render=layer_extent_render,
+                progress_cb=progress_cb,
+                report=self._report,
+                wait_fn=self._wait_with_events,
+                render_fn=self._render_tile_rgba,
+                check_cancel=self._check_cancel,
+            )
 
-                xoff = c * tile_w_px
-                yoff = r * tile_h_px
-                tw = min(tile_w_px, width - xoff)
-                th = min(tile_h_px, height - yoff)
+            if was_blank:
+                blank_tiles += 1
 
-                xmin = extent.xMinimum() + (xoff * px_w)
-                xmax = xmin + (tw * px_w)
-                ymax = extent.yMaximum() - (yoff * px_h)
-                ymin = ymax - (th * px_h)
-                tile_extent = QgsRectangle(xmin, ymin, xmax, ymax)
+            tile_name = f"{base.name}__tile_r{tile.row:03d}_c{tile.col:03d}{tile_ext}"
+            tile_path = out_dir / tile_name
 
-                done = (r * cols) + c + 1
-                percent = 15 + int((done / float(total_tiles)) * 75)
-
-                tile_overlaps_layer = True
-                if layer_extent_render is not None:
-                    try:
-                        tile_overlaps_layer = tile_extent.intersects(layer_extent_render)
-                    except Exception:
-                        tile_overlaps_layer = True
-
-                arr: Optional[np.ndarray] = None
-                was_blank = False
-
-                for attempt in range(max_retries + 1):
-                    self._check_cancel(cancel_token)
-
-                    try:
-                        arr = self._render_tile_rgba(
-                            layer=layer,
-                            tile_extent=tile_extent,
-                            render_crs=render_crs,
-                            width_px=tw,
-                            height_px=th,
-                            output_dpi=params.output_dpi,
-                            cancel_token=cancel_token,
-                        )
-                    except Exception as ex:
-                        if attempt < max_retries:
-                            backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                            backoff *= 0.8 + 0.4 * random.random()
-                            self._report(
-                                progress_cb,
-                                percent,
-                                "WARN_TILE_RETRY",
-                                {"attempt": attempt + 1, "max": max_retries, "seconds": backoff},
-                            )
-                            self._wait_with_events(backoff, cancel_token=cancel_token)
-                            continue
-                        raise ExportError("ERR_RENDER_TILE_FAILED", str(ex)) from ex
-
-                    # blank check (alpha)
-                    sy = max(1, th // 64)
-                    sx = max(1, tw // 64)
-                    alpha_max = int(arr[::sy, ::sx, 3].max())
-                    was_blank = alpha_max == 0
-
-                    if not was_blank:
-                        break
-
-                    if attempt < max_retries and tile_overlaps_layer:
-                        backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                        backoff *= 0.8 + 0.4 * random.random()
-                        self._report(
-                            progress_cb,
-                            percent,
-                            "WARN_TILE_RETRY",
-                            {"attempt": attempt + 1, "max": max_retries, "seconds": backoff},
-                        )
-                        self._wait_with_events(backoff, cancel_token=cancel_token)
-                        continue
-
-                    break
-
-                if arr is None:
-                    raise ExportError("ERR_RENDER_TILE_FAILED", "Tile render returned no buffer.")
-
-                if was_blank:
-                    blank_tiles += 1
-
-                tile_name = f"{base.name}__tile_r{r:03d}_c{c:03d}{tile_ext}"
-                tile_path = out_dir / tile_name
-
-                driver_name = self._driver_for_output(str(tile_path))
-                driver = gdal.GetDriverByName(driver_name)
-                if driver is None:
-                    raise ExportError(
-                        "ERR_GDAL_DRIVER_MISSING", f"GDAL driver not found: {driver_name}"
-                    )
-
-                # JPEG has no alpha -> composite on white and write RGB.
-                if driver_name == "JPEG":
-                    write_arr = self._rgba_to_rgb_on_white(arr)
-                    bands = 3
-                elif driver_name == "PNG":
-                    write_arr = arr
-                    bands = 4
-                else:
-                    write_arr = arr
-                    bands = 4
-
-                ds = driver.Create(
-                    str(tile_path),
-                    tw,
-                    th,
-                    bands,
-                    gdal.GDT_Byte,
-                    options=self._gdal_create_options(driver_name),
+            driver_name = self._driver_for_output(str(tile_path))
+            driver = gdal.GetDriverByName(driver_name)
+            if driver is None:
+                raise ExportError(
+                    "ERR_GDAL_DRIVER_MISSING", f"GDAL driver not found: {driver_name}"
                 )
-                if ds is None:
-                    raise ExportError(
-                        "ERR_GDAL_CREATE_FAILED", f"Failed to create tile: {tile_path}"
-                    )
 
-                try:
-                    tile_gt = [xmin, px_w, 0.0, ymax, 0.0, -px_h]
-                    ds.SetGeoTransform(tile_gt)
-                    ds.SetProjection(self._crs_to_wkt(output_crs))
+            if driver_name == "JPEG":
+                write_arr = self._rgba_to_rgb_on_white(arr)
+                bands = 3
+            elif driver_name == "PNG":
+                write_arr = arr
+                bands = 4
+            else:
+                write_arr = arr
+                bands = 4
 
-                    for i in range(bands):
-                        band = ds.GetRasterBand(i + 1)
-                        band.WriteArray(write_arr[:, :, i])
-                        band.FlushCache()
-                finally:
-                    ds = None
+            ds = driver.Create(
+                str(tile_path),
+                tile.width_px,
+                tile.height_px,
+                bands,
+                gdal.GDT_Byte,
+                options=self._gdal_create_options(driver_name),
+            )
+            if ds is None:
+                raise ExportError("ERR_GDAL_CREATE_FAILED", f"Failed to create tile: {tile_path}")
 
-                # Sidecars per tile (always; for PNG/JPEG required)
-                if write_sidecars:
-                    self._write_sidecars(str(tile_path), tile_gt, output_crs)
+            try:
+                tile_gt = [
+                    tile.extent.xMinimum(),
+                    px_w,
+                    0.0,
+                    tile.extent.yMaximum(),
+                    0.0,
+                    -px_h,
+                ]
+                ds.SetGeoTransform(tile_gt)
+                ds.SetProjection(self._crs_to_wkt(output_crs))
 
-                tile_paths_abs.append(str(tile_path))
-                self._wait_with_events(rate_limit_s, cancel_token=cancel_token)
-                self._report(progress_cb, percent, "STEP_WRITE_RASTER", {"step": 4, "total": 6})
+                for i in range(bands):
+                    band = ds.GetRasterBand(i + 1)
+                    band.WriteArray(write_arr[:, :, i])
+                    band.FlushCache()
+            finally:
+                ds = None
+
+            if write_sidecars:
+                self._write_sidecars(str(tile_path), tile_gt, output_crs)
+
+            tile_paths_abs.append(str(tile_path))
+            self._wait_with_events(rate_limit_s, cancel_token=cancel_token)
+            self._report(
+                progress_cb,
+                tile.percent,
+                "STEP_WRITE_RASTER",
+                {"step": 4, "total": 6},
+            )
 
         if blank_tiles == total_tiles:
             raise ExportError(
@@ -835,22 +773,18 @@ class GeoTiffExporter:
         px_w = extent.width() / float(width)
         px_h = extent.height() / float(height)
 
-        cols = (width + tile_size_px - 1) // tile_size_px
-        rows = (height + tile_size_px - 1) // tile_size_px
-        total_tiles = rows * cols
-
+        tile_specs = build_tile_specs(
+            extent,
+            width_px=width,
+            height_px=height,
+            tile_width_px=tile_size_px,
+            tile_height_px=tile_size_px,
+            base_percent=15,
+            span_percent=80,
+        )
+        total_tiles = len(tile_specs)
         blank_tiles = 0
-
-        layer_extent_render = None
-        try:
-            layer_extent = layer.extent()
-            if layer.crs().isValid() and render_crs.isValid() and layer.crs() != render_crs:
-                tr = QgsCoordinateTransform(layer.crs(), render_crs, QgsProject.instance())
-                layer_extent_render = tr.transformBoundingBox(layer_extent)
-            else:
-                layer_extent_render = layer_extent
-        except Exception:
-            layer_extent_render = None
+        layer_extent_render = layer_extent_in_render_crs(layer, render_crs=render_crs)
 
         geotransform = [
             extent.xMinimum(),
@@ -884,118 +818,48 @@ class GeoTiffExporter:
             dataset.SetGeoTransform(geotransform)
             dataset.SetProjection(self._crs_to_wkt(output_crs))
 
-            max_retries = 3
-            base_backoff_s = 0.7
-            max_backoff_s = 8.0
             rate_limit_s = 0.05
 
             self._report(progress_cb, 15, "STEP_RENDER", {"step": 3, "total": 6})
 
-            for r in range(rows):
-                for c in range(cols):
-                    self._check_cancel(cancel_token)
+            for tile in tile_specs:
+                self._check_cancel(cancel_token)
+                arr, was_blank = render_tile_with_retry(
+                    tile=tile,
+                    layer=layer,
+                    render_crs=render_crs,
+                    output_dpi=params.output_dpi,
+                    cancel_token=cancel_token,
+                    layer_extent_render=layer_extent_render,
+                    progress_cb=progress_cb,
+                    report=self._report,
+                    wait_fn=self._wait_with_events,
+                    render_fn=self._render_tile_rgba,
+                    check_cancel=self._check_cancel,
+                )
 
-                    xoff = c * tile_size_px
-                    yoff = r * tile_size_px
-                    tw = min(tile_size_px, width - xoff)
-                    th = min(tile_size_px, height - yoff)
+                if was_blank:
+                    blank_tiles += 1
 
-                    xmin = extent.xMinimum() + (xoff * px_w)
-                    xmax = xmin + (tw * px_w)
-                    ymax = extent.yMaximum() - (yoff * px_h)
-                    ymin = ymax - (th * px_h)
-                    tile_extent = QgsRectangle(xmin, ymin, xmax, ymax)
+                if driver_name == "JPEG":
+                    write_arr = self._rgba_to_rgb_on_white(arr)
+                    write_bands = 3
+                else:
+                    write_arr = arr
+                    write_bands = 4
 
-                    done = (r * cols) + c + 1
-                    percent = 15 + int((done / float(total_tiles)) * 80)
+                self._wait_with_events(rate_limit_s, cancel_token=cancel_token)
 
-                    tile_overlaps_layer = True
-                    if layer_extent_render is not None:
-                        try:
-                            tile_overlaps_layer = tile_extent.intersects(layer_extent_render)
-                        except Exception:
-                            tile_overlaps_layer = True
+                for i in range(write_bands):
+                    band = dataset.GetRasterBand(i + 1)
+                    band.WriteArray(write_arr[:, :, i], xoff=tile.xoff, yoff=tile.yoff)
 
-                    arr: Optional[np.ndarray] = None
-                    was_blank = False
-
-                    for attempt in range(max_retries + 1):
-                        self._check_cancel(cancel_token)
-
-                        try:
-                            arr = self._render_tile_rgba(
-                                layer=layer,
-                                tile_extent=tile_extent,
-                                render_crs=render_crs,
-                                width_px=tw,
-                                height_px=th,
-                                output_dpi=params.output_dpi,
-                                cancel_token=cancel_token,
-                            )
-                        except Exception as ex:
-                            if attempt < max_retries:
-                                backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                                backoff *= 0.8 + 0.4 * random.random()
-                                self._report(
-                                    progress_cb,
-                                    percent,
-                                    "WARN_TILE_RETRY",
-                                    {
-                                        "attempt": attempt + 1,
-                                        "max": max_retries,
-                                        "seconds": backoff,
-                                    },
-                                )
-                                self._wait_with_events(backoff, cancel_token=cancel_token)
-                                continue
-                            raise ExportError("ERR_RENDER_TILE_FAILED", str(ex)) from ex
-
-                        sy = max(1, th // 64)
-                        sx = max(1, tw // 64)
-                        alpha_max = int(arr[::sy, ::sx, 3].max())
-                        was_blank = alpha_max == 0
-
-                        if not was_blank:
-                            break
-
-                        if attempt < max_retries and tile_overlaps_layer:
-                            backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                            backoff *= 0.8 + 0.4 * random.random()
-                            self._report(
-                                progress_cb,
-                                percent,
-                                "WARN_TILE_RETRY",
-                                {"attempt": attempt + 1, "max": max_retries, "seconds": backoff},
-                            )
-                            self._wait_with_events(backoff, cancel_token=cancel_token)
-                            continue
-
-                        break
-
-                    if arr is None:
-                        raise ExportError(
-                            "ERR_RENDER_TILE_FAILED", "Tile render returned no buffer."
-                        )
-
-                    if was_blank:
-                        blank_tiles += 1
-
-                    # Convert for JPEG if needed
-                    if driver_name == "JPEG":
-                        write_arr = self._rgba_to_rgb_on_white(arr)  # (th, tw, 3)
-                        write_bands = 3
-                    else:
-                        write_arr = arr  # (th, tw, 4)
-                        write_bands = 4
-
-                    self._wait_with_events(rate_limit_s, cancel_token=cancel_token)
-
-                    # Windowed write into the dataset
-                    for i in range(write_bands):
-                        band = dataset.GetRasterBand(i + 1)
-                        band.WriteArray(write_arr[:, :, i], xoff=xoff, yoff=yoff)
-
-                    self._report(progress_cb, percent, "STEP_WRITE_RASTER", {"step": 4, "total": 6})
+                self._report(
+                    progress_cb,
+                    tile.percent,
+                    "STEP_WRITE_RASTER",
+                    {"step": 4, "total": 6},
+                )
 
             dataset.FlushCache()
 
@@ -1095,32 +959,16 @@ class GeoTiffExporter:
         output_dpi: Optional[float],
         cancel_token: Optional[CancelToken],
     ) -> np.ndarray:
-        """Render one tile into a detached RGBA array (height_px, width_px, 4)."""
-        map_settings = QgsMapSettings()
-        map_settings.setBackgroundColor(QColor(255, 255, 255))
-        map_settings.setLayers([layer])
-        map_settings.setExtent(tile_extent)
-        map_settings.setOutputSize(QSize(width_px, height_px))
-        map_settings.setDestinationCrs(render_crs)
-        if output_dpi and output_dpi > 0:
-            map_settings.setOutputDpi(float(output_dpi))
-
-        job = QgsMapRendererParallelJob(map_settings)
-        job.start()
-
-        while job.isActive():
-            self._check_cancel(cancel_token, render_job=job)
-            QCoreApplication.processEvents()
-
-        job.waitForFinished()
-
-        img = job.renderedImage().convertToFormat(QImage.Format_RGBA8888)
-        ptr = img.bits()
-        byte_count = img.sizeInBytes() if hasattr(img, "sizeInBytes") else img.byteCount()
-        ptr.setsize(byte_count)
-
-        buf = np.frombuffer(ptr, dtype=np.uint8).copy()
-        return buf.reshape(height_px, width_px, 4)
+        return render_tile_rgba(
+            layer=layer,
+            tile_extent=tile_extent,
+            render_crs=render_crs,
+            width_px=width_px,
+            height_px=height_px,
+            output_dpi=output_dpi,
+            cancel_token=cancel_token,
+            check_cancel=self._check_cancel,
+        )
 
     def _wait_with_events(
         self,
@@ -1129,12 +977,12 @@ class GeoTiffExporter:
         cancel_token: Optional[CancelToken],
         render_job: Optional[QgsMapRendererParallelJob] = None,
     ) -> None:
-        """Wait while keeping the UI responsive and honoring cancellation."""
-        end_t = time.monotonic() + max(0.0, float(seconds))
-        while time.monotonic() < end_t:
-            self._check_cancel(cancel_token, render_job=render_job)
-            QCoreApplication.processEvents()
-            time.sleep(0.05)
+        wait_with_events(
+            seconds,
+            check_cancel=self._check_cancel,
+            cancel_token=cancel_token,
+            render_job=render_job,
+        )
 
     def _driver_for_output(self, output_path: str) -> str:
         return driver_for_output(output_path)
