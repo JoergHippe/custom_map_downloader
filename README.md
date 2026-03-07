@@ -80,9 +80,9 @@ The plugin provides diagnostics in several places:
 
 ## Documentation
 
-- user operations and support: `TROUBLESHOOTING.md`
-- development workflow: `DEVELOPING.md`
-- release process: `RELEASING.md`
+- user operations and support: `docs/TROUBLESHOOTING.md`
+- development workflow: `docs/DEVELOPING.md`
+- release process: `docs/RELEASING.md`
 - integration test details: `test/integration/README.md`
 
 ## License

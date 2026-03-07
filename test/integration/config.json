@@ -115,12 +115,44 @@
       "extent": {
         "west": 13.68,
         "east": 13.78,
-        "south": 51.00,
+        "south": 51.0,
         "north": 51.08
       },
       "gsd": 5.0,
       "create_vrt": false,
       "output_extension": ".tif"
+    },
+    {
+      "name": "basemap_color_scale_tif",
+      "source": "basemap_color",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459200,
+        "east": 460800,
+        "south": 5658200,
+        "north": 5659800
+      },
+      "gsd": 2.0,
+      "scale_probe": {
+        "small": 4000,
+        "large": 20000
+      },
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "basemap_gray_png",
+      "source": "basemap_gray",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459400,
+        "east": 460400,
+        "south": 5658400,
+        "north": 5659400
+      },
+      "gsd": 1.5,
+      "create_vrt": false,
+      "output_extension": ".png"
     }
   ]
 }

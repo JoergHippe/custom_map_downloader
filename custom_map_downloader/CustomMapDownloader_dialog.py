@@ -1648,33 +1648,45 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         scale_sensitive = self._layer_looks_scale_sensitive()
 
         lines: list[str] = []
-        style = "color: #666;"
+        style = "color: #444; background: #f4f1e8; border: 1px solid #d9cfb3; padding: 6px;"
 
         if use_scale and not metric_output:
-            style = "color: #b00020; font-weight: 600;"
+            style = (
+                "color: #8f001d; background: #fdecef; border: 1px solid #efb7c1; "
+                "padding: 6px; font-weight: 600;"
+            )
             lines.append(
-                self.tr("Target scale mode needs a projected output CRS with meter units.")
+                self.tr("Warning: Target scale mode needs a projected output CRS with meter units.")
             )
         else:
             if use_scale and scale_sensitive:
-                style = "color: #8a5a00;"
+                style = (
+                    "color: #7a5200; background: #fff5df; border: 1px solid #e7d19b; "
+                    "padding: 6px;"
+                )
                 lines.append(
                     self.tr(
-                        "This layer may change portrayal by scale. Target scale mode is appropriate here."
+                        "Hint: This layer may change portrayal by scale. Target scale mode is appropriate here."
                     )
                 )
             if scale_sensitive and not metric_output:
-                style = "color: #8a5a00;"
+                style = (
+                    "color: #7a5200; background: #fff5df; border: 1px solid #e7d19b; "
+                    "padding: 6px;"
+                )
                 lines.append(
                     self.tr(
-                        "With a non-metric output CRS, the plugin may render internally in a metric CRS and reproject the final raster."
+                        "Hint: With a non-metric output CRS, the plugin may render internally in a metric CRS and reproject the final raster."
                     )
                 )
             if create_vrt and not metric_output:
-                style = "color: #8a5a00;"
+                style = (
+                    "color: #7a5200; background: #fff5df; border: 1px solid #e7d19b; "
+                    "padding: 6px;"
+                )
                 lines.append(
                     self.tr(
-                        "VRT export is most predictable when render CRS and output CRS are identical."
+                        "Hint: VRT export is most predictable when render CRS and output CRS are identical."
                     )
                 )
 

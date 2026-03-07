@@ -143,7 +143,7 @@ Full local release gate:
 make release-check
 ```
 
-Release details are documented in `RELEASING.md`.
+Release details are documented in `docs/RELEASING.md`.
 
 ## CI
 

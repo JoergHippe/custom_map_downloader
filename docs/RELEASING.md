@@ -11,7 +11,7 @@ This project uses `qgis-plugin-ci` as the primary packaging path. Legacy packagi
 - Version updated in `custom_map_downloader/metadata.txt`
 - Relevant user-facing documentation updated:
   - `README.md`
-  - `TROUBLESHOOTING.md`
+  - `docs/TROUBLESHOOTING.md`
 
 ## Standard Release Checklist
 
@@ -60,4 +60,4 @@ Release archives are built from `custom_map_downloader/` only. The package valid
 
 - Commit and push the release-ready state before publishing.
 - If the release includes user-visible changes, update the changelog section in `README.md`.
-- If the release changes export semantics or operational behavior, update `TROUBLESHOOTING.md`.
+- If the release changes export semantics or operational behavior, update `docs/TROUBLESHOOTING.md`.

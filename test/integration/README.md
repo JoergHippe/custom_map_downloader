@@ -1,6 +1,6 @@
 # QGIS-Integrationstests
 
-Siehe auch `DEVELOPING.md` für den gesamten Entwicklungs- und Test-Workflow.
+Siehe auch `docs/DEVELOPING.md` für den gesamten Entwicklungs- und Test-Workflow.
 
 Diese Tests benötigen eine echte QGIS-Python-Umgebung (qgis.core/qgis.gui). Unter Windows funktioniert das am einfachsten über die OSGeo4W-/QGIS-Shell.
 
