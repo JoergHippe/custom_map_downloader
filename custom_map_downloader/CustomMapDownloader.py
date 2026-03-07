@@ -297,9 +297,12 @@ class CustomMapDownloader:
         cancel_token = CancelToken()
         progress.canceled.connect(cancel_token.cancel)
 
+        export_warnings: list[str] = []
+
         def progress_cb(percent: int, key: str, args: dict[str, Any]):
             """Progress callback wired to the exporter."""
             args = args or {}
+            is_warning = False
 
             if key == "WARN_TILE_RETRY":
                 attempt = args.get("attempt", 0)
@@ -317,6 +320,13 @@ class CustomMapDownloader:
                     mb=mb,
                 )
 
+            elif key == "WARN_VRT_ABSOLUTE_PATHS":
+                is_warning = True
+                msg = self.tr(
+                    "Warning: The VRT was created, but tile paths could not be rewritten to relative paths. "
+                    "The VRT may not be portable."
+                )
+
             else:
                 templates = {k: self.tr(v) for k, v in PROGRESS_TEMPLATES.items()}
                 tmpl = templates.get(key, key)
@@ -324,6 +334,9 @@ class CustomMapDownloader:
                     msg = tmpl.format(**args)
                 except Exception:
                     msg = tmpl
+
+            if is_warning and msg not in export_warnings:
+                export_warnings.append(msg)
 
             progress.setLabelText(msg)
             progress.setValue(int(percent))
@@ -351,28 +364,48 @@ class CustomMapDownloader:
 
                 if raster_layer.isValid():
                     self._project().addMapLayer(raster_layer)
+                    success_message = self.tr(
+                        "Raster successfully saved and loaded:\n{path}"
+                    ).format(
+                        path=saved_path,
+                    )
+                    if export_warnings:
+                        success_message = self.tr("{base}\n\nWarnings:\n{warnings}").format(
+                            base=success_message,
+                            warnings="\n".join(export_warnings),
+                        )
                     QMessageBox.information(
                         self.iface.mainWindow(),
                         self.tr("Success"),
-                        self.tr("Raster successfully saved and loaded:\n{path}").format(
-                            path=saved_path,
-                        ),
+                        success_message,
                     )
                 else:
+                    partial_message = self.tr("Raster saved but loading failed:\n{path}").format(
+                        path=saved_path,
+                    )
+                    if export_warnings:
+                        partial_message = self.tr("{base}\n\nWarnings:\n{warnings}").format(
+                            base=partial_message,
+                            warnings="\n".join(export_warnings),
+                        )
                     QMessageBox.warning(
                         self.iface.mainWindow(),
                         self.tr("Partial success"),
-                        self.tr("Raster saved but loading failed:\n{path}").format(
-                            path=saved_path,
-                        ),
+                        partial_message,
                     )
             else:
+                success_message = self.tr("Raster successfully saved to:\n{path}").format(
+                    path=saved_path,
+                )
+                if export_warnings:
+                    success_message = self.tr("{base}\n\nWarnings:\n{warnings}").format(
+                        base=success_message,
+                        warnings="\n".join(export_warnings),
+                    )
                 QMessageBox.information(
                     self.iface.mainWindow(),
                     self.tr("Success"),
-                    self.tr("Raster successfully saved to:\n{path}").format(
-                        path=saved_path,
-                    ),
+                    success_message,
                 )
 
         except CancelledError:
@@ -445,9 +478,6 @@ class CustomMapDownloader:
             "ERR_RENDER_FAILED": self.tr("Rendering failed."),
             "ERR_RENDER_TILE_FAILED": self.tr("Tile rendering failed."),
             "ERR_VRT_BUILD_FAILED": self.tr("Failed to build VRT mosaic."),
-            "ERR_VRT_RELATIVE_PATHS_FAILED": self.tr(
-                "Failed to make the VRT portable with relative tile paths."
-            ),
             "ERR_SIDECAR_WRITE_FAILED": self.tr(
                 "Raster export succeeded, but georeferencing sidecar files could not be written."
             ),

@@ -801,7 +801,12 @@ class GeoTiffExporter:
         try:
             self._make_vrt_paths_relative(vrt_path, tile_paths_abs)
         except Exception as ex:
-            raise ExportError("ERR_VRT_RELATIVE_PATHS_FAILED", str(ex)) from ex
+            self._report(
+                progress_cb,
+                96,
+                "WARN_VRT_ABSOLUTE_PATHS",
+                {"details": str(ex)},
+            )
 
         if report_done:
             self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})

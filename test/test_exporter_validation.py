@@ -271,7 +271,7 @@ from custom_map_downloader.core.constants import (  # noqa: E402
     GSD_MIN,
     LARGE_RASTER_STRONG_MAX_DIM_PX,
 )
-from custom_map_downloader.core.errors import ExportError, ValidationError  # noqa: E402
+from custom_map_downloader.core.errors import ValidationError  # noqa: E402
 from custom_map_downloader.core.exporter import GeoTiffExporter  # noqa: E402
 from custom_map_downloader.core.models import CenterSpec, ExportParams, ExtentSpec  # noqa: E402
 
@@ -406,7 +406,7 @@ class ExporterValidationTests(unittest.TestCase):
 
         self.assertEqual(crs.authid(), "EPSG:3857")
 
-    def test_vrt_relative_path_failure_is_reported(self):
+    def test_vrt_relative_path_failure_emits_warning_and_still_succeeds(self):
         exporter = GeoTiffExporter()
         params = replace(
             self._base_params(path_suffix=".vrt"),
@@ -417,6 +417,7 @@ class ExporterValidationTests(unittest.TestCase):
         original_make_relative = exporter._make_vrt_paths_relative
         original_render_tile = exporter._render_tile_rgba
         original_wait = exporter._wait_with_events
+        progress_events = []
 
         def fail_make_relative(_vrt_path, _tile_paths):
             raise RuntimeError("rewrite failed")
@@ -435,14 +436,17 @@ class ExporterValidationTests(unittest.TestCase):
         exporter._render_tile_rgba = fake_render_tile_rgba
         exporter._wait_with_events = lambda *_args, **_kwargs: None
         try:
-            with self.assertRaises(ExportError) as ctx:
-                exporter.export(params)
+            result = exporter.export(
+                params,
+                progress_cb=lambda percent, key, args: progress_events.append((percent, key, args)),
+            )
         finally:
             exporter._make_vrt_paths_relative = original_make_relative
             exporter._render_tile_rgba = original_render_tile
             exporter._wait_with_events = original_wait
 
-        self.assertEqual(ctx.exception.code, "ERR_VRT_RELATIVE_PATHS_FAILED")
+        self.assertTrue(result.endswith(".vrt"))
+        self.assertTrue(any(key == "WARN_VRT_ABSOLUTE_PATHS" for _, key, _ in progress_events))
 
 
 if __name__ == "__main__":
