@@ -95,6 +95,7 @@ Actions:
 
 - Progress dialog: immediate status and warnings
 - Success/warning dialogs: export outcome
+- Dialog button `Show Details`: technical export context, warning list and error details
 - QGIS message log: runtime warnings and errors under `CustomMapDownloader`
 - Python logging category:
   - `custom_map_downloader.export`

@@ -104,6 +104,61 @@ class CustomMapDownloader:
         if qgis_level is not None:
             QgsMessageLog.logMessage(message, "CustomMapDownloader", qgis_level)
 
+    def _show_message(
+        self,
+        icon: QMessageBox.Icon,
+        title: str,
+        text: str,
+        *,
+        details: str = "",
+    ) -> None:
+        """Show a message box with optional expandable details."""
+        box = QMessageBox(self.iface.mainWindow())
+        box.setIcon(icon)
+        box.setWindowTitle(title)
+        box.setText(text)
+        if details:
+            box.setDetailedText(details)
+        box.exec_()
+
+    def _build_export_context_details(
+        self,
+        export_params: ExportParams,
+        *,
+        saved_path: str = "",
+        warnings: list[str] | None = None,
+    ) -> str:
+        """Build technical export context details for the UI."""
+        lines = [
+            f"output_path={saved_path or export_params.output_path}",
+            f"render_crs={export_params.render_crs.authid() if export_params.render_crs else 'none'}",
+            f"output_crs={export_params.output_crs.authid() if export_params.output_crs else 'none'}",
+            f"size_px={int(export_params.width_px)}x{int(export_params.height_px)}",
+            f"gsd_m_per_px={float(export_params.gsd_m_per_px):.6f}",
+            f"create_vrt={bool(export_params.create_vrt)}",
+        ]
+        if export_params.target_scale_denominator:
+            lines.append(f"target_scale=1:{float(export_params.target_scale_denominator):.3f}")
+        if export_params.output_dpi:
+            lines.append(f"output_dpi={float(export_params.output_dpi):.6f}")
+        if warnings:
+            lines.append("")
+            lines.append("warnings:")
+            lines.extend(f"- {warning}" for warning in warnings)
+        return "\n".join(lines)
+
+    def _build_error_details(self, err: ExportError, export_params: ExportParams) -> str:
+        """Build expandable error details for exporter exceptions."""
+        lines = [
+            f"error_code={getattr(err, 'code', 'ERR_UNKNOWN')}",
+        ]
+        details = getattr(err, "details", "")
+        if details:
+            lines.append(f"error_details={details}")
+        lines.append("")
+        lines.append(self._build_export_context_details(export_params))
+        return "\n".join(lines)
+
     @staticmethod
     def _project() -> QgsProject:
         """Return current QGIS project instance."""
@@ -390,6 +445,11 @@ class CustomMapDownloader:
             # Note: With "Create VRT" enabled, exporter returns the .vrt path.
             saved_path = result_path
             self._log_runtime_message(logging.INFO, "Export completed", details=saved_path)
+            detail_text = self._build_export_context_details(
+                export_params,
+                saved_path=saved_path,
+                warnings=export_warnings,
+            )
 
             for warning in export_warnings:
                 self._log_runtime_message(logging.WARNING, "Export warning", details=warning)
@@ -410,10 +470,11 @@ class CustomMapDownloader:
                             base=success_message,
                             warnings="\n".join(export_warnings),
                         )
-                    QMessageBox.information(
-                        self.iface.mainWindow(),
+                    self._show_message(
+                        QMessageBox.Information,
                         self.tr("Success"),
                         success_message,
+                        details=detail_text,
                     )
                 else:
                     partial_message = self.tr("Raster saved but loading failed:\n{path}").format(
@@ -424,10 +485,11 @@ class CustomMapDownloader:
                             base=partial_message,
                             warnings="\n".join(export_warnings),
                         )
-                    QMessageBox.warning(
-                        self.iface.mainWindow(),
+                    self._show_message(
+                        QMessageBox.Warning,
                         self.tr("Partial success"),
                         partial_message,
+                        details=detail_text,
                     )
             else:
                 success_message = self.tr("Raster successfully saved to:\n{path}").format(
@@ -438,10 +500,11 @@ class CustomMapDownloader:
                         base=success_message,
                         warnings="\n".join(export_warnings),
                     )
-                QMessageBox.information(
-                    self.iface.mainWindow(),
+                self._show_message(
+                    QMessageBox.Information,
                     self.tr("Success"),
                     success_message,
+                    details=detail_text,
                 )
 
         except CancelledError:
@@ -458,10 +521,11 @@ class CustomMapDownloader:
                 f"Validation failed ({getattr(e, 'code', 'ERR_UNKNOWN')})",
                 details=getattr(e, "details", ""),
             )
-            QMessageBox.critical(
-                self.iface.mainWindow(),
+            self._show_message(
+                QMessageBox.Critical,
                 self.tr("Error"),
                 self._format_export_error(e),
+                details=self._build_error_details(e, export_params),
             )
 
         except ExportError as e:
@@ -470,10 +534,11 @@ class CustomMapDownloader:
                 f"Export failed ({getattr(e, 'code', 'ERR_UNKNOWN')})",
                 details=getattr(e, "details", ""),
             )
-            QMessageBox.critical(
-                self.iface.mainWindow(),
+            self._show_message(
+                QMessageBox.Critical,
                 self.tr("Error"),
                 self._format_export_error(e),
+                details=self._build_error_details(e, export_params),
             )
 
         except Exception as e:
