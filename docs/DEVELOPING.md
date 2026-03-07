@@ -57,9 +57,11 @@ On Windows, the repository also provides helpers:
 run_integration_tests.bat all myprofile
 run_integration_tests.bat smoke myprofile
 run_integration_tests.bat network myprofile
+run_integration_tests.bat e2e myprofile
 ```
 
-The chosen profile affects the QGIS runtime context. The tests still import the plugin code directly from the repository.
+The modes `all`, `smoke` and `network` import the plugin code directly from the repository.
+The mode `e2e` deploys the plugin into the selected QGIS profile first and then runs the smoke suite against the deployed plugin import path.
 
 See also `test/integration/README.md`.
 
@@ -117,7 +119,7 @@ Recommended local loop:
 `test/integration/test_export_network.py` covers:
 
 - configurable WMS / XYZ export scenarios
-- optional scale-dependent WMS probes via `scale_probe`
+- explicit scale-dependent WMS probes via `scale_matrix`
 - scenario filtering via `SCENARIOS=name1,name2`
 - opt-in execution via `ALLOW_INTEGRATION_NETWORK=1`
 

@@ -70,10 +70,6 @@
         "north": 5660000
       },
       "gsd": 2.0,
-      "scale_probe": {
-        "small": 5000,
-        "large": 25000
-      },
       "create_vrt": false,
       "output_extension": ".tif"
     },
@@ -133,10 +129,6 @@
         "north": 5659800
       },
       "gsd": 2.0,
-      "scale_probe": {
-        "small": 4000,
-        "large": 20000
-      },
       "create_vrt": false,
       "output_extension": ".tif"
     },
@@ -152,6 +144,50 @@
       },
       "gsd": 1.5,
       "create_vrt": false,
+      "output_extension": ".png"
+    }
+  ],
+  "scale_matrix": [
+    {
+      "name": "basemap_gray_scale_matrix",
+      "source": "basemap_gray",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 461000,
+        "south": 5658000,
+        "north": 5660000
+      },
+      "small_scale": 5000,
+      "large_scale": 25000,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "basemap_color_scale_matrix",
+      "source": "basemap_color",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459200,
+        "east": 460800,
+        "south": 5658200,
+        "north": 5659800
+      },
+      "small_scale": 4000,
+      "large_scale": 20000,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "geosn_ortho_gray_scale_matrix",
+      "source": "geosn_ortho_gray",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 460000,
+        "south": 5658500,
+        "north": 5659500
+      },
+      "small_scale": 1500,
+      "large_scale": 6000,
       "output_extension": ".png"
     }
   ]

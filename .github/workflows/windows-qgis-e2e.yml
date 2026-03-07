@@ -1,0 +1,22 @@
+name: Windows QGIS E2E
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-qgis-e2e:
+    runs-on: [self-hosted, windows, qgis]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run deployed-plugin E2E smoke tests
+        shell: cmd
+        run: |
+          run_integration_tests.bat e2e github-actions
+
+      - name: Run network scale matrix
+        shell: cmd
+        run: |
+          set ALLOW_INTEGRATION_NETWORK=1
+          run_integration_tests.bat network github-actions

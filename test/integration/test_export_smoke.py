@@ -1,12 +1,11 @@
-import os
-import sys
 import tempfile
 import unittest
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from custom_map_downloader.core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator
+from test.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
 
 def _resolve_repo_root() -> Path:
@@ -32,39 +31,14 @@ else:
     QgsProject = object  # type: ignore
     QgsRasterLayer = object  # type: ignore
 
-
-def _detect_qgis_prefix() -> str:
-    """Best-effort QGIS-Prefix finden (Env bevorzugt)."""
-    prefix_env = os.environ.get("QGIS_PREFIX_PATH", "").strip()
-    qgis_runtime_prefix = ""
-    try:
-        qgis_runtime_prefix = str(QgsApplication.prefixPath() or "").strip()
-    except Exception:
-        qgis_runtime_prefix = ""
-    candidates = [
-        prefix_env,
-        qgis_runtime_prefix,
-        "/usr",
-        "/usr/local",
-        "/usr/lib/qgis",
-        r"C:\OSGeo4W64\apps\qgis",
-        r"C:\OSGeo4W\apps\qgis",
-        r"C:\Program Files\QGIS 3.36.0\apps\qgis",
-        r"C:\Program Files\QGIS 3.34.0\apps\qgis",
-    ]
-    return next((p for p in candidates if p and Path(p).exists()), "")
-
-
 try:
     from qgis.core import (  # type: ignore
-        QgsApplication,
         QgsCoordinateReferenceSystem,
         QgsProject,
         QgsRasterLayer,
     )
 
-    if str(REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPO_ROOT))
+    ensure_plugin_import_path()
 
     from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
     from custom_map_downloader.core.models import (  # type: ignore
@@ -80,34 +54,11 @@ else:
     warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 
 
-def _init_qgis_app() -> Tuple[Optional["QgsApplication"], bool]:
-    """Initialise QgsApplication if needed. Returns (app, created_flag)."""
-    if not HAS_QGIS:
-        return None, False
-
-    app = QgsApplication.instance()
-    created = False
-    if app is None:
-        app = QgsApplication([], False)
-        created = True
-
-    already_init = bool(getattr(QgsApplication, "_CMD_INIT_DONE", False))
-    if not already_init:
-        prefix = _detect_qgis_prefix()
-        if not prefix:
-            raise RuntimeError("QGIS prefix path not found; set QGIS_PREFIX_PATH.")
-        QgsApplication.setPrefixPath(prefix, True)
-        QgsApplication.initQgis()
-        QgsApplication._CMD_INIT_DONE = True
-
-    return app, created
-
-
 @unittest.skipUnless(HAS_QGIS, "QGIS not available; skipping integration test")
 class QgisExportIntegrationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app, cls.app_created = _init_qgis_app()
+        cls.app, cls.app_created = init_qgis_app()
         cls.project = QgsProject.instance()
 
     @classmethod

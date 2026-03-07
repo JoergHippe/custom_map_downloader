@@ -72,6 +72,15 @@ if /I "%MODE%"=="network" (
   exit /b %errorlevel%
 )
 
+if /I "%MODE%"=="e2e" (
+  "%PYTHON_CMD%" scripts\install_dev_plugin.py --profile "%PROFILE%" --mode link
+  if errorlevel 1 exit /b %errorlevel%
+  set "CMD_PLUGIN_IMPORT_MODE=profile"
+  set "CMD_QGIS_PROFILE=%PROFILE%"
+  "%PYTHON_CMD%" -m unittest -v test.integration.test_profile_bootstrap test.integration.test_export_smoke
+  exit /b %errorlevel%
+)
+
 echo [ERROR] Unknown mode "%MODE%".
-echo Usage: run_integration_tests.bat [all^|smoke^|network] [profile]
+echo Usage: run_integration_tests.bat [all^|smoke^|network^|e2e] [profile]
 exit /b 2

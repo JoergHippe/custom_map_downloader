@@ -1,40 +1,20 @@
 import json
 import os
-import sys
 import tempfile
 import unittest
 import warnings
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 from urllib.request import urlopen
+
+from test.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = REPO_ROOT / "test" / "integration" / "config.json"
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo")
-
-
-def _detect_qgis_prefix() -> str:
-    prefix_env = os.environ.get("QGIS_PREFIX_PATH", "").strip()
-    qgis_runtime_prefix = ""
-    try:
-        qgis_runtime_prefix = str(QgsApplication.prefixPath() or "").strip()
-    except Exception:
-        qgis_runtime_prefix = ""
-    candidates = [
-        prefix_env,
-        qgis_runtime_prefix,
-        "/usr",
-        "/usr/local",
-        "/usr/lib/qgis",
-        r"C:\OSGeo4W64\apps\qgis",
-        r"C:\OSGeo4W\apps\qgis",
-        r"C:\Program Files\QGIS 3.36.0\apps\qgis",
-        r"C:\Program Files\QGIS 3.34.0\apps\qgis",
-    ]
-    return next((p for p in candidates if p and Path(p).exists()), "")
 
 
 if TYPE_CHECKING:
@@ -54,15 +34,13 @@ else:
 
 try:
     from qgis.core import (  # type: ignore
-        QgsApplication,
         QgsCoordinateReferenceSystem,
         QgsProject,
         QgsRasterLayer,
         QgsRectangle,
     )
 
-    if str(REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPO_ROOT))
+    ensure_plugin_import_path()
 
     from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
     from custom_map_downloader.core.models import (  # type: ignore
@@ -81,28 +59,6 @@ except Exception:
 else:
     # Unterdrückt das bekannte GDAL FutureWarning-Rauschen im Test-Output.
     warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
-
-
-def _init_qgis_app() -> Tuple[Optional["QgsApplication"], bool]:
-    if not HAS_QGIS:
-        return None, False
-
-    app = QgsApplication.instance()
-    created = False
-    if app is None:
-        app = QgsApplication([], False)
-        created = True
-
-    already_init = bool(getattr(QgsApplication, "_CMD_INIT_DONE", False))
-    if not already_init:
-        prefix = _detect_qgis_prefix()
-        if not prefix:
-            raise RuntimeError("QGIS prefix path not found; set QGIS_PREFIX_PATH.")
-        QgsApplication.setPrefixPath(prefix, True)
-        QgsApplication.initQgis()
-        QgsApplication._CMD_INIT_DONE = True
-
-    return app, created
 
 
 def _load_config():
@@ -165,7 +121,7 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                 "Network tests disabled (set ALLOW_INTEGRATION_NETWORK=1 to enable)"
             )
 
-        cls.app, cls.app_created = _init_qgis_app()
+        cls.app, cls.app_created = init_qgis_app()
         cls.project = QgsProject.instance()
 
     @classmethod
@@ -327,31 +283,30 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
             self.fail("\n".join(fail_messages))
 
     def test_scale_dependent_scenarios(self):
-        scenarios = [s for s in self.config.get("scenarios", []) if s.get("scale_probe")]
-        if not scenarios:
-            self.skipTest("No scale_probe scenarios configured")
+        matrix_cases = self.config.get("scale_matrix", [])
+        if not matrix_cases:
+            self.skipTest("No scale matrix configured")
 
         tmpdir = Path(tempfile.gettempdir())
-        for scenario in scenarios:
-            name = scenario.get("name", "unnamed")
-            source = self.sources.get(scenario.get("source", ""), {}) or {}
-            provider = scenario.get("provider") or source.get("provider", "wms")
-            uri = scenario.get("uri") or source.get("uri", "")
+        for case in matrix_cases:
+            name = case.get("name", "unnamed")
+            source = self.sources.get(case.get("source", ""), {}) or {}
+            provider = case.get("provider") or source.get("provider", "wms")
+            uri = case.get("uri") or source.get("uri", "")
             crs_authid = (
-                scenario.get("crs")
+                case.get("crs")
                 or source.get("default_crs")
                 or self.defaults.get("crs", "EPSG:3857")
             )
             ext_cfg = (
-                scenario.get("extent", {})
+                case.get("extent", {})
                 or source.get("extent", {})
                 or self.defaults.get("extent", {})
             )
-            scale_probe = scenario.get("scale_probe", {}) or {}
-            small_scale = float(scale_probe.get("small", 0.0))
-            large_scale = float(scale_probe.get("large", 0.0))
+            small_scale = float(case.get("small_scale", 0.0))
+            large_scale = float(case.get("large_scale", 0.0))
             if small_scale <= 0.0 or large_scale <= 0.0 or small_scale == large_scale:
-                self.fail(f"{name}: invalid scale_probe values")
+                self.fail(f"{name}: invalid scale matrix values")
 
             crs = QgsCoordinateReferenceSystem(crs_authid)
             if not crs.isValid():
@@ -380,7 +335,8 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                     width_px = max(1, int(round(rect.width() / gsd)))
                     height_px = max(1, int(round(rect.height() / gsd)))
                     widths.append(width_px)
-                    out_path = tmpdir / f"cmd_scale_probe_{name}_{suffix}.tif"
+                    output_extension = str(case.get("output_extension", ".tif") or ".tif")
+                    out_path = tmpdir / f"cmd_scale_probe_{name}_{suffix}{output_extension}"
                     out_paths.append(out_path)
                     if out_path.exists():
                         out_path.unlink()
@@ -425,6 +381,10 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                 for out_path in out_paths:
                     if out_path.exists():
                         out_path.unlink()
+                    for suffix in (".tfw", ".pgw", ".jgw", ".prj"):
+                        sidecar = out_path.with_suffix(suffix)
+                        if sidecar.exists():
+                            sidecar.unlink()
 
 
 if __name__ == "__main__":

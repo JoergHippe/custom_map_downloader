@@ -23,6 +23,7 @@ Die lokale Smoke-Suite deckt aktuell ab:
 - kleiner Export mit `Target scale (1:n)`
 - kleiner VRT-Export mit Tile-Erzeugung
 - kleiner Export mit Reprojektion zwischen Render-CRS und Output-CRS
+- optional derselbe Smoke-Pfad gegen den deployten Plugin-Stand im QGIS-Profil
 
 ## Netzbasierte Szenarien (WMS/XYZ)
 
@@ -36,7 +37,7 @@ Die lokale Smoke-Suite deckt aktuell ab:
 - `defaults`: zentrale Defaults (CRS, Extent, GSD, VRT/Output), die von Quellen/Szenarien geerbt werden.
 - `sources`: Datenquellen mit `name`, `provider`, `uri`, optional `default_crs`, `extent`, `gsd`, `create_vrt`, `output_extension`.
 - `scenarios`: konkrete Testläufe mit `name`, `source`-Verweis und optionalen Overrides (`crs`, `extent`, `gsd`, `vrt_preset_size`, `create_vrt`, `output_extension`).
-- Optional `scale_probe`: führt denselben Szenario-Extent mit zwei Zielmaßstäben (`small`, `large`) als echten WMS-End-to-End-Test aus. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
+- `scale_matrix`: explizite Matrix für echte Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
 - Umgebungsvariablen:
   - `ALLOW_INTEGRATION_NETWORK=1` aktiviert Netztests.
   - `CRS=EPSG:xxxx` überschreibt CRS global für alle Szenarien.
@@ -49,9 +50,10 @@ Die lokale Smoke-Suite deckt aktuell ab:
   - `run_integration_tests.bat` → alle Integrationstests (`discover`)
   - `run_integration_tests.bat smoke` → nur lokaler Raster-Smoke-Test
   - `run_integration_tests.bat network` → nur Netz-Szenarien (setzt intern `ALLOW_INTEGRATION_NETWORK=1`)
+  - `run_integration_tests.bat e2e myprofile` → deployter Plugin-Stand im Profil `myprofile` + E2E-Smoke-Tests gegen den Profil-Import
 
 Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.bat`, prüft `qgis.core` vorab und gibt den Rückgabecode der Tests aus. Keine langen Pfade nötig.
-Ein optionaler Profilname beeinflusst den QGIS-Kontext (`QGIS_PROFILE`/Konfiguration), aber die Tests importieren den Plugin-Code weiterhin direkt aus dem Repo und nicht aus einem deployten Plugin-Verzeichnis.
+Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e2e` deployt das Plugin zuerst in das gewählte QGIS-Profil und testet anschließend bewusst den deployten Stand.
 
 ## Hinweise
 
