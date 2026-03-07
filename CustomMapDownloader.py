@@ -14,29 +14,27 @@ Notes:
 """
 
 import os
-from typing import Any
-
 from pathlib import Path
+from typing import Any
 from xml.etree import ElementTree as ET
-
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox, QProgressDialog, QCheckBox
 
 from qgis.core import (
     Qgis,
-    QgsUnitTypes,
     QgsCoordinateReferenceSystem,
+    QgsNetworkAccessManager,
     QgsProject,
     QgsRasterLayer,
-    QgsNetworkAccessManager,
+    QgsUnitTypes,
 )
+from qgis.PyQt.QtCore import QCoreApplication, QSettings, Qt, QTranslator
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction, QCheckBox, QMessageBox, QProgressDialog
 
-from .resources import *  # noqa: F401,F403
-from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
+from .core.errors import CancelledError, ExportError, ValidationError
 from .core.exporter import GeoTiffExporter
-from .core.models import ExportParams, CenterSpec, ExtentSpec, CancelToken
-from .core.errors import ExportError, ValidationError, CancelledError
+from .core.models import CancelToken, CenterSpec, ExportParams, ExtentSpec
+from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
+from .resources import *  # noqa: F401,F403
 
 
 class CustomMapDownloader:
@@ -158,7 +156,9 @@ class CustomMapDownloader:
         try:
             project_is_meters = project_crs.mapUnits() == Qgis.DistanceUnit.Meters
         except Exception:
-            project_is_meters = QgsUnitTypes.toString(project_crs.mapUnits()).lower().startswith("meter")
+            project_is_meters = (
+                QgsUnitTypes.toString(project_crs.mapUnits()).lower().startswith("meter")
+            )
 
         selected_output_crs = params.get("output_crs")
         selected_output_is_meters = False
@@ -183,7 +183,11 @@ class CustomMapDownloader:
             )
             return
 
-        requested_output_crs = selected_output_crs if selected_output_crs is not None and selected_output_crs.isValid() else None
+        requested_output_crs = (
+            selected_output_crs
+            if selected_output_crs is not None and selected_output_crs.isValid()
+            else None
+        )
 
         if selected_output_is_meters:
             render_crs = selected_output_crs
@@ -197,7 +201,7 @@ class CustomMapDownloader:
         # Center in project CRS (as provided by dialog)
         center = CenterSpec(
             northing=float(params["northing"]),  # Y
-            easting=float(params["easting"]),    # X
+            easting=float(params["easting"]),  # X
             crs=project_crs,
         )
 
@@ -246,9 +250,9 @@ class CustomMapDownloader:
                     lines.append(self.tr("- {name}: {src}").format(name=name, src=src))
                 else:
                     lines.append(
-                        self.tr("- {name}: {src} (VRT references files that would be overwritten)").format(
-                            name=name, src=src
-                        )
+                        self.tr(
+                            "- {name}: {src} (VRT references files that would be overwritten)"
+                        ).format(name=name, src=src)
                     )
             details = "\n".join(lines)
 
@@ -272,7 +276,6 @@ class CustomMapDownloader:
                 self.dlg._save_settings()
         except Exception:
             pass
-
 
         # Progress dialog
         progress = QProgressDialog(
@@ -306,7 +309,7 @@ class CustomMapDownloader:
                 )
 
             elif key == "WARN_LARGE_EXPORT":
-                mb = (float(args.get("bytes", 0) or 0.0) / (1024 * 1024))
+                mb = float(args.get("bytes", 0) or 0.0) / (1024 * 1024)
                 msg = self.tr("Warning: Very large export (raw approx. {mb:.0f} MB).").format(
                     mb=mb,
                 )
@@ -330,7 +333,9 @@ class CustomMapDownloader:
             old_timeout = QgsNetworkAccessManager.timeout()
             QgsNetworkAccessManager.setTimeout(10 * 60 * 1000)  # 10 minutes
             try:
-                result_path = exporter.export(export_params, progress_cb=progress_cb, cancel_token=cancel_token)
+                result_path = exporter.export(
+                    export_params, progress_cb=progress_cb, cancel_token=cancel_token
+                )
             finally:
                 QgsNetworkAccessManager.setTimeout(old_timeout)
 
@@ -415,7 +420,9 @@ class CustomMapDownloader:
             "ERR_VALIDATION_EXTENT_INVALID": self.tr("Invalid extent values."),
             "ERR_VALIDATION_EXTENT_TRANSFORM_FAILED": self.tr("Failed to transform extent."),
             "ERR_VALIDATION_CENTER_MISSING": self.tr("Center coordinate missing."),
-            "ERR_VALIDATION_CENTER_TRANSFORM_FAILED": self.tr("Failed to transform center coordinate."),
+            "ERR_VALIDATION_CENTER_TRANSFORM_FAILED": self.tr(
+                "Failed to transform center coordinate."
+            ),
             "ERR_VALIDATION_RENDER_CRS_UNITS": self.tr(
                 "The selected render CRS does not use meters. Please use a projected CRS."
             ),
@@ -426,14 +433,18 @@ class CustomMapDownloader:
             "ERR_GDAL_CREATE_FAILED": self.tr("Failed to create GeoTIFF."),
             "ERR_CRS_INVALID": self.tr("Invalid CRS."),
             "ERR_CRS_TO_WKT_FAILED": self.tr("Failed to convert CRS to WKT."),
-            "ERR_WARP_FAILED": self.tr("Failed to reproject the rendered raster into the requested output CRS."),
+            "ERR_WARP_FAILED": self.tr(
+                "Failed to reproject the rendered raster into the requested output CRS."
+            ),
             "ERR_RENDER_EMPTY": self.tr(
                 "Rendered image is empty/transparent (often a server limit or timeout)."
             ),
             "ERR_RENDER_FAILED": self.tr("Rendering failed."),
             "ERR_RENDER_TILE_FAILED": self.tr("Tile rendering failed."),
             "ERR_VRT_BUILD_FAILED": self.tr("Failed to build VRT mosaic."),
-            "ERR_SIDECAR_WRITE_FAILED": self.tr("Raster export succeeded, but georeferencing sidecar files could not be written."),
+            "ERR_SIDECAR_WRITE_FAILED": self.tr(
+                "Raster export succeeded, but georeferencing sidecar files could not be written."
+            ),
         }
 
         base = messages.get(code, self.tr("Export failed."))
@@ -441,7 +452,9 @@ class CustomMapDownloader:
             return self.tr("{base}\n\nDetails:\n{details}").format(base=base, details=details)
         return base
 
-    def _find_loaded_layer_conflicts(self, output_path: str, *, create_vrt: bool) -> list[tuple[str, str, str]]:
+    def _find_loaded_layer_conflicts(
+        self, output_path: str, *, create_vrt: bool
+    ) -> list[tuple[str, str, str]]:
         """Prüfe, ob Ziel-Dateien (direkt oder indirekt via geladenem VRT) aktuell als Layer geladen sind.
 
         - Direkt-Konflikt: geladener Layer = genau die Datei, die überschrieben werden soll.
@@ -535,7 +548,9 @@ class CustomMapDownloader:
         render_authid = render_crs.authid() if render_crs and render_crs.isValid() else ""
         output_authid = output_crs.authid() if output_crs and output_crs.isValid() else ""
         requested_crs = params.get("output_crs")
-        requested_authid = requested_crs.authid() if requested_crs and requested_crs.isValid() else ""
+        requested_authid = (
+            requested_crs.authid() if requested_crs and requested_crs.isValid() else ""
+        )
 
         lines = [
             self.tr("Layer: {name}").format(name=layer_name),
@@ -603,6 +618,7 @@ class CustomMapDownloader:
             settings.setValue(base + "confirm_export", False)
 
         return reply == QMessageBox.Yes
+
 
 PROGRESS_TEMPLATES = {
     "STEP_VALIDATE": "{step}/{total}: Validating parameters",

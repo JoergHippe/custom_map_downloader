@@ -24,8 +24,6 @@ import math
 import os
 from typing import Optional, Tuple, cast
 
-from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import QTimer, Qt, QLocale, QCoreApplication, QSettings
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -34,16 +32,19 @@ from qgis.core import (
     QgsRectangle,
     QgsUnitTypes,
 )
+from qgis.gui import QgsExtentWidget
+from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import QCoreApplication, QLocale, QSettings, Qt, QTimer
+
 from .core.constants import (
-    GSD_MIN,
-    GSD_STEP,
     GSD_DECIMALS,
     GSD_MAX,
+    GSD_MIN,
+    GSD_STEP,
 )
 from .core.profile_io import read_profile, write_profile
 from .core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 from .core.validation import pixel_limit_status
-from qgis.gui import QgsExtentWidget
 
 FORM_CLASS, _ = uic.loadUiType(
     os.path.join(os.path.dirname(__file__), "CustomMapDownloader_dialog_base.ui")
@@ -102,7 +103,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.spinBox_gsd.valueChanged.connect(self._on_gsd_changed)
 
         if hasattr(self, "comboBox_resolutionMode"):
-            self.comboBox_resolutionMode.currentIndexChanged.connect(self._on_resolution_mode_changed)
+            self.comboBox_resolutionMode.currentIndexChanged.connect(
+                self._on_resolution_mode_changed
+            )
 
         if hasattr(self, "doubleSpinBox_targetScale"):
             self.doubleSpinBox_targetScale.valueChanged.connect(self._update_extent_info)
@@ -195,7 +198,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.comboBox_resolutionMode.addItem(self.tr("Target scale (1:n)"), "scale")
 
         if hasattr(self, "spinBox_gsd") and hasattr(self, "doubleSpinBox_targetScale"):
-            self.doubleSpinBox_targetScale.setValue(round(gsd_to_scale_denominator(float(self.spinBox_gsd.value()))))
+            self.doubleSpinBox_targetScale.setValue(
+                round(gsd_to_scale_denominator(float(self.spinBox_gsd.value())))
+            )
 
         self._update_resolution_controls()
 
@@ -291,7 +296,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
     def _update_output_controls_state(self) -> None:
         """Enable/disable output format based on VRT mode."""
-        create_vrt = bool(self.checkBox_createVrt.isChecked()) if hasattr(self, "checkBox_createVrt") else False
+        create_vrt = (
+            bool(self.checkBox_createVrt.isChecked())
+            if hasattr(self, "checkBox_createVrt")
+            else False
+        )
         if hasattr(self, "comboBox_outputFormat"):
             self.comboBox_outputFormat.setEnabled(not create_vrt)
 
@@ -383,7 +392,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             )
 
         if hasattr(self, "comboBox_outputFormat"):
-            self.comboBox_outputFormat.setToolTip(self.tr("Output raster format (single export only)."))
+            self.comboBox_outputFormat.setToolTip(
+                self.tr("Output raster format (single export only).")
+            )
             self.comboBox_outputFormat.setWhatsThis(
                 self.tr(
                     "GeoTIFF stores georeferencing internally. PNG/JPEG require worldfile + .prj. "
@@ -396,12 +407,13 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 self.tr("Export tiles + VRT mosaic (VRT-only; no merged single raster).")
             )
             self.checkBox_createVrt.setWhatsThis(
-                self.tr("Writes equally sized GeoTIFF tiles and a .vrt file referencing them with relative paths.")
+                self.tr(
+                    "Writes equally sized GeoTIFF tiles and a .vrt file referencing them with relative paths."
+                )
             )
 
         if hasattr(self, "checkBox_loadLayer"):
             self.checkBox_loadLayer.setToolTip(self.tr("Load the result as a layer after export."))
-
 
     # ------------------------------------------------------------------
     # Qt lifecycle
@@ -440,7 +452,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             pass
 
         try:
-            resolution_mode = settings.value(base + "last_resolution_mode", "gsd", type=str) or "gsd"
+            resolution_mode = (
+                settings.value(base + "last_resolution_mode", "gsd", type=str) or "gsd"
+            )
             if hasattr(self, "comboBox_resolutionMode"):
                 idx = self.comboBox_resolutionMode.findData(resolution_mode)
                 if idx >= 0:
@@ -480,7 +494,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         if hasattr(self, "doubleSpinBox_targetScale"):
             try:
-                settings.setValue(base + "last_target_scale", float(self.doubleSpinBox_targetScale.value()))
+                settings.setValue(
+                    base + "last_target_scale", float(self.doubleSpinBox_targetScale.value())
+                )
             except Exception:
                 pass
 
@@ -544,11 +560,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         # Hooking this signal makes "Draw on canvas" much more reliable.
         if self._extent_widget is not None:
             try:
-                self._extent_widget.toggleDialogVisibility.connect(self._on_extent_toggle_dialog_visibility)
+                self._extent_widget.toggleDialogVisibility.connect(
+                    self._on_extent_toggle_dialog_visibility
+                )
                 self._extent_widget.validationChanged.connect(self._on_extent_validation_changed)
             except Exception:
                 pass
-
 
     def _hide_project_layer_extent_button(self) -> None:
         """Hide the 'current layer extent' button of QgsExtentGroupBox."""
@@ -565,7 +582,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 except Exception:
                     continue
 
-                if any(k in text for k in keywords_layer) and any(k in text for k in keywords_current):
+                if any(k in text for k in keywords_layer) and any(
+                    k in text for k in keywords_current
+                ):
                     w.hide()
                     w.setEnabled(False)
 
@@ -731,7 +750,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         for idx in range(self.comboBox_layer.count()):
             layer = self.comboBox_layer.itemData(idx)
             try:
-                if layer_id and hasattr(layer, "id") and callable(layer.id) and layer.id() == layer_id:
+                if (
+                    layer_id
+                    and hasattr(layer, "id")
+                    and callable(layer.id)
+                    and layer.id() == layer_id
+                ):
                     selected_index = idx
                     break
             except Exception:
@@ -741,7 +765,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             for idx in range(self.comboBox_layer.count()):
                 layer = self.comboBox_layer.itemData(idx)
                 try:
-                    if hasattr(layer, "name") and callable(layer.name) and layer.name() == layer_name:
+                    if (
+                        hasattr(layer, "name")
+                        and callable(layer.name)
+                        and layer.name() == layer_name
+                    ):
                         selected_index = idx
                         break
                 except Exception:
@@ -773,10 +801,22 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             "resolution_mode": self._resolution_mode(),
             "gsd": self._current_gsd(),
             "target_scale_denominator": self._current_target_scale(),
-            "load_as_layer": bool(self.checkBox_loadLayer.isChecked()) if hasattr(self, "checkBox_loadLayer") else False,
-            "create_vrt": bool(self.checkBox_createVrt.isChecked()) if hasattr(self, "checkBox_createVrt") else False,
-            "vrt_max_cols": int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0,
-            "vrt_max_rows": int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0,
+            "load_as_layer": (
+                bool(self.checkBox_loadLayer.isChecked())
+                if hasattr(self, "checkBox_loadLayer")
+                else False
+            ),
+            "create_vrt": (
+                bool(self.checkBox_createVrt.isChecked())
+                if hasattr(self, "checkBox_createVrt")
+                else False
+            ),
+            "vrt_max_cols": (
+                int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
+            ),
+            "vrt_max_rows": (
+                int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0
+            ),
             "vrt_preset_size": 0,
             "layer_id": "",
             "layer_name": "",
@@ -804,7 +844,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 pass
 
         try:
-            output_crs = self.extentGroupBox.outputCrs() if hasattr(self, "extentGroupBox") else None
+            output_crs = (
+                self.extentGroupBox.outputCrs() if hasattr(self, "extentGroupBox") else None
+            )
             if output_crs is not None and output_crs.isValid():
                 state["output_crs_authid"] = output_crs.authid() or ""
         except Exception:
@@ -908,7 +950,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self,
             self.tr("Save export profile"),
             self._default_profile_path(),
-            self.tr("Custom Map Downloader profile (*.cmdprofile.json *.json);;JSON files (*.json)"),
+            self.tr(
+                "Custom Map Downloader profile (*.cmdprofile.json *.json);;JSON files (*.json)"
+            ),
         )
         if not path:
             return
@@ -927,7 +971,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self,
             self.tr("Load export profile"),
             self._default_profile_path(),
-            self.tr("Custom Map Downloader profile (*.cmdprofile.json *.json);;JSON files (*.json)"),
+            self.tr(
+                "Custom Map Downloader profile (*.cmdprofile.json *.json);;JSON files (*.json)"
+            ),
         )
         if not path:
             return
@@ -982,13 +1028,23 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return None
 
         rect_out = self._get_best_output_extent(commit=True)
-        if rect_out is None or rect_out.isEmpty() or rect_out.width() <= 0.0 or rect_out.height() <= 0.0:
+        if (
+            rect_out is None
+            or rect_out.isEmpty()
+            or rect_out.width() <= 0.0
+            or rect_out.height() <= 0.0
+        ):
             return None
 
         project_crs = self._project().crs()
 
         rect_proj = QgsRectangle(rect_out)
-        if output_crs and output_crs.isValid() and project_crs.isValid() and output_crs != project_crs:
+        if (
+            output_crs
+            and output_crs.isValid()
+            and project_crs.isValid()
+            and output_crs != project_crs
+        ):
             try:
                 tr_proj = QgsCoordinateTransform(output_crs, project_crs, self._project())
                 rect_proj = tr_proj.transformBoundingBox(rect_out)
@@ -1018,16 +1074,28 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         if layer is None:
             return None
 
-        load_as_layer = bool(self.checkBox_loadLayer.isChecked()) if hasattr(self, "checkBox_loadLayer") else False
+        load_as_layer = (
+            bool(self.checkBox_loadLayer.isChecked())
+            if hasattr(self, "checkBox_loadLayer")
+            else False
+        )
         add_georeferencing = (
             bool(self.checkBox_georeferencing.isChecked())
             if hasattr(self, "checkBox_georeferencing")
             else False
         )
 
-        create_vrt = bool(self.checkBox_createVrt.isChecked()) if hasattr(self, "checkBox_createVrt") else False
-        vrt_max_cols = int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
-        vrt_max_rows = int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0
+        create_vrt = (
+            bool(self.checkBox_createVrt.isChecked())
+            if hasattr(self, "checkBox_createVrt")
+            else False
+        )
+        vrt_max_cols = (
+            int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
+        )
+        vrt_max_rows = (
+            int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0
+        )
         vrt_preset_size = 0
         if hasattr(self, "comboBox_vrtPreset"):
             try:
@@ -1202,7 +1270,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         s2 = s.replace(",", ".")
         return float(s2)
 
-    
     def _find_extent_widget(self) -> Optional[QgsExtentWidget]:
         """Return the internal QgsExtentWidget contained in QgsExtentGroupBox."""
         if not hasattr(self, "extentGroupBox"):
@@ -1280,7 +1347,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 # Best guess: the internal widget usually stores as xmin,xmax,ymin,ymax.
                 # We only fill missing slots to avoid breaking already matched ones.
                 fallback_order = ["xmin", "xmax", "ymin", "ymax"]
-                for slot, e in zip(fallback_order, numeric_edits[:4]):
+                for slot, e in zip(fallback_order, numeric_edits[:4], strict=False):
                     if self._extent_line_edits[slot] is None:
                         self._extent_line_edits[slot] = e
 
@@ -1459,7 +1526,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         lines = [
             self.tr("Extent: {width:.2f} m × {height:.2f} m").format(width=w_m, height=h_m),
             self.tr("GSD: {gsd:.4f} m/px").format(gsd=self._current_gsd()),
-            self.tr("Size: {width_px} × {height_px} px").format(width_px=width_px, height_px=height_px),
+            self.tr("Size: {width_px} × {height_px} px").format(
+                width_px=width_px, height_px=height_px
+            ),
         ]
         target_scale = self._current_target_scale()
         if target_scale is not None:
@@ -1491,8 +1560,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return
 
         try:
-            tile_w = int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
-            tile_h = int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0
+            tile_w = (
+                int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
+            )
+            tile_h = (
+                int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0
+            )
         except Exception:
             self.label_vrtInfo.setText("")
             return
@@ -1519,7 +1592,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         text = self._extent_info_default or "Extent is empty or invalid."
         self.label_extentInfo.setText(self.tr(text))
-        self.label_extentInfo.setStyleSheet("color: #a00000;" if not self._extent_info_default else "")
+        self.label_extentInfo.setStyleSheet(
+            "color: #a00000;" if not self._extent_info_default else ""
+        )
 
     def _crs_uses_meters(self, crs: QgsCoordinateReferenceSystem) -> bool:
         """Return True if the CRS uses meters as distance unit."""

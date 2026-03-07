@@ -1,0 +1,70 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+  | __pycache__
+  | help/build
+)/
+'''
+extend-exclude = '''
+(
+    resources\.py
+  | resources_rc\.py
+  | CustomMapDownloader_dialog_base_ui\.py
+  | help/source/conf\.py
+  | plugin_upload\.py
+  | package_plugin\.py
+  | test/integration/__init__\.py
+  | test/qgis_interface\.py
+  | test/test_CustomMapDownloader_dialog\.py
+  | test/test_qgis_environment\.py
+  | test/test_resources\.py
+  | test/test_translations\.py
+  | test/utilities\.py
+)$
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+  "resources.py",
+  "resources_rc.py",
+  "CustomMapDownloader_dialog_base_ui.py",
+  "help/source/conf.py",
+  "plugin_upload.py",
+  "package_plugin.py",
+  "test/qgis_interface.py",
+  "test/test_CustomMapDownloader_dialog.py",
+  "test/test_qgis_environment.py",
+  "test/test_resources.py",
+  "test/test_translations.py",
+  "test/utilities.py",
+  "help/build",
+]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "B",
+]
+ignore = [
+  "E501",
+  "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"test/**/*.py" = ["E402"]
+"resources.py" = ["ALL"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py"]
+addopts = "-ra"

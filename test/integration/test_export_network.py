@@ -7,15 +7,14 @@ import warnings
 from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Tuple
-from urllib.parse import urlparse, parse_qs
 from urllib.request import urlopen
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = REPO_ROOT / "test" / "integration" / "config.json"
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo")
+
 
 def _detect_qgis_prefix() -> str:
     prefix_env = os.environ.get("QGIS_PREFIX_PATH", "").strip()
@@ -66,7 +65,7 @@ try:
         sys.path.insert(0, str(REPO_ROOT))
 
     from core.exporter import GeoTiffExporter  # type: ignore
-    from core.models import ExportParams, CenterSpec, ExtentSpec  # type: ignore
+    from core.models import CenterSpec, ExportParams, ExtentSpec  # type: ignore
     from core.scale import OGC_STANDARD_DPI, scale_to_gsd_m_per_px  # type: ignore
 
     HAS_QGIS = True
@@ -94,7 +93,7 @@ def _init_qgis_app() -> Tuple[Optional["QgsApplication"], bool]:
             raise RuntimeError("QGIS prefix path not found; set QGIS_PREFIX_PATH.")
         QgsApplication.setPrefixPath(prefix, True)
         QgsApplication.initQgis()
-        setattr(QgsApplication, "_CMD_INIT_DONE", True)
+        QgsApplication._CMD_INIT_DONE = True
 
     return app, created
 
@@ -155,7 +154,9 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
 
         allow_net = os.environ.get("ALLOW_INTEGRATION_NETWORK", "").lower() in {"1", "true", "yes"}
         if not allow_net:
-            raise unittest.SkipTest("Network tests disabled (set ALLOW_INTEGRATION_NETWORK=1 to enable)")
+            raise unittest.SkipTest(
+                "Network tests disabled (set ALLOW_INTEGRATION_NETWORK=1 to enable)"
+            )
 
         cls.app, cls.app_created = _init_qgis_app()
         cls.project = QgsProject.instance()
@@ -191,14 +192,35 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
             source = self.sources.get(source_name or "", {}) or {}
             provider = scenario.get("provider") or source.get("provider", "wms")
             uri = scenario.get("uri") or source.get("uri", "")
-            crs_authid = env_crs or scenario.get("crs") or source.get("default_crs") or self.defaults.get("crs", "EPSG:3857")
-            ext_cfg = scenario.get("extent", {}) or source.get("extent", {}) or self.defaults.get("extent", {})
+            crs_authid = (
+                env_crs
+                or scenario.get("crs")
+                or source.get("default_crs")
+                or self.defaults.get("crs", "EPSG:3857")
+            )
+            ext_cfg = (
+                scenario.get("extent", {})
+                or source.get("extent", {})
+                or self.defaults.get("extent", {})
+            )
             if env_extent:
                 ext_cfg = {**ext_cfg, **env_extent}
             gsd = float(scenario.get("gsd", source.get("gsd", self.defaults.get("gsd", 1.0))))
-            create_vrt = bool(scenario.get("create_vrt", source.get("create_vrt", self.defaults.get("create_vrt", False))))
-            vrt_size = int(scenario.get("vrt_preset_size", source.get("vrt_preset_size", self.defaults.get("vrt_preset_size", 0))))
-            out_ext = scenario.get("output_extension", source.get("output_extension", self.defaults.get("output_extension", ".tif")))
+            create_vrt = bool(
+                scenario.get(
+                    "create_vrt", source.get("create_vrt", self.defaults.get("create_vrt", False))
+                )
+            )
+            vrt_size = int(
+                scenario.get(
+                    "vrt_preset_size",
+                    source.get("vrt_preset_size", self.defaults.get("vrt_preset_size", 0)),
+                )
+            )
+            out_ext = scenario.get(
+                "output_extension",
+                source.get("output_extension", self.defaults.get("output_extension", ".tif")),
+            )
 
             crs = QgsCoordinateReferenceSystem(crs_authid)
             if not crs.isValid():
@@ -216,14 +238,17 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                 try:
                     err_obj = layer.error()
                     if err_obj:
-                        layer_err = getattr(err_obj, "summary", lambda: str(err_obj))()
+                        summary_fn = getattr(err_obj, "summary", None)
+                        layer_err = summary_fn() if callable(summary_fn) else str(err_obj)
                 except Exception:
                     pass
 
                 if status and status != 200:
                     print(f"[SKIP] {name}: WMS base unreachable (HTTP {status}) uri={uri}")
                 else:
-                    print(f"[SKIP] {name}: Layer invalid; provider={provider}; uri={uri}; error={layer_err}")
+                    print(
+                        f"[SKIP] {name}: Layer invalid; provider={provider}; uri={uri}; error={layer_err}"
+                    )
                 skip_count += 1
                 continue
 
@@ -305,8 +330,16 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
             source = self.sources.get(scenario.get("source", ""), {}) or {}
             provider = scenario.get("provider") or source.get("provider", "wms")
             uri = scenario.get("uri") or source.get("uri", "")
-            crs_authid = scenario.get("crs") or source.get("default_crs") or self.defaults.get("crs", "EPSG:3857")
-            ext_cfg = scenario.get("extent", {}) or source.get("extent", {}) or self.defaults.get("extent", {})
+            crs_authid = (
+                scenario.get("crs")
+                or source.get("default_crs")
+                or self.defaults.get("crs", "EPSG:3857")
+            )
+            ext_cfg = (
+                scenario.get("extent", {})
+                or source.get("extent", {})
+                or self.defaults.get("extent", {})
+            )
             scale_probe = scenario.get("scale_probe", {}) or {}
             small_scale = float(scale_probe.get("small", 0.0))
             large_scale = float(scale_probe.get("large", 0.0))
@@ -366,11 +399,17 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                         output_dpi=OGC_STANDARD_DPI,
                     )
                     result_path = GeoTiffExporter().export(params)
-                    self.assertTrue(Path(result_path).exists(), f"{name}: scale export missing for {suffix}")
+                    self.assertTrue(
+                        Path(result_path).exists(), f"{name}: scale export missing for {suffix}"
+                    )
                     hashes.append(sha256(Path(result_path).read_bytes()).hexdigest())
 
-                self.assertNotEqual(widths[0], widths[1], f"{name}: expected different raster dimensions")
-                self.assertNotEqual(hashes[0], hashes[1], f"{name}: expected different raster content")
+                self.assertNotEqual(
+                    widths[0], widths[1], f"{name}: expected different raster dimensions"
+                )
+                self.assertNotEqual(
+                    hashes[0], hashes[1], f"{name}: expected different raster content"
+                )
             finally:
                 try:
                     self.project.removeMapLayer(layer.id())

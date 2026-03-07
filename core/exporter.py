@@ -1,4 +1,4 @@
-#n CustomMapDownloader/core/exporter.py
+# n CustomMapDownloader/core/exporter.py
 # -*- coding: utf-8 -*-
 
 """Exporter implementation (UI-agnostic).
@@ -28,8 +28,6 @@ from typing import Any, Callable, Optional
 
 import numpy as np
 from osgeo import gdal, osr
-from qgis.PyQt.QtCore import QCoreApplication, QSize
-from qgis.PyQt.QtGui import QColor, QImage
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -42,16 +40,18 @@ from qgis.core import (
     QgsRectangle,
     QgsUnitTypes,
 )
+from qgis.PyQt.QtCore import QCoreApplication, QSize
+from qgis.PyQt.QtGui import QColor, QImage
 
-from .errors import CancelledError, ExportError, ValidationError
-from .models import CancelToken, ExportParams
 from .constants import (
     LARGE_RASTER_STRONG_MAX_DIM_PX,
     LARGE_RASTER_STRONG_TOTAL_PX,
 )
+from .errors import CancelledError, ExportError, ValidationError
+from .models import CancelToken, ExportParams
 from .validation import (
-    validate_output_path,
     validate_gsd,
+    validate_output_path,
 )
 
 ProgressCallback = Callable[[int, str, dict[str, Any]], None]
@@ -88,9 +88,6 @@ class GeoTiffExporter:
         self._validate(params)
         self._check_cancel(cancel_token)
 
-        layer = params.layer
-        width = int(params.width_px)
-        height = int(params.height_px)
         output_path = params.output_path
 
         self._report(progress_cb, 8, "STEP_PREPARE", {"step": 2, "total": 6})
@@ -168,6 +165,7 @@ class GeoTiffExporter:
         width = int(params.width_px)
         height = int(params.height_px)
         output_path = params.output_path
+        extent = self._resolve_extent(params, render_crs=render_crs)
 
         tile_w_px, tile_h_px = self._pick_tile_size(params)
 
@@ -313,7 +311,9 @@ class GeoTiffExporter:
             options=options,
         )
         if dataset is None:
-            raise ExportError("ERR_GDAL_CREATE_FAILED", f"driver.Create returned None (driver={driver_name}).")
+            raise ExportError(
+                "ERR_GDAL_CREATE_FAILED", f"driver.Create returned None (driver={driver_name})."
+            )
 
         try:
             # Some drivers accept geo metadata, some don’t; we set it anyway.
@@ -395,7 +395,9 @@ class GeoTiffExporter:
             return project_crs
         return QgsCoordinateReferenceSystem("EPSG:3857")
 
-    def _resolve_extent(self, params: ExportParams, *, render_crs: QgsCoordinateReferenceSystem) -> QgsRectangle:
+    def _resolve_extent(
+        self, params: ExportParams, *, render_crs: QgsCoordinateReferenceSystem
+    ) -> QgsRectangle:
         """Resolve the export extent in render CRS.
 
         If ``params.extent`` is set, it is transformed to ``render_crs`` (bounding box).
@@ -421,12 +423,17 @@ class GeoTiffExporter:
                 )
 
             src_crs = ext.crs
-            if src_crs is not None and src_crs.isValid() and render_crs.isValid() and src_crs != render_crs:
+            if (
+                src_crs is not None
+                and src_crs.isValid()
+                and render_crs.isValid()
+                and src_crs != render_crs
+            ):
                 try:
                     tr = QgsCoordinateTransform(src_crs, render_crs, QgsProject.instance())
                     rect = tr.transformBoundingBox(rect)
                 except Exception as ex:
-                    raise ValidationError("ERR_VALIDATION_EXTENT_TRANSFORM_FAILED", str(ex))
+                    raise ValidationError("ERR_VALIDATION_EXTENT_TRANSFORM_FAILED", str(ex)) from ex
 
             return rect
 
@@ -442,7 +449,7 @@ class GeoTiffExporter:
             tr = QgsCoordinateTransform(center.crs, render_crs, QgsProject.instance())
             c = tr.transform(QgsPointXY(center.easting, center.northing))
         except Exception as ex:
-            raise ValidationError("ERR_VALIDATION_CENTER_TRANSFORM_FAILED", str(ex))
+            raise ValidationError("ERR_VALIDATION_CENTER_TRANSFORM_FAILED", str(ex)) from ex
 
         half_width = (width * gsd) / 2.0
         half_height = (height * gsd) / 2.0
@@ -564,7 +571,7 @@ class GeoTiffExporter:
             transform = QgsCoordinateTransform(src_crs, dst_crs, QgsProject.instance())
             return transform.transformBoundingBox(rect)
         except Exception as ex:
-            raise ExportError("ERR_WARP_FAILED", f"Failed to transform output extent: {ex}")
+            raise ExportError("ERR_WARP_FAILED", f"Failed to transform output extent: {ex}") from ex
 
     def _export_tiled_vrt(
         self,
@@ -679,7 +686,7 @@ class GeoTiffExporter:
                     except Exception as ex:
                         if attempt < max_retries:
                             backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                            backoff *= (0.8 + 0.4 * random.random())
+                            backoff *= 0.8 + 0.4 * random.random()
                             self._report(
                                 progress_cb,
                                 percent,
@@ -688,7 +695,7 @@ class GeoTiffExporter:
                             )
                             self._wait_with_events(backoff, cancel_token=cancel_token)
                             continue
-                        raise ExportError("ERR_RENDER_TILE_FAILED", str(ex))
+                        raise ExportError("ERR_RENDER_TILE_FAILED", str(ex)) from ex
 
                     # blank check (alpha)
                     sy = max(1, th // 64)
@@ -701,7 +708,7 @@ class GeoTiffExporter:
 
                     if attempt < max_retries and tile_overlaps_layer:
                         backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                        backoff *= (0.8 + 0.4 * random.random())
+                        backoff *= 0.8 + 0.4 * random.random()
                         self._report(
                             progress_cb,
                             percent,
@@ -725,7 +732,9 @@ class GeoTiffExporter:
                 driver_name = self._driver_for_output(str(tile_path))
                 driver = gdal.GetDriverByName(driver_name)
                 if driver is None:
-                    raise ExportError("ERR_GDAL_DRIVER_MISSING", f"GDAL driver not found: {driver_name}")
+                    raise ExportError(
+                        "ERR_GDAL_DRIVER_MISSING", f"GDAL driver not found: {driver_name}"
+                    )
 
                 # JPEG has no alpha -> composite on white and write RGB.
                 if driver_name == "JPEG":
@@ -747,7 +756,9 @@ class GeoTiffExporter:
                     options=self._gdal_create_options(driver_name),
                 )
                 if ds is None:
-                    raise ExportError("ERR_GDAL_CREATE_FAILED", f"Failed to create tile: {tile_path}")
+                    raise ExportError(
+                        "ERR_GDAL_CREATE_FAILED", f"Failed to create tile: {tile_path}"
+                    )
 
                 try:
                     tile_gt = [xmin, px_w, 0.0, ymax, 0.0, -px_h]
@@ -965,16 +976,20 @@ class GeoTiffExporter:
                         except Exception as ex:
                             if attempt < max_retries:
                                 backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                                backoff *= (0.8 + 0.4 * random.random())
+                                backoff *= 0.8 + 0.4 * random.random()
                                 self._report(
                                     progress_cb,
                                     percent,
                                     "WARN_TILE_RETRY",
-                                    {"attempt": attempt + 1, "max": max_retries, "seconds": backoff},
+                                    {
+                                        "attempt": attempt + 1,
+                                        "max": max_retries,
+                                        "seconds": backoff,
+                                    },
                                 )
                                 self._wait_with_events(backoff, cancel_token=cancel_token)
                                 continue
-                            raise ExportError("ERR_RENDER_TILE_FAILED", str(ex))
+                            raise ExportError("ERR_RENDER_TILE_FAILED", str(ex)) from ex
 
                         sy = max(1, th // 64)
                         sx = max(1, tw // 64)
@@ -986,7 +1001,7 @@ class GeoTiffExporter:
 
                         if attempt < max_retries and tile_overlaps_layer:
                             backoff = min(max_backoff_s, base_backoff_s * (2**attempt))
-                            backoff *= (0.8 + 0.4 * random.random())
+                            backoff *= 0.8 + 0.4 * random.random()
                             self._report(
                                 progress_cb,
                                 percent,
@@ -999,7 +1014,9 @@ class GeoTiffExporter:
                         break
 
                     if arr is None:
-                        raise ExportError("ERR_RENDER_TILE_FAILED", "Tile render returned no buffer.")
+                        raise ExportError(
+                            "ERR_RENDER_TILE_FAILED", "Tile render returned no buffer."
+                        )
 
                     if was_blank:
                         blank_tiles += 1
@@ -1055,7 +1072,9 @@ class GeoTiffExporter:
         self._check_cancel(cancel_token)
         src_ds = gdal.Open(source_path)
         if src_ds is None:
-            raise ExportError("ERR_WARP_FAILED", f"Failed to open intermediate raster: {source_path}")
+            raise ExportError(
+                "ERR_WARP_FAILED", f"Failed to open intermediate raster: {source_path}"
+            )
 
         width = int(getattr(src_ds, "RasterXSize", 0) or 0)
         height = int(getattr(src_ds, "RasterYSize", 0) or 0)
@@ -1078,14 +1097,16 @@ class GeoTiffExporter:
             ],
             "width": width,
             "height": height,
-            "creationOptions": self._gdal_create_options(self._driver_for_output(final_output_path)),
+            "creationOptions": self._gdal_create_options(
+                self._driver_for_output(final_output_path)
+            ),
         }
 
         warped_ds = None
         try:
             warped_ds = gdal.Warp(final_output_path, src_ds, **warp_kwargs)
         except Exception as ex:
-            raise ExportError("ERR_WARP_FAILED", f"GDAL warp failed: {ex}")
+            raise ExportError("ERR_WARP_FAILED", f"GDAL warp failed: {ex}") from ex
         finally:
             src_ds = None
 
@@ -1096,7 +1117,7 @@ class GeoTiffExporter:
             geotransform = list(warped_ds.GetGeoTransform())
             warped_ds.FlushCache()
         except Exception as ex:
-            raise ExportError("ERR_WARP_FAILED", f"Failed to finalize warped raster: {ex}")
+            raise ExportError("ERR_WARP_FAILED", f"Failed to finalize warped raster: {ex}") from ex
         finally:
             warped_ds = None
 
@@ -1273,7 +1294,7 @@ class GeoTiffExporter:
             raise ExportError(
                 "ERR_SIDECAR_WRITE_FAILED",
                 f"Failed to write world file for '{path}': {ex}",
-            )
+            ) from ex
 
         try:
             self._write_prj_file(path, crs)
@@ -1281,5 +1302,4 @@ class GeoTiffExporter:
             raise ExportError(
                 "ERR_SIDECAR_WRITE_FAILED",
                 f"Failed to write .prj for '{path}': {ex}",
-            )
-
+            ) from ex

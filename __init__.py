@@ -31,10 +31,12 @@ def classFactory(iface):
     """Load plugin and log import errors to QGIS message log."""
     try:
         from .CustomMapDownloader import CustomMapDownloader
+
         return CustomMapDownloader(iface)
     except Exception:
         import traceback
-        from qgis.core import QgsMessageLog, Qgis
+
+        from qgis.core import Qgis, QgsMessageLog
 
         # Keep compatibility across QGIS/stub variants.
         critical_level = getattr(Qgis, "Critical", None)

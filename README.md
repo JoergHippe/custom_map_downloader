@@ -18,7 +18,7 @@ The plugin works purely **extent-based**:
 - The plugin derives the center internally from the selected extent (no separate “Center Mode” in the UI anymore).
 - Output resolution can be controlled either by **ground resolution** (`m/px`) or by an explicit **target scale (1:n)**; pixel width/height are derived from extent and the active resolution mode.
 
-The selected layer is rendered at the requested output resolution and stored as a fully georeferenced **GeoTIFF**.  
+The selected layer is rendered at the requested output resolution and stored as a fully georeferenced **GeoTIFF**.
 Optionally, an additional **world file (.tfw)** can be written next to the GeoTIFF.
 
 Typical use cases include:
@@ -32,7 +32,7 @@ Typical use cases include:
 
 ## Features
 
-- ✔ **Export any visible QGIS layer** (XYZ/WMTS/WMS, raster, vector, etc.) :contentReference[oaicite:1]{index=1}  
+- ✔ **Export any visible QGIS layer** (XYZ/WMTS/WMS, raster, vector, etc.) :contentReference[oaicite:1]{index=1}
 - ✔ **QGIS-native extent control** using `QgsExtentGroupBox`
 - ✔ **Extent-based workflow only**:
   - Extent defined via layer extent, canvas extent, or manual extent box
@@ -57,9 +57,9 @@ Typical use cases include:
 
 ### From QGIS Plugin Repository (recommended)
 
-1. Open QGIS  
-2. Go to `Plugins → Manage and Install Plugins`  
-3. Search for **Custom Map Downloader**  
+1. Open QGIS
+2. Go to `Plugins → Manage and Install Plugins`
+3. Search for **Custom Map Downloader**
 4. Click **Install**
 
 ### Manual Install
@@ -160,7 +160,7 @@ When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
 
 1. Add one or more layers to QGIS.
 2. Open the plugin:
-   - Toolbar icon  
+   - Toolbar icon
    - Or `Plugins → MapDownloader → Download GeoTIFF from Map`.
 3. In the dialog:
    - Choose the **layer**.
@@ -173,7 +173,7 @@ When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
 7. Optionally save the setup as a **profile** for repeated exports.
 8. Click **OK**.
 
-A progress dialog appears during rendering.  
+A progress dialog appears during rendering.
 After completion, the exported image can optionally be loaded directly into QGIS.
 
 ---
@@ -273,13 +273,42 @@ No extra third-party Python dependencies are required.
 
 ## Development Setup (Optional .venv)
 
-For plugin runtime, QGIS uses its own Python environment.  
+For plugin runtime, QGIS uses its own Python environment.
 A local `.venv` is optional and only recommended for development tooling (linting/formatting and non-QGIS tests).
+
+Recommended local workflow:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install -r requirements-dev.txt
+```
+
+Core commands:
+
+```bash
+make format
+make lint
+make test
+make package
+```
+
+Optional deeper check in a QGIS-enabled environment:
+
+```bash
+make lint-pylint
+```
+
+For automatic local guardrails:
+
+```bash
+python3 -m pre_commit install
+```
 
 ## CI
 
 - GitHub Actions runs two layers of tests:
-  - a fast stubbed Python suite on plain `ubuntu-latest`
+  - a fast lint + stubbed Python suite on plain `ubuntu-latest`
   - a QGIS-backed suite inside the official `qgis/qgis` Docker image
 - The QGIS-backed job runs the repository test suite with `QT_QPA_PLATFORM=offscreen`, which gives real QGIS coverage without requiring a desktop session.
 
@@ -392,7 +421,7 @@ This creates a repository ZIP in the parent directory and includes the runtime f
 - Added CRS selector (`QgsProjectionSelectionWidget`).
 - Reworked parameter model (center and extent).
 - Added GSD/extent preview label.
-- Improved exporter interface and stability. :contentReference[oaicite:3]{index=3}  
+- Improved exporter interface and stability. :contentReference[oaicite:3]{index=3}
 
 ### Version 0.1 (Initial Release)
 
@@ -404,12 +433,12 @@ This creates a repository ZIP in the parent directory and includes the runtime f
 
 ## License
 
-GPL v2 or later  
+GPL v2 or later
 See `LICENSE` for full terms.
 
 ---
 
 ## Author
 
-Originally created by **Abhinav Jayswal**  
+Originally created by **Abhinav Jayswal**
 Extended, redesigned and maintained by project contributors.

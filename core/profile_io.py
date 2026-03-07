@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-
 PROFILE_VERSION = 1
 PROFILE_FORMATS = {".tif", ".png", ".jpg", ".vrt"}
 PROFILE_RESOLUTION_MODES = {"gsd", "scale"}

@@ -4,9 +4,9 @@ Diese Tests benötigen eine echte QGIS-Python-Umgebung (qgis.core/qgis.gui). Unt
 
 ## Vorbereitung (Windows)
 
-1. QGIS installieren (z. B. OSGeo4W oder Standalone).  
-2. OSGeo4W Shell / „QGIS Python“ öffnen.  
-3. In das Projekt wechseln: `cd C:\Users\joerg\OneDrive\Documents\Coding\GitHubRepos\custom_map_downloader`  
+1. QGIS installieren (z. B. OSGeo4W oder Standalone).
+2. OSGeo4W Shell / „QGIS Python“ öffnen.
+3. In das Projekt wechseln: `cd C:\Users\joerg\OneDrive\Documents\Coding\GitHubRepos\custom_map_downloader`
 4. Optional: `set QGIS_PREFIX_PATH=C:\OSGeo4W64\apps\qgis` (oder entsprechender QGIS-Pfad).
 
 ## Ausführen (lokal)
@@ -19,9 +19,9 @@ Der Testsuite lädt ein kleines Raster (`test/tenbytenraster.asc`), setzt eine m
 
 ## Netzbasierte Szenarien (WMS/XYZ)
 
-- Siehe `test/integration/config.json` für Quellen (`sources`) und Szenarien (`scenarios`).  
-- Quellen definieren Provider/URI/Default-CRS; Szenarien referenzieren eine Quelle (`source`) und überschreiben Extent/GSD/VRT/Output.  
-- Alle Szenarien laufen standardmäßig; optional filterbar über Env `SCENARIOS=name1,name2`.  
+- Siehe `test/integration/config.json` für Quellen (`sources`) und Szenarien (`scenarios`).
+- Quellen definieren Provider/URI/Default-CRS; Szenarien referenzieren eine Quelle (`source`) und überschreiben Extent/GSD/VRT/Output.
+- Alle Szenarien laufen standardmäßig; optional filterbar über Env `SCENARIOS=name1,name2`.
 - Passe CRS/Extent/GSD/Output-Format nach Bedarf an (z. B. EPSG:25833, Dresden-Region).
 
 ### Aufbau der config.json
@@ -47,8 +47,8 @@ Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.b
 
 ## Hinweise
 
-- Ohne QGIS-Umgebung werden die Tests automatisch übersprungen.  
-- Pfade zum QGIS-Prefix können im Test über `QGIS_PREFIX_PATH` vorgegeben werden.  
+- Ohne QGIS-Umgebung werden die Tests automatisch übersprungen.
+- Pfade zum QGIS-Prefix können im Test über `QGIS_PREFIX_PATH` vorgegeben werden.
 - Unter Linux/Container-Umgebungen erkennen die Tests zusätzlich typische Prefix-Pfade wie `/usr` und den zur Laufzeit gemeldeten `QgsApplication.prefixPath()`.
-- Testdaten liegen im Repo unter `test/` (10x10-Raster).  
+- Testdaten liegen im Repo unter `test/` (10x10-Raster).
 - Integrationstests sind bewusst minimal gehalten; für umfangreiche Szenarien können zusätzliche Testdaten/Layer ergänzt werden.***

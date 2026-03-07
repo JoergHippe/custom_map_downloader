@@ -67,7 +67,7 @@ try:
         sys.path.insert(0, str(REPO_ROOT))
 
     from core.exporter import GeoTiffExporter  # type: ignore
-    from core.models import ExportParams, CenterSpec, ExtentSpec  # type: ignore
+    from core.models import CenterSpec, ExportParams, ExtentSpec  # type: ignore
 
     HAS_QGIS = True
 except Exception:
@@ -94,7 +94,7 @@ def _init_qgis_app() -> Tuple[Optional["QgsApplication"], bool]:
             raise RuntimeError("QGIS prefix path not found; set QGIS_PREFIX_PATH.")
         QgsApplication.setPrefixPath(prefix, True)
         QgsApplication.initQgis()
-        setattr(QgsApplication, "_CMD_INIT_DONE", True)
+        QgsApplication._CMD_INIT_DONE = True
 
     return app, created
 
@@ -175,7 +175,9 @@ class QgisExportIntegrationTest(unittest.TestCase):
         output_path.unlink()
 
     def test_export_small_raster_with_target_scale(self):
-        output_path = Path(self._export_test_raster("cmd_integration_export_scale", target_scale=True))
+        output_path = Path(
+            self._export_test_raster("cmd_integration_export_scale", target_scale=True)
+        )
         self.assertTrue(output_path.exists())
         output_path.unlink()
 

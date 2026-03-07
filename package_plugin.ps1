@@ -80,10 +80,10 @@ $ExcludedCount = 0
 Get-ChildItem -Path $PluginDir -Recurse -File | ForEach-Object {
     $RelativePath = $_.FullName.Substring($PluginDir.Length + 1)
     $ShouldExclude = $false
-    
+
     # Check if any part of the path matches exclude patterns
     $PathParts = $RelativePath -split '\\'
-    
+
     foreach ($Pattern in $ExcludePatterns) {
         # Check filename
         if ($_.Name -like $Pattern) {
@@ -104,20 +104,20 @@ Get-ChildItem -Path $PluginDir -Recurse -File | ForEach-Object {
         }
         if ($ShouldExclude) { break }
     }
-    
+
     # Special case: include README.md
     if ($_.Name -eq "README.md") {
         $ShouldExclude = $false
     }
-    
+
     if (-not $ShouldExclude) {
         $DestPath = Join-Path $TempPluginDir $RelativePath
         $DestDir = Split-Path $DestPath -Parent
-        
+
         if (-not (Test-Path $DestDir)) {
             New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
         }
-        
+
         Copy-Item $_.FullName -Destination $DestPath -Force
         Write-Host "  Added: $RelativePath" -ForegroundColor Gray
         $FileCount++

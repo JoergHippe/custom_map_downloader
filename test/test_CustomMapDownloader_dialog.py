@@ -8,9 +8,9 @@
 
 """
 
-__author__ = 'abhinavjayaswal10@gmail.com'
-__date__ = '2025-11-18'
-__copyright__ = 'Copyright 2025, Abhinav Jayswal'
+__author__ = "abhinavjayaswal10@gmail.com"
+__date__ = "2025-11-18"
+__copyright__ = "Copyright 2025, Abhinav Jayswal"
 
 import unittest
 
@@ -18,6 +18,7 @@ try:
     from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
     from CustomMapDownloader_dialog import CustomMapDownloaderDialog
     from utilities import get_qgis_app
+
     QGIS_APP = get_qgis_app()
     HAS_QGIS = True
 except Exception:  # pragma: no cover - skip when QGIS unavailable
@@ -55,8 +56,8 @@ class CustomMapDownloaderDialogTest(unittest.TestCase):
         result = self.dialog.result()
         self.assertEqual(result, QDialog.Rejected)
 
+
 if __name__ == "__main__":
     suite = unittest.makeSuite(CustomMapDownloaderDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-

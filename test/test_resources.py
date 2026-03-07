@@ -8,18 +8,18 @@
 
 """
 
-__author__ = 'abhinavjayaswal10@gmail.com'
-__date__ = '2025-11-18'
-__copyright__ = 'Copyright 2025, Abhinav Jayswal'
+__author__ = "abhinavjayaswal10@gmail.com"
+__date__ = "2025-11-18"
+__copyright__ = "Copyright 2025, Abhinav Jayswal"
 
 import unittest
 
 try:
     from qgis.PyQt.QtGui import QIcon
+
     HAS_QGIS = True
 except Exception:
     HAS_QGIS = False
-
 
 
 @unittest.skipUnless(HAS_QGIS, "QGIS not available; skipping resources test")
@@ -36,14 +36,12 @@ class CustomMapDownloaderResourcesTest(unittest.TestCase):
 
     def test_icon_png(self):
         """Test we can click OK."""
-        path = ':/plugins/CustomMapDownloader/icon.png'
+        path = ":/plugins/CustomMapDownloader/icon.png"
         icon = QIcon(path)
         self.assertFalse(icon.isNull())
+
 
 if __name__ == "__main__":
     suite = unittest.makeSuite(CustomMapDownloaderResourcesTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
-
-
-

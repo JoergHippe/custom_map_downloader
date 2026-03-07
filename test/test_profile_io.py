@@ -72,7 +72,9 @@ class ProfileIoTests(unittest.TestCase):
             path.unlink()
 
         try:
-            path.write_text('{"output_prefix": "legacy", "output_extension": ".vrt"}', encoding="utf-8")
+            path.write_text(
+                '{"output_prefix": "legacy", "output_extension": ".vrt"}', encoding="utf-8"
+            )
             restored = read_profile(path)
         finally:
             if path.exists():

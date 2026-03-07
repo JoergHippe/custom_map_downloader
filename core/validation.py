@@ -9,11 +9,11 @@ import os
 from pathlib import Path
 from typing import Tuple
 
-from qgis.core import Qgis, QgsUnitTypes, QgsCoordinateReferenceSystem
+from qgis.core import Qgis, QgsCoordinateReferenceSystem, QgsUnitTypes
 
 from .constants import (
-    GSD_MIN,
     GSD_MAX,
+    GSD_MIN,
     LARGE_RASTER_STRONG_MAX_DIM_PX,
     LARGE_RASTER_STRONG_TOTAL_PX,
 )
@@ -105,9 +105,7 @@ def pixel_limit_status(width_px: int, height_px: int) -> Tuple[str, str]:
     ):
         return (
             "strong",
-            (
-                f"Raster size exceeds hard limit ({width_px}×{height_px} px, total {total_px:,} px)."
-            ),
+            (f"Raster size exceeds hard limit ({width_px}×{height_px} px, total {total_px:,} px)."),
         )
 
     if (

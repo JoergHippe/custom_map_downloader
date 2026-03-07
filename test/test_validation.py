@@ -1,8 +1,13 @@
-import unittest
 import sys
 import types
+import unittest
 
-from core.constants import GSD_MIN, GSD_MAX, LARGE_RASTER_STRONG_MAX_DIM_PX, LARGE_RASTER_STRONG_TOTAL_PX
+from core.constants import (
+    GSD_MAX,
+    GSD_MIN,
+    LARGE_RASTER_STRONG_MAX_DIM_PX,
+    LARGE_RASTER_STRONG_TOTAL_PX,
+)
 from core.errors import ValidationError
 from core.scale import OGC_PIXEL_SIZE_M, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 
@@ -36,7 +41,7 @@ def install_qgis_stubs():
 
 install_qgis_stubs()
 
-from core.validation import validate_gsd, validate_pixel_limits, validate_output_path
+from core.validation import validate_gsd, validate_output_path, validate_pixel_limits
 
 
 class ValidationHelpersTests(unittest.TestCase):
@@ -62,7 +67,7 @@ class ValidationHelpersTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_pixel_limits(10, LARGE_RASTER_STRONG_MAX_DIM_PX)
         too_many = LARGE_RASTER_STRONG_TOTAL_PX + 1
-        side = int(too_many ** 0.5) + 1
+        side = int(too_many**0.5) + 1
         with self.assertRaises(ValidationError):
             validate_pixel_limits(side, side)
 

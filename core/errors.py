@@ -20,9 +20,11 @@ class ExportError(Exception):
 
 class ValidationError(ExportError):
     """Raised when input parameters are invalid."""
+
     pass
 
 
 class CancelledError(ExportError):
     """Raised when the user cancels the export."""
+
     pass
