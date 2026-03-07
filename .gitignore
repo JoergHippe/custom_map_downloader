@@ -30,5 +30,6 @@ Thumbs.db
 # Documentation (except README)
 *.md
 !README.md
+!DEVELOPING.md
 !RELEASING.md
 !TROUBLESHOOTING.md

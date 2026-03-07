@@ -150,6 +150,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_scale_hint()
 
         # Start polling (kept lightweight; only updates when something really changed)
         self._start_extent_polling()
@@ -358,6 +359,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                     "The plugin derives GSD from the entered target scale."
                 )
             )
+        if hasattr(self, "label_scaleHint"):
+            self.label_scaleHint.setToolTip(
+                self.tr(
+                    "Context-sensitive hints for WMS portrayal, CRS choice and VRT limitations."
+                )
+            )
 
         if hasattr(self, "lineEdit_outputDirectory"):
             self.lineEdit_outputDirectory.setToolTip(self.tr("Target folder for exported files."))
@@ -476,6 +483,8 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self._last_layer_id = layer_id or None
         except Exception:
             self._last_layer_id = None
+
+        self._update_scale_hint()
 
     def _save_settings(self) -> None:
         """Persist last used settings to QSettings."""
@@ -942,6 +951,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._update_output_controls_state()
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_scale_hint()
         return warnings
 
     def save_profile(self) -> None:
@@ -1173,6 +1183,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._update_resolution_controls()
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_scale_hint()
 
     def _on_gsd_changed(self, value: float) -> None:
         """Keep scale denominator synchronized when GSD changes."""
@@ -1192,12 +1203,14 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_scale_hint()
 
     def _on_extent_changed(self, _rect: QgsRectangle) -> None:  # noqa: ARG002
         """React to extent changes from QgsExtentGroupBox."""
         self._get_best_output_extent(commit=True)
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_scale_hint()
 
     def _on_create_vrt_toggled(self, enabled: bool) -> None:
         """Enable/disable VRT tiling controls based on checkbox."""
@@ -1217,6 +1230,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.label_vrtInfo.setText("")
 
         self._update_vrt_info()
+        self._update_scale_hint()
 
     def _on_vrt_preset_changed(self, index: int) -> None:  # noqa: ARG002
         """Apply preset tile size from combo box to max columns/rows."""
@@ -1366,6 +1380,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 pass
             QTimer.singleShot(0, self._update_extent_info)
             QTimer.singleShot(0, self._update_vrt_info)
+            QTimer.singleShot(0, self._update_scale_hint)
 
     def _on_extent_validation_changed(self, valid: bool) -> None:
         """Called when internal extent widget validation changes."""
@@ -1584,6 +1599,88 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 total=total,
             )
         )
+
+    def _layer_looks_scale_sensitive(self) -> bool:
+        """Best-effort heuristic for web map sources that can vary by scale."""
+        if not hasattr(self, "comboBox_layer"):
+            return False
+        layer = self.comboBox_layer.currentData()
+        if layer is None:
+            return False
+
+        provider = ""
+        source = ""
+        try:
+            if hasattr(layer, "providerType") and callable(layer.providerType):
+                provider = str(layer.providerType() or "").strip().lower()
+        except Exception:
+            provider = ""
+        try:
+            if hasattr(layer, "source") and callable(layer.source):
+                source = str(layer.source() or "").strip().lower()
+        except Exception:
+            source = ""
+
+        if provider in {"wms", "xyz", "arcgismapserver"}:
+            return True
+        return "type=xyz" in source or "contextualwmslegend" in source or "url=" in source
+
+    def _output_crs_uses_meters(self) -> bool:
+        """Return True when the selected output CRS uses meters."""
+        try:
+            crs = self.mQgsProjectionSelectionWidget.crs()
+        except Exception:
+            return False
+        return bool(crs and crs.isValid() and self._crs_uses_meters(crs))
+
+    def _update_scale_hint(self) -> None:
+        """Update contextual hints for scale-sensitive services and CRS limitations."""
+        if not hasattr(self, "label_scaleHint"):
+            return
+
+        use_scale = self._resolution_mode() == "scale"
+        create_vrt = (
+            bool(self.checkBox_createVrt.isChecked())
+            if hasattr(self, "checkBox_createVrt")
+            else False
+        )
+        metric_output = self._output_crs_uses_meters()
+        scale_sensitive = self._layer_looks_scale_sensitive()
+
+        lines: list[str] = []
+        style = "color: #666;"
+
+        if use_scale and not metric_output:
+            style = "color: #b00020; font-weight: 600;"
+            lines.append(
+                self.tr("Target scale mode needs a projected output CRS with meter units.")
+            )
+        else:
+            if use_scale and scale_sensitive:
+                style = "color: #8a5a00;"
+                lines.append(
+                    self.tr(
+                        "This layer may change portrayal by scale. Target scale mode is appropriate here."
+                    )
+                )
+            if scale_sensitive and not metric_output:
+                style = "color: #8a5a00;"
+                lines.append(
+                    self.tr(
+                        "With a non-metric output CRS, the plugin may render internally in a metric CRS and reproject the final raster."
+                    )
+                )
+            if create_vrt and not metric_output:
+                style = "color: #8a5a00;"
+                lines.append(
+                    self.tr(
+                        "VRT export is most predictable when render CRS and output CRS are identical."
+                    )
+                )
+
+        self.label_scaleHint.setText("\n".join(lines))
+        self.label_scaleHint.setVisible(bool(lines))
+        self.label_scaleHint.setStyleSheet(style)
 
     def _clear_extent_info(self) -> None:
         """Clear extent info label to its default informational text."""

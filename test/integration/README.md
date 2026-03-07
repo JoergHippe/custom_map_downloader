@@ -1,5 +1,7 @@
 # QGIS-Integrationstests
 
+Siehe auch `DEVELOPING.md` für den gesamten Entwicklungs- und Test-Workflow.
+
 Diese Tests benötigen eine echte QGIS-Python-Umgebung (qgis.core/qgis.gui). Unter Windows funktioniert das am einfachsten über die OSGeo4W-/QGIS-Shell.
 
 ## Vorbereitung (Windows)
@@ -15,7 +17,12 @@ Diese Tests benötigen eine echte QGIS-Python-Umgebung (qgis.core/qgis.gui). Unt
 python -m unittest discover -s test/integration -v
 ```
 
-Der Testsuite lädt ein kleines Raster (`test/tenbytenraster.asc`), setzt eine metrische CRS, startet den Exporter und schreibt ein GeoTIFF in ein temporäres Verzeichnis.
+Die lokale Smoke-Suite deckt aktuell ab:
+
+- kleiner direkter GeoTIFF-Export
+- kleiner Export mit `Target scale (1:n)`
+- kleiner VRT-Export mit Tile-Erzeugung
+- kleiner Export mit Reprojektion zwischen Render-CRS und Output-CRS
 
 ## Netzbasierte Szenarien (WMS/XYZ)
 
