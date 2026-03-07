@@ -13,6 +13,7 @@ Notes:
     - These parameters are threaded into ExportParams.
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from xml.etree import ElementTree as ET
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
+    QgsMessageLog,
     QgsNetworkAccessManager,
     QgsProject,
     QgsRasterLayer,
@@ -36,6 +38,8 @@ from .core.locale import resolve_locale_code
 from .core.models import CancelToken, CenterSpec, ExportParams, ExtentSpec
 from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
 from .resources import *  # noqa: F401,F403
+
+LOGGER = logging.getLogger("custom_map_downloader.ui")
 
 
 class CustomMapDownloader:
@@ -71,6 +75,34 @@ class CustomMapDownloader:
     def tr(self, message: str) -> str:
         """Translate a message."""
         return QCoreApplication.translate("CustomMapDownloader", message)
+
+    def _log_runtime_message(
+        self,
+        level: int,
+        summary: str,
+        *,
+        details: str = "",
+    ) -> None:
+        """Write a runtime message to Python logging and the QGIS message log."""
+        message = summary if not details else f"{summary} | {details}"
+        LOGGER.log(level, message)
+
+        qgis_level = getattr(Qgis, "Info", None)
+        if level >= logging.ERROR:
+            qgis_level = getattr(Qgis, "Critical", qgis_level)
+        elif level >= logging.WARNING:
+            qgis_level = getattr(Qgis, "Warning", qgis_level)
+
+        if qgis_level is None and hasattr(Qgis, "MessageLevel"):
+            if level >= logging.ERROR:
+                qgis_level = Qgis.MessageLevel.Critical
+            elif level >= logging.WARNING:
+                qgis_level = Qgis.MessageLevel.Warning
+            else:
+                qgis_level = Qgis.MessageLevel.Info
+
+        if qgis_level is not None:
+            QgsMessageLog.logMessage(message, "CustomMapDownloader", qgis_level)
 
     @staticmethod
     def _project() -> QgsProject:
@@ -357,6 +389,10 @@ class CustomMapDownloader:
 
             # Note: With "Create VRT" enabled, exporter returns the .vrt path.
             saved_path = result_path
+            self._log_runtime_message(logging.INFO, "Export completed", details=saved_path)
+
+            for warning in export_warnings:
+                self._log_runtime_message(logging.WARNING, "Export warning", details=warning)
 
             if params["load_as_layer"]:
                 layer_name = os.path.basename(saved_path)
@@ -409,6 +445,7 @@ class CustomMapDownloader:
                 )
 
         except CancelledError:
+            self._log_runtime_message(logging.INFO, "Export cancelled")
             QMessageBox.information(
                 self.iface.mainWindow(),
                 self.tr("Cancelled"),
@@ -416,6 +453,11 @@ class CustomMapDownloader:
             )
 
         except ValidationError as e:
+            self._log_runtime_message(
+                logging.ERROR,
+                f"Validation failed ({getattr(e, 'code', 'ERR_UNKNOWN')})",
+                details=getattr(e, "details", ""),
+            )
             QMessageBox.critical(
                 self.iface.mainWindow(),
                 self.tr("Error"),
@@ -423,6 +465,11 @@ class CustomMapDownloader:
             )
 
         except ExportError as e:
+            self._log_runtime_message(
+                logging.ERROR,
+                f"Export failed ({getattr(e, 'code', 'ERR_UNKNOWN')})",
+                details=getattr(e, "details", ""),
+            )
             QMessageBox.critical(
                 self.iface.mainWindow(),
                 self.tr("Error"),
@@ -430,6 +477,7 @@ class CustomMapDownloader:
             )
 
         except Exception as e:
+            self._log_runtime_message(logging.ERROR, "Unexpected export failure", details=str(e))
             QMessageBox.critical(
                 self.iface.mainWindow(),
                 self.tr("Error"),

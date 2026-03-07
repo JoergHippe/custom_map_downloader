@@ -32,7 +32,7 @@ Typical use cases include:
 
 ## Features
 
-- ✔ **Export any visible QGIS layer** (XYZ/WMTS/WMS, raster, vector, etc.) :contentReference[oaicite:1]{index=1}
+- ✔ **Export any visible QGIS layer** (XYZ/WMTS/WMS, raster, vector, etc.)
 - ✔ **QGIS-native extent control** using `QgsExtentGroupBox`
 - ✔ **Extent-based workflow only**:
   - Extent defined via layer extent, canvas extent, or manual extent box
@@ -73,7 +73,7 @@ Typical use cases include:
 
 ## User Interface Overview
 
-The dialog consists of several main sections. The exact layout may evolve, but the semantics remain stable. :contentReference[oaicite:2]{index=2}
+The dialog consists of several main sections. The exact layout may evolve, but the semantics remain stable.
 
 ### 1. Source and Output
 
@@ -476,6 +476,26 @@ Release archives are built directly from the `custom_map_downloader/` plugin sou
 ---
 
 ## Troubleshooting
+
+See `TROUBLESHOOTING.md` for the operational troubleshooting guide.
+
+- transparent / empty exports
+- VRT portability warnings
+- render CRS vs output CRS behavior
+- repeated tile retries
+- reload failures after export
+
+## Release
+
+See `RELEASING.md` for the release checklist.
+
+Quick path:
+
+```bash
+make release-check
+```
+
+This runs linting, tests, package build and package validation.
 
 ### Export is empty / fully transparent
 

@@ -1,4 +1,4 @@
-.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check precommit
+.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit
 
 PYTHON ?= python3
 PLUGIN_DIR := custom_map_downloader
@@ -20,6 +20,7 @@ help:
 	@echo "  precommit     Run pre-commit hooks on all files"
 	@echo "  package       Build release ZIP via qgis-plugin-ci"
 	@echo "  package-check Build and validate release ZIP contents"
+	@echo "  release-check Run the full release checklist (lint, tests, package validation)"
 
 install-dev:
 	$(PYTHON) -m pip install -r requirements-dev.txt
@@ -69,3 +70,5 @@ package:
 
 package-check: package
 	$(PYTHON) scripts/check_package.py
+
+release-check: lint test package-check
