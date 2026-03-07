@@ -79,6 +79,9 @@ The dialog consists of several main sections. The exact layout may evolve, but t
 
 - **Layer selection**
   - Pick the QGIS layer that should be rendered (XYZ/WMTS/WMS, raster, vector, etc.).
+- **Profiles**
+  - `Load profile...` restores a previously saved JSON preset for recurring exports.
+  - `Save profile...` stores the current dialog state as a reusable JSON preset.
 - **CRS selection**
   - `QgsProjectionSelectionWidget` for choosing the exported raster CRS.
   - In target scale mode, use a projected CRS with meter units.
@@ -166,7 +169,8 @@ When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
    - Use canvas extent, layer extent, or manually adjust the extent box.
 5. Choose either **ground resolution (m/px)** or **Target scale (1:n)**.
 6. Optionally configure **tiling** and **world file** options.
-7. Click **OK**.
+7. Optionally save the setup as a **profile** for repeated exports.
+8. Click **OK**.
 
 A progress dialog appears during rendering.  
 After completion, the exported image can optionally be loaded directly into QGIS.
@@ -185,6 +189,22 @@ After completion, the exported image can optionally be loaded directly into QGIS
 | Load as layer         | Enabled                   |
 | VRT / tiling          | Disabled by default       |
 | Tile size preset      | 1024 × 1024 px (example)  |
+
+---
+
+## Export Profiles
+
+- Profiles are stored as JSON (`*.cmdprofile.json`).
+- They capture the dialog state relevant for repeated exports:
+  - output directory and filename prefix
+  - selected layer id/name
+  - output CRS
+  - extent
+  - resolution mode, ground resolution and target scale
+  - VRT/tiling settings
+  - `Load as layer`
+- Profiles are intended as local working presets. They do not embed layer data or credentials.
+- When a stored layer id is no longer present in the current QGIS project, the profile still loads and the layer must be selected manually.
 
 ---
 

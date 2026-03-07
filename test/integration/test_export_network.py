@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 import warnings
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Tuple
 from urllib.parse import urlparse, parse_qs
@@ -57,6 +58,7 @@ try:
 
     from core.exporter import GeoTiffExporter  # type: ignore
     from core.models import ExportParams, CenterSpec, ExtentSpec  # type: ignore
+    from core.scale import OGC_STANDARD_DPI, scale_to_gsd_m_per_px  # type: ignore
 
     HAS_QGIS = True
 except Exception:
@@ -282,6 +284,92 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
         print(f"[INFO] Summary: OK={ok_count}, SKIP={skip_count}, FAIL={len(fail_messages)}")
         if fail_messages:
             self.fail("\n".join(fail_messages))
+
+    def test_scale_dependent_scenarios(self):
+        scenarios = [s for s in self.config.get("scenarios", []) if s.get("scale_probe")]
+        if not scenarios:
+            self.skipTest("No scale_probe scenarios configured")
+
+        tmpdir = Path(tempfile.gettempdir())
+        for scenario in scenarios:
+            name = scenario.get("name", "unnamed")
+            source = self.sources.get(scenario.get("source", ""), {}) or {}
+            provider = scenario.get("provider") or source.get("provider", "wms")
+            uri = scenario.get("uri") or source.get("uri", "")
+            crs_authid = scenario.get("crs") or source.get("default_crs") or self.defaults.get("crs", "EPSG:3857")
+            ext_cfg = scenario.get("extent", {}) or source.get("extent", {}) or self.defaults.get("extent", {})
+            scale_probe = scenario.get("scale_probe", {}) or {}
+            small_scale = float(scale_probe.get("small", 0.0))
+            large_scale = float(scale_probe.get("large", 0.0))
+            if small_scale <= 0.0 or large_scale <= 0.0 or small_scale == large_scale:
+                self.fail(f"{name}: invalid scale_probe values")
+
+            crs = QgsCoordinateReferenceSystem(crs_authid)
+            if not crs.isValid():
+                self.fail(f"{name}: invalid CRS {crs_authid}")
+
+            layer = QgsRasterLayer(uri, f"{name}_scale_probe", provider)
+            if not layer.isValid():
+                print(f"[SKIP] {name}: layer invalid for scale probe")
+                continue
+
+            self.project.addMapLayer(layer)
+            rect = QgsRectangle(
+                float(ext_cfg["west"]),
+                float(ext_cfg["south"]),
+                float(ext_cfg["east"]),
+                float(ext_cfg["north"]),
+            )
+            center = rect.center()
+
+            hashes: list[str] = []
+            widths: list[int] = []
+            out_paths: list[Path] = []
+            try:
+                for scale_value, suffix in ((small_scale, "small"), (large_scale, "large")):
+                    gsd = scale_to_gsd_m_per_px(scale_value)
+                    width_px = max(1, int(round(rect.width() / gsd)))
+                    height_px = max(1, int(round(rect.height() / gsd)))
+                    widths.append(width_px)
+                    out_path = tmpdir / f"cmd_scale_probe_{name}_{suffix}.tif"
+                    out_paths.append(out_path)
+                    if out_path.exists():
+                        out_path.unlink()
+
+                    params = ExportParams(
+                        layer=layer,
+                        width_px=width_px,
+                        height_px=height_px,
+                        gsd_m_per_px=gsd,
+                        center=CenterSpec(northing=center.y(), easting=center.x(), crs=crs),
+                        extent=ExtentSpec(
+                            west=rect.xMinimum(),
+                            south=rect.yMinimum(),
+                            east=rect.xMaximum(),
+                            north=rect.yMaximum(),
+                            crs=crs,
+                        ),
+                        output_path=str(out_path),
+                        load_as_layer=False,
+                        render_crs=crs,
+                        output_crs=crs,
+                        target_scale_denominator=scale_value,
+                        output_dpi=OGC_STANDARD_DPI,
+                    )
+                    result_path = GeoTiffExporter().export(params)
+                    self.assertTrue(Path(result_path).exists(), f"{name}: scale export missing for {suffix}")
+                    hashes.append(sha256(Path(result_path).read_bytes()).hexdigest())
+
+                self.assertNotEqual(widths[0], widths[1], f"{name}: expected different raster dimensions")
+                self.assertNotEqual(hashes[0], hashes[1], f"{name}: expected different raster content")
+            finally:
+                try:
+                    self.project.removeMapLayer(layer.id())
+                except Exception:
+                    pass
+                for out_path in out_paths:
+                    if out_path.exists():
+                        out_path.unlink()
 
 
 if __name__ == "__main__":

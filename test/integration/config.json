@@ -70,6 +70,10 @@
         "north": 5660000
       },
       "gsd": 2.0,
+      "scale_probe": {
+        "small": 5000,
+        "large": 25000
+      },
       "create_vrt": false,
       "output_extension": ".tif"
     },

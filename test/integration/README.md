@@ -29,6 +29,7 @@ Der Testsuite lädt ein kleines Raster (`test/tenbytenraster.asc`), setzt eine m
 - `defaults`: zentrale Defaults (CRS, Extent, GSD, VRT/Output), die von Quellen/Szenarien geerbt werden.
 - `sources`: Datenquellen mit `name`, `provider`, `uri`, optional `default_crs`, `extent`, `gsd`, `create_vrt`, `output_extension`.
 - `scenarios`: konkrete Testläufe mit `name`, `source`-Verweis und optionalen Overrides (`crs`, `extent`, `gsd`, `vrt_preset_size`, `create_vrt`, `output_extension`).
+- Optional `scale_probe`: führt denselben Szenario-Extent mit zwei Zielmaßstäben (`small`, `large`) als echten WMS-End-to-End-Test aus. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
 - Umgebungsvariablen:
   - `ALLOW_INTEGRATION_NETWORK=1` aktiviert Netztests.
   - `CRS=EPSG:xxxx` überschreibt CRS global für alle Szenarien.

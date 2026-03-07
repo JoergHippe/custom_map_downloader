@@ -40,6 +40,7 @@ from .core.constants import (
     GSD_DECIMALS,
     GSD_MAX,
 )
+from .core.profile_io import read_profile, write_profile
 from .core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 from .core.validation import pixel_limit_status
 from qgis.gui import QgsExtentWidget
@@ -88,6 +89,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         if hasattr(self, "pushButton_refreshLayers"):
             self.pushButton_refreshLayers.clicked.connect(self.populate_layers)
+
+        if hasattr(self, "pushButton_saveProfile"):
+            self.pushButton_saveProfile.clicked.connect(self.save_profile)
+
+        if hasattr(self, "pushButton_loadProfile"):
+            self.pushButton_loadProfile.clicked.connect(self.load_profile)
 
         if hasattr(self, "spinBox_gsd"):
             self.spinBox_gsd.valueChanged.connect(self._update_extent_info)
@@ -356,6 +363,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                     "Provide a filename prefix without extension. "
                     "The extension is selected via 'Output format' (single export) or forced to .vrt in VRT mode."
                 )
+            )
+
+        if hasattr(self, "pushButton_saveProfile"):
+            self.pushButton_saveProfile.setToolTip(
+                self.tr("Save the current dialog state as a reusable JSON export profile.")
+            )
+
+        if hasattr(self, "pushButton_loadProfile"):
+            self.pushButton_loadProfile.setToolTip(
+                self.tr("Load a previously saved JSON export profile into the dialog.")
             )
 
         if hasattr(self, "mQgsProjectionSelectionWidget"):
@@ -675,6 +692,262 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         )
         if directory and hasattr(self, "lineEdit_outputDirectory"):
             self.lineEdit_outputDirectory.setText(directory)
+
+    def _default_profile_path(self) -> str:
+        """Return a sensible default path for save/load profile dialogs."""
+        output_directory = ""
+        if hasattr(self, "lineEdit_outputDirectory"):
+            output_directory = (self.lineEdit_outputDirectory.text() or "").strip()
+        if not output_directory or not os.path.isdir(output_directory):
+            output_directory = os.path.expanduser("~")
+
+        prefix = ""
+        if hasattr(self, "lineEdit_outputPrefix"):
+            prefix = self._sanitize_prefix(self.lineEdit_outputPrefix.text())
+        prefix = prefix or "custom_map_download"
+        return os.path.join(output_directory, f"{prefix}.cmdprofile.json")
+
+    def _set_output_format_from_extension(self, extension: str) -> None:
+        """Select output format combo entry from a file extension."""
+        if not hasattr(self, "comboBox_outputFormat"):
+            return
+        wanted = (extension or "").strip().lower()
+        for idx in range(self.comboBox_outputFormat.count()):
+            try:
+                current = str(self.comboBox_outputFormat.itemData(idx) or "").strip().lower()
+            except Exception:
+                continue
+            if current == wanted:
+                self.comboBox_outputFormat.setCurrentIndex(idx)
+                return
+
+    def _select_layer_from_profile(self, layer_id: str, layer_name: str) -> list[str]:
+        """Restore selected layer from stored id/name if possible."""
+        warnings: list[str] = []
+        if not hasattr(self, "comboBox_layer"):
+            return warnings
+
+        selected_index = -1
+        for idx in range(self.comboBox_layer.count()):
+            layer = self.comboBox_layer.itemData(idx)
+            try:
+                if layer_id and hasattr(layer, "id") and callable(layer.id) and layer.id() == layer_id:
+                    selected_index = idx
+                    break
+            except Exception:
+                continue
+
+        if selected_index < 0 and layer_name:
+            for idx in range(self.comboBox_layer.count()):
+                layer = self.comboBox_layer.itemData(idx)
+                try:
+                    if hasattr(layer, "name") and callable(layer.name) and layer.name() == layer_name:
+                        selected_index = idx
+                        break
+                except Exception:
+                    continue
+
+        if selected_index >= 0:
+            self.comboBox_layer.setCurrentIndex(selected_index)
+        elif layer_id or layer_name:
+            warnings.append(
+                self.tr("Stored layer could not be restored. Please choose a layer manually.")
+            )
+
+        return warnings
+
+    def _collect_profile_state(self) -> dict:
+        """Capture current dialog state for JSON profile export."""
+        state = {
+            "output_directory": (
+                (self.lineEdit_outputDirectory.text() or "").strip()
+                if hasattr(self, "lineEdit_outputDirectory")
+                else ""
+            ),
+            "output_prefix": (
+                self._sanitize_prefix(self.lineEdit_outputPrefix.text())
+                if hasattr(self, "lineEdit_outputPrefix")
+                else ""
+            ),
+            "output_extension": self._selected_output_extension(),
+            "resolution_mode": self._resolution_mode(),
+            "gsd": self._current_gsd(),
+            "target_scale_denominator": self._current_target_scale(),
+            "load_as_layer": bool(self.checkBox_loadLayer.isChecked()) if hasattr(self, "checkBox_loadLayer") else False,
+            "create_vrt": bool(self.checkBox_createVrt.isChecked()) if hasattr(self, "checkBox_createVrt") else False,
+            "vrt_max_cols": int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0,
+            "vrt_max_rows": int(self.spinBox_vrtMaxRows.value()) if hasattr(self, "spinBox_vrtMaxRows") else 0,
+            "vrt_preset_size": 0,
+            "layer_id": "",
+            "layer_name": "",
+            "output_crs_authid": "",
+            "extent": None,
+        }
+
+        if hasattr(self, "comboBox_vrtPreset"):
+            try:
+                state["vrt_preset_size"] = int(self.comboBox_vrtPreset.currentText())
+            except Exception:
+                state["vrt_preset_size"] = 0
+
+        if hasattr(self, "comboBox_layer"):
+            layer = self.comboBox_layer.currentData()
+            try:
+                if layer is not None and hasattr(layer, "id") and callable(layer.id):
+                    state["layer_id"] = layer.id()
+            except Exception:
+                pass
+            try:
+                if layer is not None and hasattr(layer, "name") and callable(layer.name):
+                    state["layer_name"] = layer.name()
+            except Exception:
+                pass
+
+        try:
+            output_crs = self.extentGroupBox.outputCrs() if hasattr(self, "extentGroupBox") else None
+            if output_crs is not None and output_crs.isValid():
+                state["output_crs_authid"] = output_crs.authid() or ""
+        except Exception:
+            pass
+
+        rect = self._get_best_output_extent(commit=False)
+        if rect is not None and not rect.isEmpty() and rect.width() > 0.0 and rect.height() > 0.0:
+            state["extent"] = {
+                "west": float(rect.xMinimum()),
+                "south": float(rect.yMinimum()),
+                "east": float(rect.xMaximum()),
+                "north": float(rect.yMaximum()),
+            }
+
+        return state
+
+    def _apply_profile_state(self, profile: dict) -> list[str]:
+        """Apply a previously stored dialog profile."""
+        warnings: list[str] = []
+
+        if hasattr(self, "lineEdit_outputDirectory"):
+            self.lineEdit_outputDirectory.setText(str(profile.get("output_directory") or ""))
+
+        if hasattr(self, "lineEdit_outputPrefix"):
+            self.lineEdit_outputPrefix.setText(str(profile.get("output_prefix") or ""))
+
+        self._set_output_format_from_extension(str(profile.get("output_extension") or ".tif"))
+
+        resolution_mode = str(profile.get("resolution_mode") or "gsd")
+        if hasattr(self, "comboBox_resolutionMode"):
+            idx = self.comboBox_resolutionMode.findData(resolution_mode)
+            if idx >= 0:
+                self.comboBox_resolutionMode.setCurrentIndex(idx)
+
+        gsd = profile.get("gsd")
+        if gsd is not None and hasattr(self, "spinBox_gsd"):
+            self.spinBox_gsd.setValue(float(gsd))
+
+        target_scale = profile.get("target_scale_denominator")
+        if target_scale is not None and hasattr(self, "doubleSpinBox_targetScale"):
+            self.doubleSpinBox_targetScale.setValue(float(target_scale))
+
+        if hasattr(self, "checkBox_loadLayer"):
+            self.checkBox_loadLayer.setChecked(bool(profile.get("load_as_layer")))
+
+        if hasattr(self, "checkBox_createVrt"):
+            self.checkBox_createVrt.setChecked(bool(profile.get("create_vrt")))
+
+        if hasattr(self, "spinBox_vrtMaxCols"):
+            self.spinBox_vrtMaxCols.setValue(int(profile.get("vrt_max_cols") or 0))
+
+        if hasattr(self, "spinBox_vrtMaxRows"):
+            self.spinBox_vrtMaxRows.setValue(int(profile.get("vrt_max_rows") or 0))
+
+        if hasattr(self, "comboBox_vrtPreset"):
+            preset_size = int(profile.get("vrt_preset_size") or 0)
+            if preset_size > 0:
+                preset_text = str(preset_size)
+                idx = self.comboBox_vrtPreset.findText(preset_text)
+                if idx >= 0:
+                    self.comboBox_vrtPreset.setCurrentIndex(idx)
+
+        warnings.extend(
+            self._select_layer_from_profile(
+                str(profile.get("layer_id") or ""),
+                str(profile.get("layer_name") or ""),
+            )
+        )
+
+        crs_authid = str(profile.get("output_crs_authid") or "")
+        if crs_authid and hasattr(self, "mQgsProjectionSelectionWidget"):
+            crs = QgsCoordinateReferenceSystem(crs_authid)
+            if crs.isValid():
+                self.mQgsProjectionSelectionWidget.setCrs(crs)
+            else:
+                warnings.append(self.tr("Stored CRS could not be restored."))
+
+        extent = profile.get("extent")
+        if isinstance(extent, dict) and hasattr(self, "extentGroupBox"):
+            try:
+                crs = self.extentGroupBox.outputCrs()
+                rect = QgsRectangle(
+                    float(extent["west"]),
+                    float(extent["south"]),
+                    float(extent["east"]),
+                    float(extent["north"]),
+                )
+                self.extentGroupBox.setCurrentExtent(rect, crs)
+            except Exception:
+                warnings.append(self.tr("Stored extent could not be restored."))
+
+        self._update_resolution_controls()
+        self._update_output_controls_state()
+        self._update_extent_info()
+        self._update_vrt_info()
+        return warnings
+
+    def save_profile(self) -> None:
+        """Save current dialog state as JSON profile."""
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save export profile"),
+            self._default_profile_path(),
+            self.tr("Custom Map Downloader profile (*.cmdprofile.json *.json);;JSON files (*.json)"),
+        )
+        if not path:
+            return
+        try:
+            write_profile(path, self._collect_profile_state())
+        except Exception as exc:
+            QtWidgets.QMessageBox.critical(
+                self,
+                self.tr("Save profile failed"),
+                self.tr("Could not save profile:\n{msg}").format(msg=str(exc)),
+            )
+
+    def load_profile(self) -> None:
+        """Load dialog state from JSON profile."""
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            self.tr("Load export profile"),
+            self._default_profile_path(),
+            self.tr("Custom Map Downloader profile (*.cmdprofile.json *.json);;JSON files (*.json)"),
+        )
+        if not path:
+            return
+        try:
+            profile = read_profile(path)
+            warnings = self._apply_profile_state(profile)
+        except Exception as exc:
+            QtWidgets.QMessageBox.critical(
+                self,
+                self.tr("Load profile failed"),
+                self.tr("Could not load profile:\n{msg}").format(msg=str(exc)),
+            )
+            return
+
+        if warnings:
+            QtWidgets.QMessageBox.warning(
+                self,
+                self.tr("Profile loaded with warnings"),
+                "\n".join(warnings),
+            )
 
     def get_parameters(self) -> Optional[dict]:
         """Collect and validate dialog parameters."""

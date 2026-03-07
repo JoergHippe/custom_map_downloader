@@ -6,6 +6,8 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator
+
 
 def _resolve_repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -29,6 +31,7 @@ else:
     QgsCoordinateReferenceSystem = object  # type: ignore
     QgsProject = object  # type: ignore
     QgsRasterLayer = object  # type: ignore
+
 
 def _detect_qgis_prefix() -> str:
     """Best-effort QGIS-Prefix finden (Env bevorzugt)."""
@@ -61,7 +64,6 @@ try:
 except Exception:
     HAS_QGIS = False
 else:
-    # Unterdrückt das bekannte GDAL FutureWarning-Rauschen im Test-Output.
     warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 
 
@@ -106,23 +108,20 @@ class QgisExportIntegrationTest(unittest.TestCase):
         if cls.app_created and cls.app is not None:
             cls.app.exitQgis()
 
-    def test_export_small_raster(self):
+    def _export_test_raster(self, output_name: str, *, target_scale: bool) -> str:
         if not TEST_DATA.exists():
             self.skipTest("Test raster not found")
 
-        layer = QgsRasterLayer(str(TEST_DATA), "test_raster")
+        layer = QgsRasterLayer(str(TEST_DATA), output_name)
         self.assertTrue(layer.isValid(), "Raster layer failed to load")
 
-        # Force a projected CRS (meters) to satisfy exporter requirements.
         metric_crs = QgsCoordinateReferenceSystem("EPSG:3857")
         layer.setCrs(metric_crs)
-
         self.project.addMapLayer(layer)
 
         extent = layer.extent()
         center = extent.center()
-
-        output_path = Path(tempfile.gettempdir()) / "cmd_integration_export.tif"
+        output_path = Path(tempfile.gettempdir()) / f"{output_name}.tif"
         if output_path.exists():
             output_path.unlink()
 
@@ -143,23 +142,33 @@ class QgisExportIntegrationTest(unittest.TestCase):
             load_as_layer=False,
             render_crs=metric_crs,
             output_crs=metric_crs,
+            target_scale_denominator=gsd_to_scale_denominator(10.0) if target_scale else None,
+            output_dpi=OGC_STANDARD_DPI if target_scale else None,
             create_vrt=False,
             vrt_max_cols=0,
             vrt_max_rows=0,
             vrt_preset_size=0,
         )
 
-        exporter = GeoTiffExporter()
-        result_path = exporter.export(params)
-        self.assertTrue(Path(result_path).exists(), "Exported file not found")
-
-        # Cleanup
         try:
-            self.project.removeMapLayer(layer.id())
-        except Exception:
-            pass
-        if output_path.exists():
-            output_path.unlink()
+            result_path = GeoTiffExporter().export(params)
+            self.assertTrue(Path(result_path).exists(), "Exported file not found")
+            return result_path
+        finally:
+            try:
+                self.project.removeMapLayer(layer.id())
+            except Exception:
+                pass
+
+    def test_export_small_raster(self):
+        output_path = Path(self._export_test_raster("cmd_integration_export", target_scale=False))
+        self.assertTrue(output_path.exists())
+        output_path.unlink()
+
+    def test_export_small_raster_with_target_scale(self):
+        output_path = Path(self._export_test_raster("cmd_integration_export_scale", target_scale=True))
+        self.assertTrue(output_path.exists())
+        output_path.unlink()
 
 
 if __name__ == "__main__":

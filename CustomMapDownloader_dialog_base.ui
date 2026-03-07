@@ -99,6 +99,20 @@
         </property>
        </widget>
       </item>
+      <item row="4" column="1">
+       <widget class="QPushButton" name="pushButton_loadProfile">
+        <property name="text">
+         <string>Load profile…</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QPushButton" name="pushButton_saveProfile">
+        <property name="text">
+         <string>Save profile…</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
