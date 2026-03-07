@@ -1,4 +1,4 @@
-.PHONY: help install-dev format format-check lint lint-pylint test test-qgis test-all package package-check precommit
+.PHONY: help install-dev deploy-dev format format-check lint lint-pylint test test-qgis test-all package package-check precommit
 
 PYTHON ?= python3
 PLUGIN_DIR := custom_map_downloader
@@ -7,6 +7,7 @@ VERSION := $(shell sed -n 's/^version=//p' $(PLUGIN_DIR)/metadata.txt | head -n 
 help:
 	@echo "Available targets:"
 	@echo "  install-dev   Install local development dependencies"
+	@echo "  deploy-dev    Link plugin into local QGIS profile for development"
 	@echo "  format        Apply black formatting"
 	@echo "  format-check  Check black formatting"
 	@echo "  lint          Run ruff + black checks"
@@ -20,6 +21,9 @@ help:
 
 install-dev:
 	$(PYTHON) -m pip install -r requirements-dev.txt
+
+deploy-dev:
+	$(PYTHON) scripts/install_dev_plugin.py
 
 format:
 	$(PYTHON) -m black .

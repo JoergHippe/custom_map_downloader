@@ -317,6 +317,26 @@ make test
 make package
 ```
 
+Local plugin deployment into the real QGIS profile:
+
+```bash
+make deploy-dev
+```
+
+This links `custom_map_downloader/` into the local QGIS profile as
+`.../python/plugins/custom_map_downloader`.
+Use copy mode if links/junctions are undesired:
+
+```bash
+python scripts/install_dev_plugin.py --mode copy
+```
+
+Choose another QGIS profile explicitly if needed:
+
+```bash
+python scripts/install_dev_plugin.py --profile myprofile
+```
+
 Optional extra check in a QGIS-enabled environment:
 
 ```bash
