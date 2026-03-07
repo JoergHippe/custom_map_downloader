@@ -1,8 +1,9 @@
-.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit
+.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit translations-update translations-compile translations-status
 
 PYTHON ?= python3
 PLUGIN_DIR := custom_map_downloader
 VERSION := $(shell sed -n 's/^version=//p' $(PLUGIN_DIR)/metadata.txt | head -n 1)
+LOCALES ?= de
 
 help:
 	@echo "Available targets:"
@@ -21,6 +22,9 @@ help:
 	@echo "  package       Build release ZIP via qgis-plugin-ci"
 	@echo "  package-check Build and validate release ZIP contents"
 	@echo "  release-check Run the full release checklist (lint, tests, package validation)"
+	@echo "  translations-update   Refresh .ts translation source files for LOCALES=$(LOCALES)"
+	@echo "  translations-compile  Build .qm files for LOCALES=$(LOCALES)"
+	@echo "  translations-status   Show translation coverage summary"
 
 install-dev:
 	$(PYTHON) -m pip install -r requirements-dev.txt
@@ -60,6 +64,15 @@ test-all: lint test
 
 precommit:
 	$(PYTHON) -m pre_commit run --all-files
+
+translations-update:
+	bash scripts/update-strings.sh $(LOCALES)
+
+translations-compile:
+	bash scripts/compile-strings.sh $(LOCALES)
+
+translations-status:
+	$(PYTHON) scripts/check_translations.py
 
 package:
 	@if [ -x "$(dir $(PYTHON))/qgis-plugin-ci" ]; then \

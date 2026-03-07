@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Usage: scripts/compile-strings.sh de af
 LOCALES="$@"

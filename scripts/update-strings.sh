@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Usage: scripts/update-strings.sh de af
 LOCALES="$@"
@@ -12,7 +12,7 @@ BASE="CustomMapDownloader"
 PLUGIN_DIR="custom_map_downloader"
 
 # Collect all Python/UI files
-PYTHON_FILES=$(find "${PLUGIN_DIR}" -type f \( -name "*.py" -o -name "*.ui" \))
+PYTHON_FILES=$(find "${PLUGIN_DIR}" -type f \( -name "*.py" -o -name "*.ui" \) | sort)
 
 # Determine newest timestamp of source files
 CHANGED_FILES=0

@@ -78,6 +78,11 @@ The plugin provides diagnostics in several places:
 - expandable `Show Details` section in those dialogs
 - QGIS message log under `CustomMapDownloader`
 
+## Language Support
+
+The plugin ships with English source strings and a German translation.
+Translations are maintained via the standard Qt Linguist workflow under `custom_map_downloader/i18n/`.
+
 ## Documentation
 
 - user operations and support: `docs/TROUBLESHOOTING.md`

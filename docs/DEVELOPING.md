@@ -123,6 +123,29 @@ Recommended local loop:
 
 The scenario source of truth is `test/integration/config.json`.
 
+## Translations
+
+Plugin translations follow the standard QGIS / Qt Linguist workflow.
+
+Translation source files live in `custom_map_downloader/i18n/*.ts`.
+Compiled runtime files live next to them as `*.qm`.
+
+Typical maintainer flow:
+
+```bash
+make translations-update LOCALES=de
+make translations-status
+make translations-compile LOCALES=de
+```
+
+Notes:
+
+- keep source strings in code and UI files in English
+- route all user-visible strings through `tr(...)`
+- prefer `unfinished` entries over fake copied-English translations
+- rebuild `.qm` files before packaging or release
+- `pylupdate5` and `lrelease` usually come from the QGIS / Qt toolchain, not from the plain tooling-only `.venv`
+
 ## Packaging and Release
 
 Primary packaging path:
