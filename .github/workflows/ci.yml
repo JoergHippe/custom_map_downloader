@@ -35,6 +35,9 @@ jobs:
           VERSION=$(sed -n 's/^version=//p' custom_map_downloader/metadata.txt | head -n 1)
           qgis-plugin-ci package "$VERSION" -c
 
+      - name: Validate packaged archive
+        run: python scripts/check_package.py
+
   qgis-tests:
     runs-on: ubuntu-latest
     steps:

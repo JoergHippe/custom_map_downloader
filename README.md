@@ -376,6 +376,12 @@ Primary release path:
 make package
 ```
 
+Validation of the built archive:
+
+```bash
+make package-check
+```
+
 This uses `qgis-plugin-ci` and repository metadata from `pyproject.toml` plus `custom_map_downloader/metadata.txt`.
 Release archives are built directly from the `custom_map_downloader/` plugin source directory.
 
