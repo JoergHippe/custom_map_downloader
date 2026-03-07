@@ -337,6 +337,24 @@ Choose another QGIS profile explicitly if needed:
 python scripts/install_dev_plugin.py --profile myprofile
 ```
 
+Remove the deployed development plugin again:
+
+```bash
+make undeploy-dev
+```
+
+On Windows, you can start QGIS directly against a chosen dev profile and deploy
+the current plugin source in one step:
+
+```bat
+start_qgis_dev.bat
+start_qgis_dev.bat myprofile
+start_qgis_dev.bat myprofile copy
+```
+
+This deploys `custom_map_downloader/` into the selected profile and launches
+QGIS with `--profile`.
+
 Optional extra check in a QGIS-enabled environment:
 
 ```bash
@@ -385,6 +403,32 @@ python -m unittest discover -s test/integration -v
 ```
 
 See also `test/integration/README.md` for Windows helpers and network test flags.
+
+### 3. Practical local dev loop
+
+Recommended workflow in a real QGIS environment:
+
+1. Deploy the plugin into the target profile:
+   - `make deploy-dev`
+   - or on Windows: `start_qgis_dev.bat`
+2. Start QGIS with that profile.
+3. Make code/UI changes in the repo.
+4. In QGIS:
+   - either restart QGIS,
+   - or use a plugin reloader if you explicitly choose to work that way.
+5. Run a quick smoke check:
+   - open the plugin dialog
+   - verify layer list loads
+   - verify extent control works
+   - export a very small raster
+   - if relevant, repeat once with `Target scale (1:n)`
+
+For non-GUI validation before reopening QGIS:
+
+```bash
+make test
+make package-check
+```
 
 ---
 

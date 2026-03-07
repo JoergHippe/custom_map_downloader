@@ -84,6 +84,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Only print the resolved target directory and exit",
     )
+    parser.add_argument(
+        "--remove",
+        action="store_true",
+        help="Remove an existing deployed plugin from the target profile",
+    )
     return parser.parse_args()
 
 
@@ -99,6 +104,12 @@ def main() -> int:
         raise RuntimeError(f"Plugin source directory not found: {PLUGIN_SOURCE}")
 
     target.parent.mkdir(parents=True, exist_ok=True)
+
+    if args.remove:
+        remove_existing(target)
+        print(f"Removed {PLUGIN_NAME} from {target}")
+        return 0
+
     remove_existing(target)
 
     if args.mode == "copy":
