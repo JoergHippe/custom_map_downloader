@@ -4,7 +4,7 @@
 
 [general]
 name=Custom Map Downloader
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.34
 description=Extent-based export of georeferenced rasters (GeoTIFF/PNG/JPEG) with GSD control and optional VRT tiling
 version=0.3.0
 author=Abhinav Jayswal

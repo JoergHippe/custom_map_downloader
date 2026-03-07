@@ -33,7 +33,9 @@ class ExportLoggingTests(unittest.TestCase):
 
     def test_summarize_params_contains_core_fields(self):
         params = self._params()
-        summary = summarize_params(params, render_crs=params.render_crs, output_crs=params.output_crs)
+        summary = summarize_params(
+            params, render_crs=params.render_crs, output_crs=params.output_crs
+        )
         self.assertEqual(summary["render_crs"], "EPSG:3857")
         self.assertEqual(summary["output_crs"], "EPSG:3857")
         self.assertEqual(summary["width_px"], 512)

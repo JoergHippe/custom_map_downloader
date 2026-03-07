@@ -118,7 +118,9 @@ class GeoTiffExporter:
         self._report(progress_cb, 8, "STEP_PREPARE", {"step": 2, "total": 6})
         render_crs = params.render_crs or self._default_render_crs()
         output_crs = params.output_crs or render_crs
-        log_event("export_start", **summarize_params(params, render_crs=render_crs, output_crs=output_crs))
+        log_event(
+            "export_start", **summarize_params(params, render_crs=render_crs, output_crs=output_crs)
+        )
 
         # Policy: gsd_m_per_px is meters per pixel -> render CRS must use meters.
         if not self._crs_uses_meters(render_crs):

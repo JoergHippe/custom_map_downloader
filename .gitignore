@@ -31,3 +31,7 @@ Thumbs.db
 *.md
 !README.md
 !docs/*.md
+
+# Local tool caches
+.mypy_cache/
+.ruff_cache/
