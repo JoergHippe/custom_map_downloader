@@ -49,5 +49,6 @@ Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.b
 
 - Ohne QGIS-Umgebung werden die Tests automatisch übersprungen.  
 - Pfade zum QGIS-Prefix können im Test über `QGIS_PREFIX_PATH` vorgegeben werden.  
+- Unter Linux/Container-Umgebungen erkennen die Tests zusätzlich typische Prefix-Pfade wie `/usr` und den zur Laufzeit gemeldeten `QgsApplication.prefixPath()`.
 - Testdaten liegen im Repo unter `test/` (10x10-Raster).  
 - Integrationstests sind bewusst minimal gehalten; für umfangreiche Szenarien können zusätzliche Testdaten/Layer ergänzt werden.***

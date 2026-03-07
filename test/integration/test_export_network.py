@@ -19,8 +19,17 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo")
 
 def _detect_qgis_prefix() -> str:
     prefix_env = os.environ.get("QGIS_PREFIX_PATH", "").strip()
+    qgis_runtime_prefix = ""
+    try:
+        qgis_runtime_prefix = str(QgsApplication.prefixPath() or "").strip()
+    except Exception:
+        qgis_runtime_prefix = ""
     candidates = [
         prefix_env,
+        qgis_runtime_prefix,
+        "/usr",
+        "/usr/local",
+        "/usr/lib/qgis",
         r"C:\OSGeo4W64\apps\qgis",
         r"C:\OSGeo4W\apps\qgis",
         r"C:\Program Files\QGIS 3.36.0\apps\qgis",

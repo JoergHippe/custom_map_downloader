@@ -192,8 +192,7 @@ class CustomMapDownloader:
         else:
             render_crs = QgsCoordinateReferenceSystem("EPSG:3857")
 
-        # The exporter writes georeferencing in the same CRS it renders in.
-        output_crs = render_crs
+        output_crs = requested_output_crs or render_crs
 
         # Center in project CRS (as provided by dialog)
         center = CenterSpec(
@@ -420,10 +419,14 @@ class CustomMapDownloader:
             "ERR_VALIDATION_RENDER_CRS_UNITS": self.tr(
                 "The selected render CRS does not use meters. Please use a projected CRS."
             ),
+            "ERR_VALIDATION_VRT_OUTPUT_CRS_UNSUPPORTED": self.tr(
+                "VRT export currently requires identical render and output CRS."
+            ),
             "ERR_IMAGE_SAVE_FAILED": self.tr("Failed to write TIFF."),
             "ERR_GDAL_CREATE_FAILED": self.tr("Failed to create GeoTIFF."),
             "ERR_CRS_INVALID": self.tr("Invalid CRS."),
             "ERR_CRS_TO_WKT_FAILED": self.tr("Failed to convert CRS to WKT."),
+            "ERR_WARP_FAILED": self.tr("Failed to reproject the rendered raster into the requested output CRS."),
             "ERR_RENDER_EMPTY": self.tr(
                 "Rendered image is empty/transparent (often a server limit or timeout)."
             ),
@@ -551,6 +554,12 @@ class CustomMapDownloader:
                     "Requested output CRS {requested} is not metric; export falls back to {actual}."
                 ).format(requested=requested_authid, actual=output_authid)
             )
+        elif render_authid and output_authid and render_authid != output_authid:
+            lines.append(
+                self.tr(
+                    "Rendering is performed in {render} and the final raster is reprojected to {output}."
+                ).format(render=render_authid, output=output_authid)
+            )
         if export_params.target_scale_denominator is not None:
             lines.append(
                 self.tr("Target scale: 1:{scale:.0f}").format(
@@ -603,5 +612,6 @@ PROGRESS_TEMPLATES = {
     "STEP_WRITE_GEOTIFF": "{step}/{total}: Writing GeoTIFF",
     "STEP_WRITE_RASTER": "{step}/{total}: Writing raster",
     "STEP_BUILD_VRT": "{step}/{total}: Building VRT",
+    "STEP_REPROJECT": "{step}/{total}: Reprojecting output raster",
     "STEP_DONE": "{step}/{total}: Finished",
 }

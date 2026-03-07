@@ -20,7 +20,9 @@ from __future__ import annotations
 import os
 import random
 import re
+import tempfile
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -104,6 +106,69 @@ class GeoTiffExporter:
 
         extent = self._resolve_extent(params, render_crs=render_crs)
 
+        if params.create_vrt and self._crs_differs(render_crs, output_crs):
+            raise ValidationError(
+                "ERR_VALIDATION_VRT_OUTPUT_CRS_UNSUPPORTED",
+                "VRT export currently requires render CRS and output CRS to be identical.",
+            )
+
+        if self._crs_differs(render_crs, output_crs):
+            with tempfile.TemporaryDirectory(prefix="cmd_render_") as tmp_dir:
+                render_output = str(Path(tmp_dir) / "rendered_intermediate.tif")
+                render_params = replace(
+                    params,
+                    output_path=render_output,
+                    output_crs=render_crs,
+                    create_vrt=False,
+                )
+                rendered_path = self._export_internal(
+                    render_params,
+                    render_crs=render_crs,
+                    output_crs=render_crs,
+                    progress_cb=progress_cb,
+                    cancel_token=cancel_token,
+                    report_done=False,
+                    write_sidecars=False,
+                )
+                self._check_cancel(cancel_token)
+                self._report(progress_cb, 92, "STEP_REPROJECT", {"step": 5, "total": 6})
+                return self._warp_rendered_raster(
+                    rendered_path,
+                    final_output_path=output_path,
+                    render_extent=extent,
+                    render_crs=render_crs,
+                    output_crs=output_crs,
+                    progress_cb=progress_cb,
+                    cancel_token=cancel_token,
+                )
+
+        return self._export_internal(
+            params,
+            render_crs=render_crs,
+            output_crs=output_crs,
+            progress_cb=progress_cb,
+            cancel_token=cancel_token,
+            report_done=True,
+            write_sidecars=True,
+        )
+
+    def _export_internal(
+        self,
+        params: ExportParams,
+        *,
+        render_crs: QgsCoordinateReferenceSystem,
+        output_crs: QgsCoordinateReferenceSystem,
+        progress_cb: Optional[ProgressCallback],
+        cancel_token: Optional[CancelToken],
+        report_done: bool,
+        write_sidecars: bool,
+    ) -> str:
+        """Run the export assuming render/output CRS handling is already decided."""
+        layer = params.layer
+        width = int(params.width_px)
+        height = int(params.height_px)
+        output_path = params.output_path
+
         tile_w_px, tile_h_px = self._pick_tile_size(params)
 
         if params.create_vrt:
@@ -149,7 +214,9 @@ class GeoTiffExporter:
                     tile_h_px=tile_h_px,
                     width_px=width,
                     height_px=height,
-)
+                    report_done=report_done,
+                    write_sidecars=write_sidecars,
+                )
 
             # Fallback: klassisches, windowed Schreiben in ein einzelnes GeoTIFF.
             return self._export_tiled(
@@ -160,6 +227,8 @@ class GeoTiffExporter:
                 progress_cb=progress_cb,
                 cancel_token=cancel_token,
                 tile_size_px=max(tile_w_px, tile_h_px),
+                report_done=report_done,
+                write_sidecars=write_sidecars,
             )
 
         raw_bytes = self.estimate_raw_bytes(width, height, bands=4)
@@ -259,10 +328,11 @@ class GeoTiffExporter:
         finally:
             dataset = None
 
-        # Sidecars: always write worldfile; for PNG/JPEG also write .prj
-        self._write_sidecars(output_path, geotransform, output_crs)
+        if write_sidecars:
+            self._write_sidecars(output_path, geotransform, output_crs)
 
-        self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
+        if report_done:
+            self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return output_path
 
     @staticmethod
@@ -465,6 +535,37 @@ class GeoTiffExporter:
         th = max(64, min(8192, th))
         return tw, th
 
+    def _crs_differs(
+        self,
+        left: QgsCoordinateReferenceSystem,
+        right: QgsCoordinateReferenceSystem,
+    ) -> bool:
+        """Return True if two valid CRS objects are semantically different."""
+        if not left.isValid() or not right.isValid():
+            return False
+        return left != right
+
+    def _transform_extent_rect(
+        self,
+        rect: QgsRectangle,
+        *,
+        src_crs: QgsCoordinateReferenceSystem,
+        dst_crs: QgsCoordinateReferenceSystem,
+    ) -> QgsRectangle:
+        """Transform a rectangle bounding box into another CRS."""
+        if not self._crs_differs(src_crs, dst_crs):
+            return QgsRectangle(
+                rect.xMinimum(),
+                rect.yMinimum(),
+                rect.xMaximum(),
+                rect.yMaximum(),
+            )
+        try:
+            transform = QgsCoordinateTransform(src_crs, dst_crs, QgsProject.instance())
+            return transform.transformBoundingBox(rect)
+        except Exception as ex:
+            raise ExportError("ERR_WARP_FAILED", f"Failed to transform output extent: {ex}")
+
     def _export_tiled_vrt(
         self,
         params: ExportParams,
@@ -478,6 +579,8 @@ class GeoTiffExporter:
         tile_h_px: int,
         width_px: int,
         height_px: int,
+        report_done: bool,
+        write_sidecars: bool,
     ) -> str:
         """Export as VRT-only: write georeferenced tiles and build a VRT mosaic.
 
@@ -659,7 +762,8 @@ class GeoTiffExporter:
                     ds = None
 
                 # Sidecars per tile (always; for PNG/JPEG required)
-                self._write_sidecars(str(tile_path), tile_gt, output_crs)
+                if write_sidecars:
+                    self._write_sidecars(str(tile_path), tile_gt, output_crs)
 
                 tile_paths_abs.append(str(tile_path))
                 self._wait_with_events(rate_limit_s, cancel_token=cancel_token)
@@ -685,7 +789,8 @@ class GeoTiffExporter:
         except Exception:
             pass
 
-        self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
+        if report_done:
+            self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return str(vrt_path)
 
     def _make_vrt_paths_relative(self, vrt_path: Path, tile_paths_abs: list[str]) -> None:
@@ -738,6 +843,8 @@ class GeoTiffExporter:
         progress_cb: Optional[ProgressCallback],
         cancel_token: Optional[CancelToken],
         tile_size_px: int,
+        report_done: bool,
+        write_sidecars: bool,
     ) -> str:
         """Export using tiled rendering and windowed writes to one output raster.
 
@@ -920,7 +1027,8 @@ class GeoTiffExporter:
             dataset = None
 
         # Sidecars (always; PNG/JPEG required)
-        self._write_sidecars(output_path, geotransform, output_crs)
+        if write_sidecars:
+            self._write_sidecars(output_path, geotransform, output_crs)
 
         if blank_tiles == total_tiles:
             raise ExportError(
@@ -928,8 +1036,73 @@ class GeoTiffExporter:
                 "All tiles rendered fully transparent. Likely service limits/timeouts/throttling.",
             )
 
-        self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
+        if report_done:
+            self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return output_path
+
+    def _warp_rendered_raster(
+        self,
+        source_path: str,
+        *,
+        final_output_path: str,
+        render_extent: QgsRectangle,
+        render_crs: QgsCoordinateReferenceSystem,
+        output_crs: QgsCoordinateReferenceSystem,
+        progress_cb: Optional[ProgressCallback],
+        cancel_token: Optional[CancelToken],
+    ) -> str:
+        """Reproject an intermediate rendered raster into the requested output CRS."""
+        self._check_cancel(cancel_token)
+        src_ds = gdal.Open(source_path)
+        if src_ds is None:
+            raise ExportError("ERR_WARP_FAILED", f"Failed to open intermediate raster: {source_path}")
+
+        width = int(getattr(src_ds, "RasterXSize", 0) or 0)
+        height = int(getattr(src_ds, "RasterYSize", 0) or 0)
+        if width <= 0 or height <= 0:
+            raise ExportError("ERR_WARP_FAILED", "Intermediate raster has invalid dimensions.")
+
+        output_extent = self._transform_extent_rect(
+            render_extent,
+            src_crs=render_crs,
+            dst_crs=output_crs,
+        )
+        warp_kwargs: dict[str, Any] = {
+            "format": self._driver_for_output(final_output_path),
+            "dstSRS": self._crs_to_wkt(output_crs),
+            "outputBounds": [
+                output_extent.xMinimum(),
+                output_extent.yMinimum(),
+                output_extent.xMaximum(),
+                output_extent.yMaximum(),
+            ],
+            "width": width,
+            "height": height,
+            "creationOptions": self._gdal_create_options(self._driver_for_output(final_output_path)),
+        }
+
+        warped_ds = None
+        try:
+            warped_ds = gdal.Warp(final_output_path, src_ds, **warp_kwargs)
+        except Exception as ex:
+            raise ExportError("ERR_WARP_FAILED", f"GDAL warp failed: {ex}")
+        finally:
+            src_ds = None
+
+        if warped_ds is None:
+            raise ExportError("ERR_WARP_FAILED", "GDAL warp returned no dataset.")
+
+        try:
+            geotransform = list(warped_ds.GetGeoTransform())
+            warped_ds.FlushCache()
+        except Exception as ex:
+            raise ExportError("ERR_WARP_FAILED", f"Failed to finalize warped raster: {ex}")
+        finally:
+            warped_ds = None
+
+        self._write_sidecars(final_output_path, geotransform, output_crs)
+        self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
+        return final_output_path
 
     def _render_tile_rgba(
         self,

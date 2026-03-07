@@ -184,6 +184,16 @@ def install_qgis_stubs():
         def Create(self, *_args, **_kwargs):
             return object()
 
+    class DummyWarpDataset:
+        RasterXSize = 256
+        RasterYSize = 128
+
+        def GetGeoTransform(self):
+            return [1.0, 2.0, 0.0, 3.0, 0.0, -2.0]
+
+        def FlushCache(self):
+            return None
+
     class gdal:
         GDT_Byte = 1
 
@@ -194,6 +204,14 @@ def install_qgis_stubs():
         @staticmethod
         def BuildVRT(_path, _tiles):
             return object()
+
+        @staticmethod
+        def Open(_path):
+            return DummyWarpDataset()
+
+        @staticmethod
+        def Warp(_dst, _src, **_kwargs):
+            return DummyWarpDataset()
 
     class osr:
         class SpatialReference:
@@ -209,6 +227,8 @@ def install_qgis_stubs():
     gdal_mod.GDT_Byte = gdal.GDT_Byte
     gdal_mod.GetDriverByName = gdal.GetDriverByName
     gdal_mod.BuildVRT = gdal.BuildVRT
+    gdal_mod.Open = gdal.Open
+    gdal_mod.Warp = gdal.Warp
     osr_mod.SpatialReference = osr.SpatialReference
 
     osgeo_mod.gdal = gdal_mod
@@ -313,6 +333,39 @@ class ExporterValidationTests(unittest.TestCase):
         params_with_preset = replace(params, vrt_max_cols=0, vrt_max_rows=0, vrt_preset_size=2048)
         tw, th = exporter._pick_tile_size(params_with_preset)
         self.assertEqual((tw, th), (2048, 2048))
+
+    def test_rejects_vrt_with_different_render_and_output_crs(self):
+        exporter = GeoTiffExporter()
+        params = replace(
+            self._base_params(path_suffix=".vrt"),
+            create_vrt=True,
+            output_crs=qgis.core.QgsCoordinateReferenceSystem("EPSG:4326"),
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            exporter.export(params)
+
+        self.assertEqual(ctx.exception.code, "ERR_VALIDATION_VRT_OUTPUT_CRS_UNSUPPORTED")
+
+    def test_warp_rendered_raster_writes_output_sidecars(self):
+        exporter = GeoTiffExporter()
+        render_crs = qgis.core.QgsCoordinateReferenceSystem("EPSG:3857")
+        output_crs = qgis.core.QgsCoordinateReferenceSystem("EPSG:4326")
+        output_path = self.out_dir / "warped_output.tif"
+
+        result = exporter._warp_rendered_raster(
+            str(self.out_dir / "intermediate.tif"),
+            final_output_path=str(output_path),
+            render_extent=qgis.core.QgsRectangle(0.0, 0.0, 10.0, 10.0),
+            render_crs=render_crs,
+            output_crs=output_crs,
+            progress_cb=None,
+            cancel_token=None,
+        )
+
+        self.assertEqual(result, str(output_path))
+        self.assertTrue((self.out_dir / "warped_output.tfw").exists())
+        self.assertTrue((self.out_dir / "warped_output.prj").exists())
 
 
 if __name__ == "__main__":

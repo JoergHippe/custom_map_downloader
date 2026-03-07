@@ -85,7 +85,8 @@ The dialog consists of several main sections. The exact layout may evolve, but t
 - **CRS selection**
   - `QgsProjectionSelectionWidget` for choosing the exported raster CRS.
   - In target scale mode, use a projected CRS with meter units.
-  - If a non-metric CRS is chosen in ground-resolution mode, the exporter falls back to a metric render/output CRS internally.
+  - If a non-metric CRS is chosen in ground-resolution mode, the exporter may still render internally in a metric CRS for stable WMS portrayal and then reproject the final raster into the requested output CRS.
+  - Current limitation: VRT export requires identical render CRS and output CRS.
 - **Output path**
   - Output directory (folder)
   - Output file prefix
@@ -249,9 +250,10 @@ World files are always written.
 5. **Rendering**
    - `QgsMapRendererParallelJob` renders the selected layer for the requested extent at the derived resolution.
    - In target-scale mode, the renderer uses the OGC standard pixel size / DPI to stabilize scale-dependent WMS portrayal.
-6. **GeoTIFF writing (GDAL)**
-   - RGBA arrays are written tile by tile (full image or per tile).
-   - GeoTransform and projection are stored.
+6. **Raster writing / reprojection (GDAL)**
+   - RGBA arrays are written in render CRS.
+   - If output CRS differs, the rendered raster is reprojected into the requested output CRS before the final file is written.
+   - GeoTransform and projection are stored in the final output CRS.
 7. **World file (optional)**
    - If enabled, `.tfw` is written next to the GeoTIFF.
 8. **Post-processing**
@@ -273,6 +275,13 @@ No extra third-party Python dependencies are required.
 
 For plugin runtime, QGIS uses its own Python environment.  
 A local `.venv` is optional and only recommended for development tooling (linting/formatting and non-QGIS tests).
+
+## CI
+
+- GitHub Actions runs two layers of tests:
+  - a fast stubbed Python suite on plain `ubuntu-latest`
+  - a QGIS-backed suite inside the official `qgis/qgis` Docker image
+- The QGIS-backed job runs the repository test suite with `QT_QPA_PLATFORM=offscreen`, which gives real QGIS coverage without requiring a desktop session.
 
 ### 1. Local tooling environment (without QGIS)
 
