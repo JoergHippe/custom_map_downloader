@@ -4,6 +4,9 @@ setlocal enableextensions
 set "MODE=%~1"
 if /I "%MODE%"=="" set "MODE=all"
 
+set "PROFILE=%~2"
+if /I "%PROFILE%"=="" set "PROFILE=default"
+
 set "REPO_DIR=%~dp0"
 cd /d "%REPO_DIR%" || (
   echo [ERROR] Could not switch to repo directory: %REPO_DIR%
@@ -37,8 +40,14 @@ if exist "%PYQGIS_BAT%" (
 
 echo [INFO] Repo: %REPO_DIR%
 echo [INFO] Mode: %MODE%
+echo [INFO] Profile: %PROFILE%
 echo [INFO] QGIS_PREFIX_PATH: %QGIS_PREFIX_PATH%
 echo [INFO] Python command: %PYTHON_CMD%
+
+if defined APPDATA (
+  set "QGIS_CUSTOM_CONFIG_PATH=%APPDATA%\QGIS\QGIS3"
+)
+set "QGIS_PROFILE=%PROFILE%"
 
 "%PYTHON_CMD%" -c "import qgis.core" >nul 2>nul
 if errorlevel 1 (
@@ -64,5 +73,5 @@ if /I "%MODE%"=="network" (
 )
 
 echo [ERROR] Unknown mode "%MODE%".
-echo Usage: run_integration_tests.bat [all^|smoke^|network]
+echo Usage: run_integration_tests.bat [all^|smoke^|network] [profile]
 exit /b 2

@@ -1,4 +1,4 @@
-.PHONY: help install-dev deploy-dev undeploy-dev format format-check lint lint-pylint test test-qgis test-all package package-check precommit
+.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check precommit
 
 PYTHON ?= python3
 PLUGIN_DIR := custom_map_downloader
@@ -9,6 +9,7 @@ help:
 	@echo "  install-dev   Install local development dependencies"
 	@echo "  deploy-dev    Link plugin into local QGIS profile for development"
 	@echo "  undeploy-dev  Remove plugin from local QGIS profile"
+	@echo "  dev-check     Run standard local preflight checks"
 	@echo "  format        Apply black formatting"
 	@echo "  format-check  Check black formatting"
 	@echo "  lint          Run ruff + black checks"
@@ -28,6 +29,9 @@ deploy-dev:
 
 undeploy-dev:
 	$(PYTHON) scripts/install_dev_plugin.py --remove
+
+dev-check:
+	$(PYTHON) scripts/dev_check.py
 
 format:
 	$(PYTHON) -m black .

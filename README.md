@@ -314,6 +314,7 @@ Core tooling commands:
 make format
 make lint
 make test
+make dev-check
 make package
 ```
 
@@ -354,6 +355,17 @@ start_qgis_dev.bat myprofile copy
 
 This deploys `custom_map_downloader/` into the selected profile and launches
 QGIS with `--profile`.
+
+VS Code can be started with the same QGIS profile semantics:
+
+```bat
+start_vscode_qgis.bat
+start_vscode_qgis.bat myprofile
+start_vscode_qgis.bat myprofile copy
+```
+
+This prepares the QGIS environment, deploys the plugin to the selected profile
+and opens the repository in VS Code.
 
 Optional extra check in a QGIS-enabled environment:
 
@@ -403,6 +415,13 @@ python -m unittest discover -s test/integration -v
 ```
 
 See also `test/integration/README.md` for Windows helpers and network test flags.
+On Windows, you can choose a QGIS profile explicitly:
+
+```bat
+run_integration_tests.bat all myprofile
+run_integration_tests.bat smoke myprofile
+run_integration_tests.bat network myprofile
+```
 
 ### 3. Practical local dev loop
 
@@ -427,6 +446,7 @@ For non-GUI validation before reopening QGIS:
 
 ```bash
 make test
+make dev-check
 make package-check
 ```
 
