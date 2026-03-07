@@ -390,7 +390,10 @@ class GeoTiffExporter:
         - If project CRS uses meters -> use it.
         - Else -> EPSG:3857 (safe default for m/px workflows).
         """
-        project_crs = QgsProject.instance().crs()
+        project = QgsProject.instance()
+        if project is None:
+            return QgsCoordinateReferenceSystem("EPSG:3857")
+        project_crs = project.crs()
         if project_crs.isValid() and self._crs_uses_meters(project_crs):
             return project_crs
         return QgsCoordinateReferenceSystem("EPSG:3857")
@@ -797,8 +800,8 @@ class GeoTiffExporter:
         # Make VRT portable (relative SourceFilename entries)
         try:
             self._make_vrt_paths_relative(vrt_path, tile_paths_abs)
-        except Exception:
-            pass
+        except Exception as ex:
+            raise ExportError("ERR_VRT_RELATIVE_PATHS_FAILED", str(ex)) from ex
 
         if report_done:
             self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})

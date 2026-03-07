@@ -423,6 +423,10 @@ run_integration_tests.bat smoke myprofile
 run_integration_tests.bat network myprofile
 ```
 
+Das gewählte Profil beeinflusst dabei den QGIS-Kontext. Der getestete Plugin-Code
+wird weiterhin direkt aus dem Repository importiert, nicht aus einem deployten
+Profil-Plugin-Verzeichnis.
+
 ### 3. Practical local dev loop
 
 Recommended workflow in a real QGIS environment:

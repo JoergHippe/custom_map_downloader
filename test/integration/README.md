@@ -44,6 +44,7 @@ Der Testsuite lädt ein kleines Raster (`test/tenbytenraster.asc`), setzt eine m
   - `run_integration_tests.bat network` → nur Netz-Szenarien (setzt intern `ALLOW_INTEGRATION_NETWORK=1`)
 
 Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.bat`, prüft `qgis.core` vorab und gibt den Rückgabecode der Tests aus. Keine langen Pfade nötig.
+Ein optionaler Profilname beeinflusst den QGIS-Kontext (`QGIS_PROFILE`/Konfiguration), aber die Tests importieren den Plugin-Code weiterhin direkt aus dem Repo und nicht aus einem deployten Plugin-Verzeichnis.
 
 ## Hinweise
 

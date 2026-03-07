@@ -182,7 +182,30 @@ def install_qgis_stubs():
 
     class DummyDriver:
         def Create(self, *_args, **_kwargs):
-            return object()
+            return DummyWritableDataset()
+
+    class DummyBand:
+        def WriteArray(self, *_args, **_kwargs):
+            return None
+
+        def SetNoDataValue(self, *_args, **_kwargs):
+            return None
+
+        def FlushCache(self):
+            return None
+
+    class DummyWritableDataset:
+        def SetGeoTransform(self, *_args, **_kwargs):
+            return None
+
+        def SetProjection(self, *_args, **_kwargs):
+            return None
+
+        def GetRasterBand(self, *_args, **_kwargs):
+            return DummyBand()
+
+        def FlushCache(self):
+            return None
 
     class DummyWarpDataset:
         RasterXSize = 256
@@ -248,7 +271,7 @@ from custom_map_downloader.core.constants import (  # noqa: E402
     GSD_MIN,
     LARGE_RASTER_STRONG_MAX_DIM_PX,
 )
-from custom_map_downloader.core.errors import ValidationError  # noqa: E402
+from custom_map_downloader.core.errors import ExportError, ValidationError  # noqa: E402
 from custom_map_downloader.core.exporter import GeoTiffExporter  # noqa: E402
 from custom_map_downloader.core.models import CenterSpec, ExportParams, ExtentSpec  # noqa: E402
 
@@ -371,6 +394,55 @@ class ExporterValidationTests(unittest.TestCase):
         self.assertEqual(result, str(output_path))
         self.assertTrue((self.out_dir / "warped_output.tfw").exists())
         self.assertTrue((self.out_dir / "warped_output.prj").exists())
+
+    def test_default_render_crs_falls_back_when_project_instance_is_missing(self):
+        exporter = GeoTiffExporter()
+        original_instance = qgis.core.QgsProject.instance
+        qgis.core.QgsProject.instance = classmethod(lambda cls: None)
+        try:
+            crs = exporter._default_render_crs()
+        finally:
+            qgis.core.QgsProject.instance = original_instance
+
+        self.assertEqual(crs.authid(), "EPSG:3857")
+
+    def test_vrt_relative_path_failure_is_reported(self):
+        exporter = GeoTiffExporter()
+        params = replace(
+            self._base_params(path_suffix=".vrt"),
+            create_vrt=True,
+            vrt_max_cols=256,
+            vrt_max_rows=256,
+        )
+        original_make_relative = exporter._make_vrt_paths_relative
+        original_render_tile = exporter._render_tile_rgba
+        original_wait = exporter._wait_with_events
+
+        def fail_make_relative(_vrt_path, _tile_paths):
+            raise RuntimeError("rewrite failed")
+
+        class FakeArray:
+            def __getitem__(self, _key):
+                return self
+
+            def max(self):
+                return 255
+
+        def fake_render_tile_rgba(**_kwargs):
+            return FakeArray()
+
+        exporter._make_vrt_paths_relative = fail_make_relative
+        exporter._render_tile_rgba = fake_render_tile_rgba
+        exporter._wait_with_events = lambda *_args, **_kwargs: None
+        try:
+            with self.assertRaises(ExportError) as ctx:
+                exporter.export(params)
+        finally:
+            exporter._make_vrt_paths_relative = original_make_relative
+            exporter._render_tile_rgba = original_render_tile
+            exporter._wait_with_events = original_wait
+
+        self.assertEqual(ctx.exception.code, "ERR_VRT_RELATIVE_PATHS_FAILED")
 
 
 if __name__ == "__main__":

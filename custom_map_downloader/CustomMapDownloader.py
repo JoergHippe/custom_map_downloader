@@ -445,6 +445,9 @@ class CustomMapDownloader:
             "ERR_RENDER_FAILED": self.tr("Rendering failed."),
             "ERR_RENDER_TILE_FAILED": self.tr("Tile rendering failed."),
             "ERR_VRT_BUILD_FAILED": self.tr("Failed to build VRT mosaic."),
+            "ERR_VRT_RELATIVE_PATHS_FAILED": self.tr(
+                "Failed to make the VRT portable with relative tile paths."
+            ),
             "ERR_SIDECAR_WRITE_FAILED": self.tr(
                 "Raster export succeeded, but georeferencing sidecar files could not be written."
             ),
