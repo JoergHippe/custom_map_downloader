@@ -174,6 +174,8 @@ class GeoTiffExporter:
         map_settings.setExtent(extent)
         map_settings.setOutputSize(QSize(width, height))
         map_settings.setDestinationCrs(render_crs)
+        if params.output_dpi and params.output_dpi > 0:
+            map_settings.setOutputDpi(float(params.output_dpi))
 
         self._report(progress_cb, 35, "STEP_RENDER", {"step": 3, "total": 6})
         render = QgsMapRendererParallelJob(map_settings)
@@ -568,6 +570,7 @@ class GeoTiffExporter:
                             render_crs=render_crs,
                             width_px=tw,
                             height_px=th,
+                            output_dpi=params.output_dpi,
                             cancel_token=cancel_token,
                         )
                     except Exception as ex:
@@ -849,6 +852,7 @@ class GeoTiffExporter:
                                 render_crs=render_crs,
                                 width_px=tw,
                                 height_px=th,
+                                output_dpi=params.output_dpi,
                                 cancel_token=cancel_token,
                             )
                         except Exception as ex:
@@ -935,6 +939,7 @@ class GeoTiffExporter:
         render_crs: QgsCoordinateReferenceSystem,
         width_px: int,
         height_px: int,
+        output_dpi: Optional[float],
         cancel_token: Optional[CancelToken],
     ) -> np.ndarray:
         """Render one tile into a detached RGBA array (height_px, width_px, 4)."""
@@ -944,6 +949,8 @@ class GeoTiffExporter:
         map_settings.setExtent(tile_extent)
         map_settings.setOutputSize(QSize(width_px, height_px))
         map_settings.setDestinationCrs(render_crs)
+        if output_dpi and output_dpi > 0:
+            map_settings.setOutputDpi(float(output_dpi))
 
         job = QgsMapRendererParallelJob(map_settings)
         job.start()

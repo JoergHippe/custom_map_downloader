@@ -159,11 +159,23 @@ class CustomMapDownloader:
         except Exception:
             project_is_meters = QgsUnitTypes.toString(project_crs.mapUnits()).lower().startswith("meter")
 
-        render_crs = (
-            project_crs
-            if (project_crs.isValid() and project_is_meters)
-            else QgsCoordinateReferenceSystem("EPSG:3857")
-        )
+        selected_output_crs = params.get("output_crs")
+        selected_output_is_meters = False
+        if selected_output_crs is not None:
+            try:
+                selected_output_is_meters = (
+                    selected_output_crs.isValid()
+                    and selected_output_crs.mapUnits() == Qgis.DistanceUnit.Meters
+                )
+            except Exception:
+                selected_output_is_meters = False
+
+        if selected_output_is_meters:
+            render_crs = selected_output_crs
+        elif project_crs.isValid() and project_is_meters:
+            render_crs = project_crs
+        else:
+            render_crs = QgsCoordinateReferenceSystem("EPSG:3857")
 
         # Center in project CRS (as provided by dialog)
         center = CenterSpec(
@@ -198,6 +210,8 @@ class CustomMapDownloader:
             load_as_layer=bool(params["load_as_layer"]),
             render_crs=render_crs,
             output_crs=render_crs,
+            target_scale_denominator=params.get("target_scale_denominator"),
+            output_dpi=params.get("output_dpi"),
             create_vrt=create_vrt,
             vrt_max_cols=vrt_max_cols,
             vrt_max_rows=vrt_max_rows,
@@ -508,6 +522,12 @@ class CustomMapDownloader:
                 gsd=export_params.gsd_m_per_px,
             ),
         ]
+        if export_params.target_scale_denominator is not None:
+            lines.append(
+                self.tr("Target scale: 1:{scale:.0f}").format(
+                    scale=export_params.target_scale_denominator
+                )
+            )
         if export_params.extent is not None:
             ext = export_params.extent
             lines.append(

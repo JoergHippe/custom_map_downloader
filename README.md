@@ -16,7 +16,7 @@ The plugin works purely **extent-based**:
 
 - The geographic rectangle is selected interactively via the QGIS-native `QgsExtentGroupBox` (layer extent, canvas extent, CRS transformation handled by QGIS).
 - The plugin derives the center internally from the selected extent (no separate “Center Mode” in the UI anymore).
-- Output resolution is controlled by a single **GSD** value (map units per pixel); pixel width/height are derived from extent and GSD.
+- Output resolution can be controlled either by **GSD** (map units per pixel) or by an explicit **target scale (1:n)**; pixel width/height are derived from extent and the active resolution mode.
 
 The selected layer is rendered at the requested output resolution and stored as a fully georeferenced **GeoTIFF**.  
 Optionally, an additional **world file (.tfw)** can be written next to the GeoTIFF.
@@ -37,9 +37,10 @@ Typical use cases include:
 - ✔ **Extent-based workflow only**:
   - Extent defined via layer extent, canvas extent, or manual extent box
   - Center is derived internally from the chosen extent
-- ✔ **Single resolution parameter**:
+- ✔ **Selectable resolution mode**:
   - **GSD** (map units per pixel, typically meters per pixel)
-  - Pixel **width/height are derived** from extent and GSD
+  - **Target scale (1:n)** for scale-dependent WMS portrayal
+  - Pixel **width/height are derived** from extent and the active resolution mode
 - ✔ **Selectable CRS** via `QgsProjectionSelectionWidget`
 - ✔ **Selectable output format: GeoTIFF, PNG, JPEG**
 - ✔ **Always georeferenced output**
@@ -104,12 +105,18 @@ There is **no separate “Use Center” / “Center Mode” UI** anymore; extent
 
 ### 3. Resolution
 
+- **Resolution mode**
+  - Choose between **GSD (map units / pixel)** and **Target scale (1:n)**.
+  - Target scale is internally converted using the OGC standard pixel size (`0.28 mm`).
 - **GSD (map units / pixel)**
   - Single `QDoubleSpinBox` for GSD (e.g. meters per pixel).
   - Extent + GSD → derived pixel width/height.
+- **Target scale (1:n)**
+  - Useful for WMS services that switch portrayal by scale.
+  - Extent + target scale → derived GSD → derived pixel width/height.
 - **Extent information label**
-  - Updated whenever extent or GSD changes.
-  - Shows physical size and resulting pixel size.
+  - Updated whenever extent, GSD, or target scale changes.
+  - Shows physical size, active GSD, optional target scale, and resulting pixel size.
 
 ### 4. VRT / Tiling
 
@@ -155,7 +162,7 @@ When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
    - Optionally adjust the **output CRS**.
 4. Define the **extent**:
    - Use canvas extent, layer extent, or manually adjust the extent box.
-5. Set the **GSD** (map units per pixel).
+5. Choose either **GSD** or **Target scale (1:n)**.
 6. Optionally configure **tiling** and **world file** options.
 7. Click **OK**.
 
@@ -170,7 +177,9 @@ After completion, the exported image can optionally be loaded directly into QGIS
 
 | Parameter             | Default (example)          |
 |-----------------------|---------------------------|
+| Resolution mode       | GSD                       |
 | GSD                   | 1 map unit/pixel          |
+| Target scale          | ~1:3571 (equivalent to 1 m/px) |
 | Load as layer         | Enabled                   |
 | VRT / tiling          | Disabled by default       |
 | Tile size preset      | 1024 × 1024 px (example)  |
@@ -212,11 +221,12 @@ World files are always written.
    - Extent in project CRS
    - Transformation into render CRS (project CRS if metric, otherwise `EPSG:3857`)
 3. **Pixel size computation**
-   - GSD × extent → width/height (px)
+   - GSD or target scale × extent → width/height (px)
 4. **Tiling decision**
    - If width/height exceed tile limits, internal tiling is used.
 5. **Rendering**
    - `QgsMapRendererParallelJob` renders the selected layer for the requested extent at the derived resolution.
+   - In target-scale mode, the renderer uses the OGC standard pixel size / DPI to stabilize scale-dependent WMS portrayal.
 6. **GeoTIFF writing (GDAL)**
    - RGBA arrays are written tile by tile (full image or per tile).
    - GeoTransform and projection are stored.
@@ -291,6 +301,12 @@ See also `test/integration/README.md` for Windows helpers and network test flags
 ### GSD outside allowed range
 
 - GSD must be within the allowed range (current defaults: 0.1–1000 map units/pixel). Extremely small or large values are rejected; adjust GSD accordingly.
+
+### WMS portrayal changes with scale
+
+- Some WMS services render different content depending on scale.
+- Use **Target scale (1:n)** if you need a specific scale-dependent portrayal.
+- If the selected output CRS is metric, the plugin uses it directly for rendering; otherwise it falls back to a metric render CRS.
 
 ### Output path errors
 

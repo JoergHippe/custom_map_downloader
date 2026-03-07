@@ -65,6 +65,8 @@ class ExportParams:
         load_as_layer: If ``True`` load result into the QGIS project after export.
         render_crs: CRS used for rendering (must use meters if GSD is used).
         output_crs: CRS written to output GeoTIFF. Defaults to ``render_crs``.
+        target_scale_denominator: Optional target scale (1:n) used to derive GSD.
+        output_dpi: Optional explicit render DPI passed to ``QgsMapSettings``.
         create_vrt: If ``True``, VRT / tiling-related logic may be enabled
             (currently used as a hint, reserved for future VRT writer support).
         vrt_max_cols: Optional maximum tile width in pixels; used to derive tile
@@ -86,6 +88,8 @@ class ExportParams:
     load_as_layer: bool
     render_crs: Optional[QgsCoordinateReferenceSystem] = None
     output_crs: Optional[QgsCoordinateReferenceSystem] = None
+    target_scale_denominator: Optional[float] = None
+    output_dpi: Optional[float] = None
     create_vrt: bool = False
     vrt_max_cols: int = 0
     vrt_max_rows: int = 0

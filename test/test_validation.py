@@ -4,6 +4,7 @@ import types
 
 from core.constants import GSD_MIN, GSD_MAX, LARGE_RASTER_STRONG_MAX_DIM_PX, LARGE_RASTER_STRONG_TOTAL_PX
 from core.errors import ValidationError
+from core.scale import OGC_PIXEL_SIZE_M, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 
 
 def install_qgis_stubs():
@@ -39,6 +40,12 @@ from core.validation import validate_gsd, validate_pixel_limits, validate_output
 
 
 class ValidationHelpersTests(unittest.TestCase):
+    def test_scale_gsd_conversion_roundtrip(self):
+        scale = 5000.0
+        gsd = scale_to_gsd_m_per_px(scale)
+        self.assertAlmostEqual(gsd, scale * OGC_PIXEL_SIZE_M)
+        self.assertAlmostEqual(gsd_to_scale_denominator(gsd), scale)
+
     def test_validate_gsd_ok(self):
         validate_gsd(GSD_MIN)
         validate_gsd((GSD_MIN + GSD_MAX) / 2.0)

@@ -40,6 +40,7 @@ from .core.constants import (
     GSD_DECIMALS,
     GSD_MAX,
 )
+from .core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 from .core.validation import pixel_limit_status
 from qgis.gui import QgsExtentWidget
 
@@ -59,6 +60,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self.setupUi(self)
 
         self._apply_ui_constants()
+        self._init_resolution_mode_combo()
         self._init_output_format_combo()
         self._apply_tooltips()
 
@@ -76,6 +78,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         # Polling timer for "Draw on canvas" mode (extentChanged may not fire reliably)
         self._extent_poll_timer: Optional[QTimer] = None
         self._last_extent_signature: Optional[Tuple[float, float, float, float, str]] = None
+        self._resolution_syncing = False
 
         # ------------------------------------------------------------------
         # Wire basic UI
@@ -89,6 +92,15 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         if hasattr(self, "spinBox_gsd"):
             self.spinBox_gsd.valueChanged.connect(self._update_extent_info)
             self.spinBox_gsd.valueChanged.connect(self._update_vrt_info)
+            self.spinBox_gsd.valueChanged.connect(self._on_gsd_changed)
+
+        if hasattr(self, "comboBox_resolutionMode"):
+            self.comboBox_resolutionMode.currentIndexChanged.connect(self._on_resolution_mode_changed)
+
+        if hasattr(self, "doubleSpinBox_targetScale"):
+            self.doubleSpinBox_targetScale.valueChanged.connect(self._update_extent_info)
+            self.doubleSpinBox_targetScale.valueChanged.connect(self._update_vrt_info)
+            self.doubleSpinBox_targetScale.valueChanged.connect(self._on_target_scale_changed)
 
         if hasattr(self, "comboBox_layer"):
             self.comboBox_layer.currentIndexChanged.connect(self._on_layer_changed)
@@ -162,6 +174,94 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.spinBox_gsd.setSingleStep(float(GSD_STEP))
             self.spinBox_gsd.setMinimum(float(GSD_MIN))
             self.spinBox_gsd.setMaximum(float(GSD_MAX))
+        if hasattr(self, "doubleSpinBox_targetScale"):
+            self.doubleSpinBox_targetScale.setDecimals(0)
+            self.doubleSpinBox_targetScale.setSingleStep(1000.0)
+            self.doubleSpinBox_targetScale.setMinimum(1.0)
+            self.doubleSpinBox_targetScale.setMaximum(1_000_000_000.0)
+
+    def _init_resolution_mode_combo(self) -> None:
+        """Initialize resolution mode selector and derived scale value."""
+        if hasattr(self, "comboBox_resolutionMode"):
+            self.comboBox_resolutionMode.clear()
+            self.comboBox_resolutionMode.addItem(self.tr("GSD (m/px)"), "gsd")
+            self.comboBox_resolutionMode.addItem(self.tr("Target scale (1:n)"), "scale")
+
+        if hasattr(self, "spinBox_gsd") and hasattr(self, "doubleSpinBox_targetScale"):
+            self.doubleSpinBox_targetScale.setValue(round(gsd_to_scale_denominator(float(self.spinBox_gsd.value()))))
+
+        self._update_resolution_controls()
+
+    def _resolution_mode(self) -> str:
+        """Return active resolution mode."""
+        if hasattr(self, "comboBox_resolutionMode"):
+            try:
+                mode = str(self.comboBox_resolutionMode.currentData() or "").strip().lower()
+            except Exception:
+                mode = ""
+            if mode in {"gsd", "scale"}:
+                return mode
+        return "gsd"
+
+    def _update_resolution_controls(self) -> None:
+        """Enable only the active resolution input."""
+        use_scale = self._resolution_mode() == "scale"
+        if hasattr(self, "spinBox_gsd"):
+            self.spinBox_gsd.setEnabled(not use_scale)
+        if hasattr(self, "label_gsd"):
+            self.label_gsd.setEnabled(not use_scale)
+        if hasattr(self, "doubleSpinBox_targetScale"):
+            self.doubleSpinBox_targetScale.setEnabled(use_scale)
+        if hasattr(self, "label_targetScale"):
+            self.label_targetScale.setEnabled(use_scale)
+
+    def _current_gsd(self) -> float:
+        """Return active GSD in meters per pixel."""
+        if self._resolution_mode() == "scale":
+            if not hasattr(self, "doubleSpinBox_targetScale"):
+                return 0.0
+            try:
+                scale = float(self.doubleSpinBox_targetScale.value())
+            except Exception:
+                return 0.0
+            return scale_to_gsd_m_per_px(scale)
+
+        if not hasattr(self, "spinBox_gsd"):
+            return 0.0
+        try:
+            return float(self.spinBox_gsd.value())
+        except Exception:
+            return 0.0
+
+    def _current_target_scale(self) -> Optional[float]:
+        """Return target scale denominator for scale mode."""
+        if self._resolution_mode() != "scale" or not hasattr(self, "doubleSpinBox_targetScale"):
+            return None
+        try:
+            scale = float(self.doubleSpinBox_targetScale.value())
+        except Exception:
+            return None
+        return scale if scale > 0.0 else None
+
+    def _sync_scale_from_gsd(self, gsd: float) -> None:
+        """Update target scale widget from GSD without recursion."""
+        if self._resolution_syncing or not hasattr(self, "doubleSpinBox_targetScale") or gsd <= 0.0:
+            return
+        self._resolution_syncing = True
+        try:
+            self.doubleSpinBox_targetScale.setValue(round(gsd_to_scale_denominator(gsd)))
+        finally:
+            self._resolution_syncing = False
+
+    def _sync_gsd_from_scale(self, scale: float) -> None:
+        """Update GSD widget from target scale without recursion."""
+        if self._resolution_syncing or not hasattr(self, "spinBox_gsd") or scale <= 0.0:
+            return
+        self._resolution_syncing = True
+        try:
+            self.spinBox_gsd.setValue(scale_to_gsd_m_per_px(scale))
+        finally:
+            self._resolution_syncing = False
 
     def _init_output_format_combo(self) -> None:
         """Initialize output format combobox (single export only)."""
@@ -226,6 +326,20 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 self.tr(
                     "Derived raster size is computed from extent and pixel size. "
                     "For WMTS/XYZ, effective resolution may be snapped to supported zoom levels."
+                )
+            )
+
+        if hasattr(self, "doubleSpinBox_targetScale"):
+            self.doubleSpinBox_targetScale.setToolTip(
+                self.tr(
+                    "Target map scale denominator (1:n). "
+                    "Internally converted using the OGC standard pixel size of 0.28 mm."
+                )
+            )
+            self.doubleSpinBox_targetScale.setWhatsThis(
+                self.tr(
+                    "Use this mode when a WMS changes portrayal by scale. "
+                    "The plugin derives GSD from the entered target scale."
                 )
             )
 
@@ -295,6 +409,22 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             pass
 
         try:
+            target_scale = float(settings.value(base + "last_target_scale", "", type=float) or 0.0)
+            if target_scale > 0 and hasattr(self, "doubleSpinBox_targetScale"):
+                self.doubleSpinBox_targetScale.setValue(target_scale)
+        except Exception:
+            pass
+
+        try:
+            resolution_mode = settings.value(base + "last_resolution_mode", "gsd", type=str) or "gsd"
+            if hasattr(self, "comboBox_resolutionMode"):
+                idx = self.comboBox_resolutionMode.findData(resolution_mode)
+                if idx >= 0:
+                    self.comboBox_resolutionMode.setCurrentIndex(idx)
+        except Exception:
+            pass
+
+        try:
             crs_authid = settings.value(base + "last_crs", "", type=str) or ""
             if crs_authid and hasattr(self, "mQgsProjectionSelectionWidget"):
                 crs = QgsCoordinateReferenceSystem(crs_authid)
@@ -321,6 +451,18 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         if hasattr(self, "spinBox_gsd"):
             try:
                 settings.setValue(base + "last_gsd", float(self.spinBox_gsd.value()))
+            except Exception:
+                pass
+
+        if hasattr(self, "doubleSpinBox_targetScale"):
+            try:
+                settings.setValue(base + "last_target_scale", float(self.doubleSpinBox_targetScale.value()))
+            except Exception:
+                pass
+
+        if hasattr(self, "comboBox_resolutionMode"):
+            try:
+                settings.setValue(base + "last_resolution_mode", self._resolution_mode())
             except Exception:
                 pass
 
@@ -547,10 +689,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         if os.path.sep in output_prefix or (os.altsep and os.altsep in output_prefix):
             return None
 
-        try:
-            gsd = float(self.spinBox_gsd.value())
-        except Exception:
-            return None
+        gsd = self._current_gsd()
         if gsd <= 0.0:
             return None
 
@@ -646,6 +785,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             "vrt_max_rows": vrt_max_rows,
             "vrt_preset_size": vrt_preset_size,
             "output_crs": output_crs,
+            "target_scale_denominator": self._current_target_scale(),
+            "output_dpi": OGC_STANDARD_DPI if self._resolution_mode() == "scale" else None,
+            "resolution_mode": self._resolution_mode(),
         }
 
     # ------------------------------------------------------------------
@@ -677,6 +819,20 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         self._update_extent_info()
         self._update_vrt_info()
+
+    def _on_resolution_mode_changed(self, _index: int) -> None:
+        """Toggle the active resolution input."""
+        self._update_resolution_controls()
+        self._update_extent_info()
+        self._update_vrt_info()
+
+    def _on_gsd_changed(self, value: float) -> None:
+        """Keep scale denominator synchronized when GSD changes."""
+        self._sync_scale_from_gsd(float(value))
+
+    def _on_target_scale_changed(self, value: float) -> None:
+        """Keep GSD synchronized when target scale changes."""
+        self._sync_gsd_from_scale(float(value))
 
     def _on_output_crs_changed(self, crs: QgsCoordinateReferenceSystem) -> None:
         """Update extent output CRS when CRS widget changes."""
@@ -991,13 +1147,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
     def _compute_pixel_dimensions(self) -> Tuple[int, int]:
         """Compute pixel width/height from extent and GSD."""
-        if not hasattr(self, "spinBox_gsd"):
-            return 0, 0
-
-        try:
-            gsd = float(self.spinBox_gsd.value())
-        except Exception:
-            return 0, 0
+        gsd = self._current_gsd()
         if gsd <= 0.0:
             return 0, 0
 
@@ -1028,8 +1178,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         lines = [
             self.tr("Extent: {width:.2f} m × {height:.2f} m").format(width=w_m, height=h_m),
+            self.tr("GSD: {gsd:.4f} m/px").format(gsd=self._current_gsd()),
             self.tr("Size: {width_px} × {height_px} px").format(width_px=width_px, height_px=height_px),
         ]
+        target_scale = self._current_target_scale()
+        if target_scale is not None:
+            lines.insert(2, self.tr("Target scale: 1:{scale:.0f}").format(scale=target_scale))
         if warn_msg:
             lines.append(self.tr("Warning: {msg}").format(msg=warn_msg))
 
