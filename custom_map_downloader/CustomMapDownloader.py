@@ -32,6 +32,7 @@ from qgis.PyQt.QtWidgets import QAction, QCheckBox, QMessageBox, QProgressDialog
 
 from .core.errors import CancelledError, ExportError, ValidationError
 from .core.exporter import GeoTiffExporter
+from .core.locale import resolve_locale_code
 from .core.models import CancelToken, CenterSpec, ExportParams, ExtentSpec
 from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
 from .resources import *  # noqa: F401,F403
@@ -49,15 +50,17 @@ class CustomMapDownloader:
         """
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
+        self.translator: QTranslator | None = None
 
         # i18n / Locale
-        locale = QSettings().value("locale/userLocale")[0:2]
+        locale = resolve_locale_code(QSettings().value("locale/userLocale"))
         locale_path = os.path.join(self.plugin_dir, "i18n", f"CustomMapDownloader_{locale}.qm")
 
         if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-            QCoreApplication.installTranslator(self.translator)
+            translator = QTranslator()
+            translator.load(locale_path)
+            QCoreApplication.installTranslator(translator)
+            self.translator = translator
 
         self.actions = []
         self.menu = self.tr("&MapDownloader")
