@@ -79,12 +79,9 @@ RESOURCE_SRC=$(shell grep '^ *<file' resources.qrc | sed 's@</file>@@g;s/.*>//g'
 
 .PHONY: default
 default:
-	@echo While you can use make to build and deploy your plugin, pb_tool
-	@echo is a much better solution.
-	@echo A Python script, pb_tool provides platform independent management of
-	@echo your plugins and runs anywhere.
-	@echo You can install pb_tool using: pip install pb_tool
-	@echo See https://g-sherman.github.io/plugin_build_tool/ for info. 
+	@echo Primary packaging path: python3 package_plugin.py
+	@echo This repository loads the dialog directly from the .ui file and uses
+	@echo package_plugin.py as the preferred release workflow.
 
 compile: $(COMPILED_RESOURCE_FILES)
 

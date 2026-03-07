@@ -4,8 +4,8 @@
 
 Semantics:
 - Extent is fully handled by QgsExtentGroupBox (built-in QGIS logic).
-- Resolution is controlled via a single GSD value (map units per pixel).
-- Pixel dimensions are derived from extent and GSD.
+- Resolution can be controlled by ground resolution (m/px) or target scale (1:n).
+- Pixel dimensions are derived from extent and the active resolution mode.
 - VRT section exposes tiling parameters including presets and a tile count preview.
 
 Robustness patch for "Draw on canvas":
@@ -318,7 +318,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         if hasattr(self, "spinBox_gsd"):
             self.spinBox_gsd.setToolTip(
                 self.tr(
-                    "Pixel size (map units per pixel). Typical: meters per pixel. "
+                    "Ground resolution in map units per pixel. Typical: meters per pixel. "
                     "Allowed range: {min} … {max}."
                 ).format(min=GSD_MIN, max=GSD_MAX)
             )
@@ -355,6 +355,13 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 self.tr(
                     "Provide a filename prefix without extension. "
                     "The extension is selected via 'Output format' (single export) or forced to .vrt in VRT mode."
+                )
+            )
+
+        if hasattr(self, "mQgsProjectionSelectionWidget"):
+            self.mQgsProjectionSelectionWidget.setToolTip(
+                self.tr(
+                    "CRS of the exported raster. In target scale mode, choose a projected CRS with meter units."
                 )
             )
 

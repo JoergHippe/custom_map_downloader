@@ -3,8 +3,8 @@
 ## Overview
 
 Custom Map Downloader is a QGIS plugin to export map content from layers and map services
-(WMS, WMTS, XYZ, raster and vector layers) with precise control over extent, resolution
-(GSD), output CRS and tiling.
+(WMS, WMTS, XYZ, raster and vector layers) with precise control over extent, ground resolution,
+target scale, output CRS and tiling.
 
 ---
 
@@ -16,7 +16,7 @@ The plugin works purely **extent-based**:
 
 - The geographic rectangle is selected interactively via the QGIS-native `QgsExtentGroupBox` (layer extent, canvas extent, CRS transformation handled by QGIS).
 - The plugin derives the center internally from the selected extent (no separate “Center Mode” in the UI anymore).
-- Output resolution can be controlled either by **GSD** (map units per pixel) or by an explicit **target scale (1:n)**; pixel width/height are derived from extent and the active resolution mode.
+- Output resolution can be controlled either by **ground resolution** (`m/px`) or by an explicit **target scale (1:n)**; pixel width/height are derived from extent and the active resolution mode.
 
 The selected layer is rendered at the requested output resolution and stored as a fully georeferenced **GeoTIFF**.  
 Optionally, an additional **world file (.tfw)** can be written next to the GeoTIFF.
@@ -38,7 +38,7 @@ Typical use cases include:
   - Extent defined via layer extent, canvas extent, or manual extent box
   - Center is derived internally from the chosen extent
 - ✔ **Selectable resolution mode**:
-  - **GSD** (map units per pixel, typically meters per pixel)
+  - **Ground resolution** (`m/px`)
   - **Target scale (1:n)** for scale-dependent WMS portrayal
   - Pixel **width/height are derived** from extent and the active resolution mode
 - ✔ **Selectable CRS** via `QgsProjectionSelectionWidget`
@@ -80,8 +80,9 @@ The dialog consists of several main sections. The exact layout may evolve, but t
 - **Layer selection**
   - Pick the QGIS layer that should be rendered (XYZ/WMTS/WMS, raster, vector, etc.).
 - **CRS selection**
-  - `QgsProjectionSelectionWidget` for choosing the output/render CRS.
-  - By default, the project CRS is used; if it does not use meters, the exporter may fall back to `EPSG:3857` internally.
+  - `QgsProjectionSelectionWidget` for choosing the exported raster CRS.
+  - In target scale mode, use a projected CRS with meter units.
+  - If a non-metric CRS is chosen in ground-resolution mode, the exporter falls back to a metric render/output CRS internally.
 - **Output path**
   - Output directory (folder)
   - Output file prefix
@@ -106,17 +107,18 @@ There is **no separate “Use Center” / “Center Mode” UI** anymore; extent
 ### 3. Resolution
 
 - **Resolution mode**
-  - Choose between **GSD (map units / pixel)** and **Target scale (1:n)**.
+  - Choose between **ground resolution (m/px)** and **target scale (1:n)**.
   - Target scale is internally converted using the OGC standard pixel size (`0.28 mm`).
-- **GSD (map units / pixel)**
-  - Single `QDoubleSpinBox` for GSD (e.g. meters per pixel).
-  - Extent + GSD → derived pixel width/height.
+- **Ground resolution (m/px)**
+  - Single `QDoubleSpinBox` for pixel size in meters per pixel.
+  - Extent + ground resolution → derived pixel width/height.
 - **Target scale (1:n)**
   - Useful for WMS services that switch portrayal by scale.
-  - Extent + target scale → derived GSD → derived pixel width/height.
+  - Requires a projected output CRS with meter units.
+  - Extent + target scale → derived ground resolution → derived pixel width/height.
 - **Extent information label**
-  - Updated whenever extent, GSD, or target scale changes.
-  - Shows physical size, active GSD, optional target scale, and resulting pixel size.
+  - Updated whenever extent, ground resolution, or target scale changes.
+  - Shows physical size, active ground resolution, optional target scale, and resulting pixel size.
 
 ### 4. VRT / Tiling
 
@@ -162,7 +164,7 @@ When “Create VRT” is enabled, the exporter operates in **VRT-only mode**:
    - Optionally adjust the **output CRS**.
 4. Define the **extent**:
    - Use canvas extent, layer extent, or manually adjust the extent box.
-5. Choose either **GSD** or **Target scale (1:n)**.
+5. Choose either **ground resolution (m/px)** or **Target scale (1:n)**.
 6. Optionally configure **tiling** and **world file** options.
 7. Click **OK**.
 
@@ -177,8 +179,8 @@ After completion, the exported image can optionally be loaded directly into QGIS
 
 | Parameter             | Default (example)          |
 |-----------------------|---------------------------|
-| Resolution mode       | GSD                       |
-| GSD                   | 1 map unit/pixel          |
+| Resolution mode       | Ground resolution         |
+| Ground resolution     | 1 m/pixel                 |
 | Target scale          | ~1:3571 (equivalent to 1 m/px) |
 | Load as layer         | Enabled                   |
 | VRT / tiling          | Disabled by default       |
@@ -216,12 +218,12 @@ World files are always written.
 ## Internal Processing Pipeline
 
 1. **Parameter validation**
-   - Checks layer, extent, GSD, output path, etc.
+   - Checks layer, extent, resolution/scale mode, output path, etc.
 2. **Extent resolution**
    - Extent in project CRS
    - Transformation into render CRS (project CRS if metric, otherwise `EPSG:3857`)
 3. **Pixel size computation**
-   - GSD or target scale × extent → width/height (px)
+   - Ground resolution or target scale × extent → width/height (px)
 4. **Tiling decision**
    - If width/height exceed tile limits, internal tiling is used.
 5. **Rendering**
@@ -284,6 +286,18 @@ See also `test/integration/README.md` for Windows helpers and network test flags
 
 ---
 
+## Packaging
+
+Use `package_plugin.py` as the primary release path:
+
+```bash
+python3 package_plugin.py
+```
+
+This creates a repository ZIP in the parent directory and includes the runtime files required by the plugin, including compiled translation files.
+
+---
+
 ## Troubleshooting
 
 ### Export is empty / fully transparent
@@ -298,15 +312,15 @@ See also `test/integration/README.md` for Windows helpers and network test flags
 
 - Extremely large rasters are blocked to avoid crashes. Reduce extent or increase GSD. Use VRT/tiling for large areas.
 
-### GSD outside allowed range
+### Ground resolution outside allowed range
 
-- GSD must be within the allowed range (current defaults: 0.1–1000 map units/pixel). Extremely small or large values are rejected; adjust GSD accordingly.
+- Ground resolution must be within the allowed range (current defaults: 0.1–1000 m/pixel). Extremely small or large values are rejected; adjust the value accordingly.
 
 ### WMS portrayal changes with scale
 
 - Some WMS services render different content depending on scale.
 - Use **Target scale (1:n)** if you need a specific scale-dependent portrayal.
-- If the selected output CRS is metric, the plugin uses it directly for rendering; otherwise it falls back to a metric render CRS.
+- Target scale mode requires a projected output CRS with meter units.
 
 ### Output path errors
 

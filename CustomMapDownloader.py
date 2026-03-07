@@ -7,7 +7,7 @@ Notes:
     - Extent is defined exclusively via QgsExtentGroupBox in the dialog.
     - The dialog provides:
         * extent (west/east/south/north) in project CRS,
-        * GSD (map units per pixel),
+        * ground resolution (m/px) or target scale (1:n),
         * optional VRT/tiling parameters (create_vrt, vrt_max_cols,
           vrt_max_rows, vrt_preset_size).
     - These parameters are threaded into ExportParams.
@@ -152,7 +152,8 @@ class CustomMapDownloader:
             )
             return
 
-        # Determine render CRS (prefer a metric CRS)
+        # Determine actual render/output CRS.
+        # Scale-dependent WMS rendering is only reliable in a projected metric CRS.
         project_crs = self._project().crs()
         try:
             project_is_meters = project_crs.mapUnits() == Qgis.DistanceUnit.Meters
@@ -170,12 +171,29 @@ class CustomMapDownloader:
             except Exception:
                 selected_output_is_meters = False
 
+        requested_scale = params.get("target_scale_denominator")
+        if requested_scale is not None and not selected_output_is_meters:
+            QMessageBox.critical(
+                self.iface.mainWindow(),
+                self.tr("Error"),
+                self.tr(
+                    "Target scale mode requires a projected output CRS with meter units. "
+                    "Please choose a metric CRS such as EPSG:3857 or a local projected CRS."
+                ),
+            )
+            return
+
+        requested_output_crs = selected_output_crs if selected_output_crs is not None and selected_output_crs.isValid() else None
+
         if selected_output_is_meters:
             render_crs = selected_output_crs
         elif project_crs.isValid() and project_is_meters:
             render_crs = project_crs
         else:
             render_crs = QgsCoordinateReferenceSystem("EPSG:3857")
+
+        # The exporter writes georeferencing in the same CRS it renders in.
+        output_crs = render_crs
 
         # Center in project CRS (as provided by dialog)
         center = CenterSpec(
@@ -209,7 +227,7 @@ class CustomMapDownloader:
             output_path=params["output_path"],
             load_as_layer=bool(params["load_as_layer"]),
             render_crs=render_crs,
-            output_crs=render_crs,
+            output_crs=output_crs,
             target_scale_denominator=params.get("target_scale_denominator"),
             output_dpi=params.get("output_dpi"),
             create_vrt=create_vrt,
@@ -510,18 +528,29 @@ class CustomMapDownloader:
         layer = params.get("layer")
         layer_name = getattr(layer, "name", lambda: "")() if layer else ""
         render_crs = export_params.render_crs
-        authid = render_crs.authid() if render_crs and render_crs.isValid() else ""
+        output_crs = export_params.output_crs
+        render_authid = render_crs.authid() if render_crs and render_crs.isValid() else ""
+        output_authid = output_crs.authid() if output_crs and output_crs.isValid() else ""
+        requested_crs = params.get("output_crs")
+        requested_authid = requested_crs.authid() if requested_crs and requested_crs.isValid() else ""
 
         lines = [
             self.tr("Layer: {name}").format(name=layer_name),
             self.tr("Output: {path}").format(path=export_params.output_path),
-            self.tr("CRS: {crs}").format(crs=authid),
+            self.tr("Render CRS: {crs}").format(crs=render_authid),
+            self.tr("Raster CRS: {crs}").format(crs=output_authid),
             self.tr("Size: {w} × {h} px @ GSD {gsd}").format(
                 w=export_params.width_px,
                 h=export_params.height_px,
                 gsd=export_params.gsd_m_per_px,
             ),
         ]
+        if requested_authid and requested_authid != output_authid:
+            lines.append(
+                self.tr(
+                    "Requested output CRS {requested} is not metric; export falls back to {actual}."
+                ).format(requested=requested_authid, actual=output_authid)
+            )
         if export_params.target_scale_denominator is not None:
             lines.append(
                 self.tr("Target scale: 1:{scale:.0f}").format(
