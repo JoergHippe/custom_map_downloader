@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 import numpy as np
-from osgeo import gdal, osr
+from osgeo import gdal
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -48,7 +48,20 @@ from .constants import (
     LARGE_RASTER_STRONG_TOTAL_PX,
 )
 from .errors import CancelledError, ExportError, ValidationError
+from .gdal_io import (
+    create_dataset,
+    crs_to_wkt,
+    driver_for_output,
+    gdal_create_options,
+    rgba_to_rgb_on_white,
+    tile_extension_for,
+    worldfile_extension_for,
+    write_prj_file,
+    write_sidecars,
+    write_world_file,
+)
 from .models import CancelToken, ExportParams
+from .tiling import pad_extent_to_full_tiles, pick_tile_size
 from .validation import (
     validate_gsd,
     validate_output_path,
@@ -170,32 +183,13 @@ class GeoTiffExporter:
         tile_w_px, tile_h_px = self._pick_tile_size(params)
 
         if params.create_vrt:
-            # Pixelgröße aus aktuellem Extent ableiten (damit "look & feel" gleich bleibt)
-            px_w = extent.width() / float(width)
-            px_h = extent.height() / float(height)
-
-            cols = (width + tile_w_px - 1) // tile_w_px
-            rows = (height + tile_h_px - 1) // tile_h_px
-
-            new_width = cols * tile_w_px
-            new_height = rows * tile_h_px
-
-            dx_px = new_width - width
-            dy_px = new_height - height
-
-            # Symmetrisch um die Mitte erweitern
-            dx_map = dx_px * px_w
-            dy_map = dy_px * px_h
-
-            extent = QgsRectangle(
-                extent.xMinimum() - dx_map / 2.0,
-                extent.yMinimum() - dy_map / 2.0,
-                extent.xMaximum() + dx_map / 2.0,
-                extent.yMaximum() + dy_map / 2.0,
+            extent, width, height = pad_extent_to_full_tiles(
+                extent,
+                width_px=width,
+                height_px=height,
+                tile_width_px=tile_w_px,
+                tile_height_px=tile_h_px,
             )
-
-            width = new_width
-            height = new_height
 
         use_tiling = params.create_vrt or (width > tile_w_px) or (height > tile_h_px)
         if use_tiling:
@@ -470,25 +464,7 @@ class GeoTiffExporter:
             return QgsUnitTypes.toString(crs.mapUnits()).lower().startswith("meter")
 
     def _crs_to_wkt(self, crs: QgsCoordinateReferenceSystem) -> str:
-        if not crs.isValid():
-            raise ExportError("ERR_CRS_INVALID", "CRS is not valid.")
-
-        authid = crs.authid() or ""
-        m = re.match(r"^EPSG:(\d+)$", authid)
-        srs = osr.SpatialReference()
-
-        if m:
-            srs.ImportFromEPSG(int(m.group(1)))
-            return srs.ExportToWkt()
-
-        wkt = crs.toWkt()
-        err = srs.ImportFromWkt(wkt)
-        if err != 0:
-            raise ExportError(
-                "ERR_CRS_TO_WKT_FAILED",
-                f"OSR ImportFromWkt failed (code={err}).",
-            )
-        return srs.ExportToWkt()
+        return crs_to_wkt(crs)
 
     def _check_cancel(
         self,
@@ -518,32 +494,7 @@ class GeoTiffExporter:
             cb(int(percent), key, args or {})
 
     def _pick_tile_size(self, params: ExportParams) -> tuple[int, int]:
-        """Pick tile width/height from params with sane defaults.
-
-        Policy:
-            - Use ``vrt_max_cols`` / ``vrt_max_rows`` if > 0.
-            - Else use ``vrt_preset_size`` (UI preset) if > 0.
-            - Otherwise fall back to ``MAX_TILE_PX``.
-            - Clamp to a reasonable range to avoid tiny tiles.
-        """
-        preset = int(params.vrt_preset_size or 0)
-
-        tw = int(params.vrt_max_cols or 0)
-        th = int(params.vrt_max_rows or 0)
-
-        if tw <= 0 and preset > 0:
-            tw = preset
-        if th <= 0 and preset > 0:
-            th = preset
-
-        if tw <= 0:
-            tw = self.MAX_TILE_PX
-        if th <= 0:
-            th = self.MAX_TILE_PX
-
-        tw = max(64, min(8192, tw))
-        th = max(64, min(8192, th))
-        return tw, th
+        return pick_tile_size(params, default_max_tile_px=self.MAX_TILE_PX)
 
     def _crs_differs(
         self,
@@ -1186,39 +1137,13 @@ class GeoTiffExporter:
             time.sleep(0.05)
 
     def _driver_for_output(self, output_path: str) -> str:
-        """Return GDAL driver name for the given output path suffix."""
-        ext = (Path(output_path).suffix or "").lower()
-        if ext in {".tif", ".tiff"}:
-            return "GTiff"
-        if ext == ".png":
-            return "PNG"
-        if ext in {".jpg", ".jpeg"}:
-            return "JPEG"
-        return "GTiff"
+        return driver_for_output(output_path)
 
     def _tile_extension_for(self, output_path: str) -> str:
-        """Normalize raster extension used for tiles (and single export)."""
-        ext = (Path(output_path).suffix or "").lower()
-        if ext == ".tiff":
-            return ".tif"
-        if ext == ".jpeg":
-            return ".jpg"
-        if ext in {".tif", ".png", ".jpg"}:
-            return ext
-        # If someone passes a .vrt as output_path, default tiles to GeoTIFF.
-        if ext == ".vrt":
-            return ".tif"
-        return ".tif"
+        return tile_extension_for(output_path)
 
     def _gdal_create_options(self, driver_name: str) -> list[str]:
-        """Return GDAL Create() options per driver."""
-        if driver_name == "GTiff":
-            return ["COMPRESS=LZW", "TILED=YES", "BIGTIFF=IF_SAFER"]
-        if driver_name == "JPEG":
-            # Good default. You can expose this later as a UI option.
-            return ["QUALITY=90"]
-        # PNG: defaults are fine (lossless).
-        return []
+        return gdal_create_options(driver_name)
 
     def _gdal_create_dataset(
         self,
@@ -1230,64 +1155,26 @@ class GeoTiffExporter:
         bands: int,
         options: list[str],
     ):
-        """Create a GDAL dataset for the given output driver."""
-        driver = gdal.GetDriverByName(driver_name)
-        if driver is None:
-            raise ExportError("ERR_GDAL_DRIVER_MISSING", f"GDAL driver not found: {driver_name}")
-        return driver.Create(
-            output_path,
-            int(width),
-            int(height),
-            int(bands),
-            gdal.GDT_Byte,
+        return create_dataset(
+            output_path=output_path,
+            driver_name=driver_name,
+            width=width,
+            height=height,
+            bands=bands,
             options=options,
         )
 
     def _rgba_to_rgb_on_white(self, arr_rgba: np.ndarray) -> np.ndarray:
-        """Composite RGBA onto a white background; return RGB uint8 (for JPEG)."""
-        if arr_rgba.ndim != 3 or arr_rgba.shape[2] != 4:
-            raise ValueError("Expected RGBA array (H, W, 4)")
-
-        rgb = arr_rgba[:, :, :3].astype(np.float32)
-        a = (arr_rgba[:, :, 3:4].astype(np.float32)) / 255.0
-        white = np.full_like(rgb, 255.0, dtype=np.float32)
-        out = rgb * a + white * (1.0 - a)
-        return np.clip(out, 0.0, 255.0).astype(np.uint8)
+        return rgba_to_rgb_on_white(arr_rgba)
 
     def _write_prj_file(self, output_path: str, crs: QgsCoordinateReferenceSystem) -> None:
-        """Write .prj (WKT) next to output raster/tile."""
-        root, _ = os.path.splitext(output_path)
-        prj_path = root + ".prj"
-        wkt = self._crs_to_wkt(crs)  # nutzt deine bestehende Methode
-        Path(prj_path).write_text(wkt, encoding="utf-8")
+        write_prj_file(output_path, crs)
 
     def _worldfile_extension_for(self, output_path: str) -> str:
-        """Return worldfile extension for the raster format."""
-        ext = (Path(output_path).suffix or "").lower()
-        if ext in {".tif", ".tiff"}:
-            return ".tfw"
-        if ext == ".png":
-            return ".pgw"
-        if ext in {".jpg", ".jpeg"}:
-            return ".jgw"
-        return ".wld"
+        return worldfile_extension_for(output_path)
 
     def _write_world_file(self, path: str, geotransform: list[float]) -> None:
-        """Write a world file next to the raster (extension depends on format)."""
-        root, _ = os.path.splitext(path)
-        world_path = root + self._worldfile_extension_for(path)
-
-        gt0, gt1, gt2, gt3, gt4, gt5 = geotransform
-        x_center = gt0 + gt1 * 0.5 + gt2 * 0.5
-        y_center = gt3 + gt4 * 0.5 + gt5 * 0.5
-
-        with open(world_path, "w", encoding="ascii") as fh:
-            fh.write(f"{gt1:.12f}\n")
-            fh.write(f"{gt4:.12f}\n")
-            fh.write(f"{gt2:.12f}\n")
-            fh.write(f"{gt5:.12f}\n")
-            fh.write(f"{x_center:.12f}\n")
-            fh.write(f"{y_center:.12f}\n")
+        write_world_file(path, geotransform)
 
     def _write_sidecars(
         self,
@@ -1295,19 +1182,4 @@ class GeoTiffExporter:
         geotransform: list[float],
         crs: QgsCoordinateReferenceSystem,
     ) -> None:
-        """Write world file and .prj or fail with a clear export error."""
-        try:
-            self._write_world_file(path, geotransform)
-        except Exception as ex:
-            raise ExportError(
-                "ERR_SIDECAR_WRITE_FAILED",
-                f"Failed to write world file for '{path}': {ex}",
-            ) from ex
-
-        try:
-            self._write_prj_file(path, crs)
-        except Exception as ex:
-            raise ExportError(
-                "ERR_SIDECAR_WRITE_FAILED",
-                f"Failed to write .prj for '{path}': {ex}",
-            ) from ex
+        write_sidecars(path, geotransform, crs)
