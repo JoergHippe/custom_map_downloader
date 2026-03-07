@@ -6,7 +6,7 @@ class ProgressKeysTest(unittest.TestCase):
     """Ensure progress keys used by exporter are present in UI mapping."""
 
     def test_progress_keys_present_in_plugin(self):
-        plugin_path = Path(__file__).parents[1] / "CustomMapDownloader.py"
+        plugin_path = Path(__file__).parents[1] / "custom_map_downloader" / "CustomMapDownloader.py"
         text = plugin_path.read_text(encoding="utf-8", errors="replace")
 
         expected_keys = {
@@ -26,7 +26,12 @@ class ProgressKeysTest(unittest.TestCase):
         self.assertFalse(missing, f"Missing progress keys in CustomMapDownloader.py: {missing}")
 
     def test_de_qm_exists(self):
-        qm_path = Path(__file__).parents[1] / "i18n" / "CustomMapDownloader_de.qm"
+        qm_path = (
+            Path(__file__).parents[1]
+            / "custom_map_downloader"
+            / "i18n"
+            / "CustomMapDownloader_de.qm"
+        )
         self.assertTrue(qm_path.exists(), "German translation file is missing")
 
 

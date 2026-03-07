@@ -9,9 +9,10 @@ if [ -z "${LOCALES}" ]; then
 fi
 
 BASE="CustomMapDownloader"
+PLUGIN_DIR="custom_map_downloader"
 
 # Collect all Python/UI files
-PYTHON_FILES=$(find . -type f \( -name "*.py" -o -name "*.ui" \))
+PYTHON_FILES=$(find "${PLUGIN_DIR}" -type f \( -name "*.py" -o -name "*.ui" \))
 
 # Determine newest timestamp of source files
 CHANGED_FILES=0
@@ -24,7 +25,7 @@ done
 
 UPDATE=false
 for LOCALE in ${LOCALES}; do
-  TRANSLATION_FILE="i18n/${BASE}_${LOCALE}.ts"
+  TRANSLATION_FILE="${PLUGIN_DIR}/i18n/${BASE}_${LOCALE}.ts"
   if [ ! -f "${TRANSLATION_FILE}" ]; then
     touch "${TRANSLATION_FILE}"
     UPDATE=true
@@ -39,7 +40,7 @@ done
 if [ "${UPDATE}" = true ]; then
   echo "Updating translation sources for locales: ${LOCALES}"
   for LOCALE in ${LOCALES}; do
-    OUTFILE="i18n/${BASE}_${LOCALE}.ts"
+    OUTFILE="${PLUGIN_DIR}/i18n/${BASE}_${LOCALE}.ts"
     echo " -> ${OUTFILE}"
     pylupdate5 -noobsolete ${PYTHON_FILES} -ts "${OUTFILE}"
   done

@@ -10,10 +10,11 @@ fi
 
 BASE="CustomMapDownloader"
 LRELEASE=${LRELEASE:-lrelease}
+PLUGIN_DIR="custom_map_downloader"
 
 for LOCALE in ${LOCALES}; do
-    TS_FILE="i18n/${BASE}_${LOCALE}.ts"
-    QM_FILE="i18n/${BASE}_${LOCALE}.qm"
+    TS_FILE="${PLUGIN_DIR}/i18n/${BASE}_${LOCALE}.ts"
+    QM_FILE="${PLUGIN_DIR}/i18n/${BASE}_${LOCALE}.qm"
     echo "Compiling ${TS_FILE} -> ${QM_FILE}"
     "${LRELEASE}" "${TS_FILE}" -qm "${QM_FILE}"
 done

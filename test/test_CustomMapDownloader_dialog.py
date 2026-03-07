@@ -16,7 +16,7 @@ import unittest
 
 try:
     from qgis.PyQt.QtGui import QDialogButtonBox, QDialog
-    from CustomMapDownloader_dialog import CustomMapDownloaderDialog
+    from custom_map_downloader.CustomMapDownloader_dialog import CustomMapDownloaderDialog
     from utilities import get_qgis_app
 
     QGIS_APP = get_qgis_app()

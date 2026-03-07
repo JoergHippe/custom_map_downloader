@@ -271,12 +271,36 @@ No extra third-party Python dependencies are required.
 
 ---
 
-## Development Setup (Optional .venv)
+## Development Stack
 
-For plugin runtime, QGIS uses its own Python environment.
-A local `.venv` is optional and only recommended for development tooling (linting/formatting and non-QGIS tests).
+For actual plugin development and runtime behavior, **QGIS Python is the primary environment**.
+Do not treat a plain isolated `.venv` as the plugin runtime.
 
-Recommended local workflow:
+### QGIS runtime / integration environment
+
+Use one of these as the authoritative environment for plugin execution and QGIS-backed tests:
+
+- Windows: OSGeo4W Shell / QGIS Python Shell
+- Linux: system QGIS Python environment
+- IDE setup: a QGIS-aware virtual environment that inherits global/site packages from the installed QGIS Python stack
+
+Run QGIS-backed tests there:
+
+```bash
+make test-qgis
+```
+
+### Tooling-only environment
+
+A local `.venv` is still useful, but only for repository tooling that does not define plugin runtime semantics:
+
+- `ruff`
+- `black`
+- `pre-commit`
+- `qgis-plugin-ci`
+- fast non-QGIS tests
+
+Setup:
 
 ```bash
 python3 -m venv .venv
@@ -284,7 +308,7 @@ python3 -m venv .venv
 python3 -m pip install -r requirements-dev.txt
 ```
 
-Core commands:
+Core tooling commands:
 
 ```bash
 make format
@@ -293,13 +317,13 @@ make test
 make package
 ```
 
-Optional deeper check in a QGIS-enabled environment:
+Optional extra check in a QGIS-enabled environment:
 
 ```bash
 make lint-pylint
 ```
 
-For automatic local guardrails:
+Install local hooks once:
 
 ```bash
 python3 -m pre_commit install
@@ -312,7 +336,7 @@ python3 -m pre_commit install
   - a QGIS-backed suite inside the official `qgis/qgis` Docker image
 - The QGIS-backed job runs the repository test suite with `QT_QPA_PLATFORM=offscreen`, which gives real QGIS coverage without requiring a desktop session.
 
-### 1. Local tooling environment (without QGIS)
+### 1. Tooling-only environment (without QGIS runtime)
 
 Windows (PowerShell):
 
@@ -346,13 +370,14 @@ See also `test/integration/README.md` for Windows helpers and network test flags
 
 ## Packaging
 
-Use `package_plugin.py` as the primary release path:
+Primary release path:
 
 ```bash
-python3 package_plugin.py
+make package
 ```
 
-This creates a repository ZIP in the parent directory and includes the runtime files required by the plugin, including compiled translation files.
+This uses `qgis-plugin-ci` and repository metadata from `pyproject.toml` plus `custom_map_downloader/metadata.txt`.
+Release archives are built directly from the `custom_map_downloader/` plugin source directory.
 
 ---
 

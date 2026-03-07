@@ -2,14 +2,18 @@ import sys
 import types
 import unittest
 
-from core.constants import (
+from custom_map_downloader.core.constants import (
     GSD_MAX,
     GSD_MIN,
     LARGE_RASTER_STRONG_MAX_DIM_PX,
     LARGE_RASTER_STRONG_TOTAL_PX,
 )
-from core.errors import ValidationError
-from core.scale import OGC_PIXEL_SIZE_M, gsd_to_scale_denominator, scale_to_gsd_m_per_px
+from custom_map_downloader.core.errors import ValidationError
+from custom_map_downloader.core.scale import (
+    OGC_PIXEL_SIZE_M,
+    gsd_to_scale_denominator,
+    scale_to_gsd_m_per_px,
+)
 
 
 def install_qgis_stubs():
@@ -41,7 +45,11 @@ def install_qgis_stubs():
 
 install_qgis_stubs()
 
-from core.validation import validate_gsd, validate_output_path, validate_pixel_limits
+from custom_map_downloader.core.validation import (
+    validate_gsd,
+    validate_output_path,
+    validate_pixel_limits,
+)
 
 
 class ValidationHelpersTests(unittest.TestCase):

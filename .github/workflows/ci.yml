@@ -30,6 +30,11 @@ jobs:
       - name: Run unit tests (stubbed)
         run: python -m unittest discover -s test -v
 
+      - name: Build package with qgis-plugin-ci
+        run: |
+          VERSION=$(sed -n 's/^version=//p' custom_map_downloader/metadata.txt | head -n 1)
+          qgis-plugin-ci package "$VERSION" -c
+
   qgis-tests:
     runs-on: ubuntu-latest
     steps:

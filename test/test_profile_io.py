@@ -2,7 +2,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.profile_io import normalize_profile_data, read_profile, write_profile
+from custom_map_downloader.core.profile_io import (
+    normalize_profile_data,
+    read_profile,
+    write_profile,
+)
 
 
 class ProfileIoTests(unittest.TestCase):

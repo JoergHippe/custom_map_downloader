@@ -13,9 +13,9 @@ exclude = '''
 '''
 extend-exclude = '''
 (
-    resources\.py
-  | resources_rc\.py
-  | CustomMapDownloader_dialog_base_ui\.py
+    custom_map_downloader/resources\.py
+  | custom_map_downloader/resources_rc\.py
+  | custom_map_downloader/CustomMapDownloader_dialog_base_ui\.py
   | help/source/conf\.py
   | plugin_upload\.py
   | package_plugin\.py
@@ -33,9 +33,9 @@ extend-exclude = '''
 line-length = 100
 target-version = "py312"
 extend-exclude = [
-  "resources.py",
-  "resources_rc.py",
-  "CustomMapDownloader_dialog_base_ui.py",
+  "custom_map_downloader/resources.py",
+  "custom_map_downloader/resources_rc.py",
+  "custom_map_downloader/CustomMapDownloader_dialog_base_ui.py",
   "help/source/conf.py",
   "plugin_upload.py",
   "package_plugin.py",
@@ -62,9 +62,16 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "test/**/*.py" = ["E402"]
-"resources.py" = ["ALL"]
+"custom_map_downloader/resources.py" = ["ALL"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
 python_files = ["test_*.py"]
 addopts = "-ra"
+
+[tool.qgis-plugin-ci]
+plugin_path = "custom_map_downloader"
+github_organization_slug = "JoergHippe"
+project_slug = "custom_map_downloader"
+changelog_include = false
+use_project_slug_as_plugin_directory = true

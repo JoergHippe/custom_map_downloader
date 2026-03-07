@@ -64,9 +64,16 @@ try:
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))
 
-    from core.exporter import GeoTiffExporter  # type: ignore
-    from core.models import CenterSpec, ExportParams, ExtentSpec  # type: ignore
-    from core.scale import OGC_STANDARD_DPI, scale_to_gsd_m_per_px  # type: ignore
+    from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
+    from custom_map_downloader.core.models import (  # type: ignore
+        CenterSpec,
+        ExportParams,
+        ExtentSpec,
+    )
+    from custom_map_downloader.core.scale import (  # type: ignore
+        OGC_STANDARD_DPI,
+        scale_to_gsd_m_per_px,
+    )
 
     HAS_QGIS = True
 except Exception:

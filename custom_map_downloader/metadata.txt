@@ -1,0 +1,46 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=Custom Map Downloader
+qgisMinimumVersion=3.0
+description=Extent-based export of georeferenced rasters (GeoTIFF/PNG/JPEG) with GSD control and optional VRT tiling
+version=0.3.0
+author=Abhinav Jayswal
+email=abhinavjayaswal10@gmail.com
+
+about=Custom Map Downloader exports visible QGIS layers extent-based: pick a layer, choose an output CRS, set ground sampling distance (map units per pixel) and export a georeferenced raster. Pixel width/height are derived from extent and GSD; world files are always written. Optional VRT mode writes tiled GeoTIFFs plus a portable VRT instead of a merged raster. Designed for XYZ/WMTS/WMS, raster and vector layers with progress feedback and automatic layer loading.
+
+tracker=https://github.com/JoergHippe/custom_map_downloader/issues
+repository=https://github.com/JoergHippe/custom_map_downloader
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add the changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=raster,export,geotiff,satellite,imagery,download,georeferencing,map
+
+homepage=https://github.com/JoergHippe/custom_map_downloader
+category=Raster
+icon=icon.png
+# experimental flag
+experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+Category of the plugin: Raster, Vector, Database or Web
+# category=
+
+# If the plugin can run on QGIS Server.
+server=False

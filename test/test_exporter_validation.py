@@ -243,10 +243,14 @@ install_qgis_stubs()
 
 import qgis  # noqa: E402
 
-from core.constants import GSD_MAX, GSD_MIN, LARGE_RASTER_STRONG_MAX_DIM_PX  # noqa: E402
-from core.errors import ValidationError  # noqa: E402
-from core.exporter import GeoTiffExporter  # noqa: E402
-from core.models import CenterSpec, ExportParams, ExtentSpec  # noqa: E402
+from custom_map_downloader.core.constants import (  # noqa: E402
+    GSD_MAX,
+    GSD_MIN,
+    LARGE_RASTER_STRONG_MAX_DIM_PX,
+)
+from custom_map_downloader.core.errors import ValidationError  # noqa: E402
+from custom_map_downloader.core.exporter import GeoTiffExporter  # noqa: E402
+from custom_map_downloader.core.models import CenterSpec, ExportParams, ExtentSpec  # noqa: E402
 
 
 class ExporterValidationTests(unittest.TestCase):

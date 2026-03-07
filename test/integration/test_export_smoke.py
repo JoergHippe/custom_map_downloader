@@ -6,7 +6,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Tuple
 
-from core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator
+from custom_map_downloader.core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator
 
 
 def _resolve_repo_root() -> Path:
@@ -66,8 +66,12 @@ try:
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))
 
-    from core.exporter import GeoTiffExporter  # type: ignore
-    from core.models import CenterSpec, ExportParams, ExtentSpec  # type: ignore
+    from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
+    from custom_map_downloader.core.models import (  # type: ignore
+        CenterSpec,
+        ExportParams,
+        ExtentSpec,
+    )
 
     HAS_QGIS = True
 except Exception:

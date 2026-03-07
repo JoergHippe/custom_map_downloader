@@ -44,7 +44,9 @@ class SafeTranslationsTest(unittest.TestCase):
         """Test that translations work."""
         parent_path = os.path.join(__file__, os.path.pardir, os.path.pardir)
         dir_path = os.path.abspath(parent_path)
-        file_path = os.path.join(dir_path, "i18n", "CustomMapDownloader_de.qm")
+        file_path = os.path.join(
+            dir_path, "custom_map_downloader", "i18n", "CustomMapDownloader_de.qm"
+        )
         translator = QTranslator()
         translator.load(file_path)
         QCoreApplication.installTranslator(translator)

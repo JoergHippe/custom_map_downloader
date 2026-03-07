@@ -4,14 +4,12 @@
 __pycache__/
 *.so
 
-# QGIS
-*.qm
-
 # IDE
 .vscode/
 .idea/
 .venv/
-CustomMapDownloader_dialog_base_ui.py
+custom_map_downloader/CustomMapDownloader_dialog_base_ui.py
+custom_map_downloader/resources_rc.py
 *.swp
 *.swo
 
