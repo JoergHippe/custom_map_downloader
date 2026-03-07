@@ -1,4 +1,4 @@
-.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit translations-update translations-compile translations-status
+.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit translations-update translations-compile translations-status release-governance-check
 
 PYTHON ?= python3
 PLUGIN_DIR := custom_map_downloader
@@ -25,6 +25,7 @@ help:
 	@echo "  translations-update   Refresh .ts translation source files for LOCALES=$(LOCALES)"
 	@echo "  translations-compile  Build .qm files for LOCALES=$(LOCALES)"
 	@echo "  translations-status   Show translation coverage summary"
+	@echo "  release-governance-check Validate metadata/changelog release governance"
 
 install-dev:
 	$(PYTHON) -m pip install -r requirements-dev.txt
@@ -74,6 +75,9 @@ translations-compile:
 translations-status:
 	$(PYTHON) scripts/check_translations.py
 
+release-governance-check:
+	$(PYTHON) scripts/check_release_governance.py
+
 package:
 	@if [ -x "$(dir $(PYTHON))/qgis-plugin-ci" ]; then \
 		"$(dir $(PYTHON))/qgis-plugin-ci" package $(VERSION) -c; \
@@ -84,4 +88,4 @@ package:
 package-check: package
 	$(PYTHON) scripts/check_package.py
 
-release-check: lint test package-check
+release-check: lint test translations-status release-governance-check package-check

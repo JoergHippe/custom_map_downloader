@@ -19,8 +19,7 @@ repository=https://github.com/JoergHippe/custom_map_downloader
 # Recommended items:
 
 hasProcessingProvider=no
-# Uncomment the following line and add the changelog:
-# changelog=
+changelog=0.3.0: target-scale mode, export profiles, improved CRS handling, diagnostics, packaging and translation workflow.
 
 # Tags are comma separated with spaces allowed
 tags=raster,export,geotiff,satellite,imagery,download,georeferencing,map

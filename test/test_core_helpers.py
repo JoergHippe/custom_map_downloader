@@ -6,8 +6,19 @@ install_qgis_stubs()
 
 from qgis.core import QgsCoordinateReferenceSystem, QgsRectangle  # noqa: E402
 
+from custom_map_downloader.core.constants import (  # noqa: E402
+    DEFAULT_MAX_TILE_PX,
+    DEFAULT_METRIC_RENDER_CRS_AUTHID,
+    GTIFF_CREATE_OPTIONS,
+    JPEG_CREATE_OPTIONS,
+    LARGE_EXPORT_WARN_RAW_BYTES,
+    TILE_RENDER_BASE_BACKOFF_S,
+    TILE_RENDER_MAX_BACKOFF_S,
+    TILE_RENDER_MAX_RETRIES,
+)
 from custom_map_downloader.core.gdal_io import (  # noqa: E402
     driver_for_output,
+    gdal_create_options,
     tile_extension_for,
     worldfile_extension_for,
 )
@@ -61,6 +72,16 @@ class CoreHelperTests(unittest.TestCase):
         self.assertEqual(tile_extension_for("a.jpeg"), ".jpg")
         self.assertEqual(worldfile_extension_for("a.png"), ".pgw")
         self.assertEqual(worldfile_extension_for("a.jpeg"), ".jgw")
+
+    def test_export_policy_constants_are_wired(self):
+        self.assertEqual(DEFAULT_MAX_TILE_PX, 2048)
+        self.assertEqual(DEFAULT_METRIC_RENDER_CRS_AUTHID, "EPSG:3857")
+        self.assertEqual(TILE_RENDER_MAX_RETRIES, 3)
+        self.assertEqual(TILE_RENDER_BASE_BACKOFF_S, 0.7)
+        self.assertEqual(TILE_RENDER_MAX_BACKOFF_S, 8.0)
+        self.assertEqual(LARGE_EXPORT_WARN_RAW_BYTES, 800 * 1024 * 1024)
+        self.assertEqual(gdal_create_options("GTiff"), list(GTIFF_CREATE_OPTIONS))
+        self.assertEqual(gdal_create_options("JPEG"), list(JPEG_CREATE_OPTIONS))
 
 
 if __name__ == "__main__":

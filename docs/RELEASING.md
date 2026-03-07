@@ -9,6 +9,7 @@ This project uses `qgis-plugin-ci` as the primary packaging path. Legacy packagi
 - Working tree clean:
   - `git status --short`
 - Version updated in `custom_map_downloader/metadata.txt`
+- Version entry added to `CHANGELOG.md`
 - Relevant user-facing documentation updated:
   - `README.md`
   - `docs/TROUBLESHOOTING.md`
@@ -26,6 +27,8 @@ This runs:
 - `ruff`
 - `black --check`
 - the fast test suite
+- translation status validation
+- changelog / metadata release-governance validation
 - package build via `qgis-plugin-ci`
 - package content validation via `scripts/check_package.py`
 
@@ -59,5 +62,6 @@ Release archives are built from `custom_map_downloader/` only. The package valid
 ## Publishing Notes
 
 - Commit and push the release-ready state before publishing.
-- If the release includes user-visible changes, update the changelog section in `README.md`.
+- Keep `CHANGELOG.md` aligned with the version in `custom_map_downloader/metadata.txt`.
+- Keep the short `changelog=` summary in `custom_map_downloader/metadata.txt` aligned with the current release.
 - If the release changes export semantics or operational behavior, update `docs/TROUBLESHOOTING.md`.

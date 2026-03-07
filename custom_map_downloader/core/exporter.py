@@ -42,6 +42,9 @@ from qgis.PyQt.QtCore import QCoreApplication, QSize
 from qgis.PyQt.QtGui import QColor
 
 from .constants import (
+    DEFAULT_MAX_TILE_PX,
+    DEFAULT_METRIC_RENDER_CRS_AUTHID,
+    LARGE_EXPORT_WARN_RAW_BYTES,
     LARGE_RASTER_STRONG_MAX_DIM_PX,
     LARGE_RASTER_STRONG_TOTAL_PX,
 )
@@ -85,7 +88,7 @@ ProgressCallback = Callable[[int, str, dict[str, Any]], None]
 class GeoTiffExporter:
     """Render a layer and export to TIFF/GeoTIFF."""
 
-    MAX_TILE_PX = 2048
+    MAX_TILE_PX = DEFAULT_MAX_TILE_PX
 
     def export(
         self,
@@ -252,7 +255,7 @@ class GeoTiffExporter:
             )
 
         raw_bytes = self.estimate_raw_bytes(width, height, bands=4)
-        if raw_bytes >= 800 * 1024 * 1024:  # ~800 MB raw RGBA
+        if raw_bytes >= LARGE_EXPORT_WARN_RAW_BYTES:
             self._report(progress_cb, 10, "WARN_LARGE_EXPORT", {"bytes": raw_bytes})
 
         self._check_cancel(cancel_token)
@@ -375,11 +378,11 @@ class GeoTiffExporter:
         """
         project = QgsProject.instance()
         if project is None:
-            return QgsCoordinateReferenceSystem("EPSG:3857")
+            return QgsCoordinateReferenceSystem(DEFAULT_METRIC_RENDER_CRS_AUTHID)
         project_crs = project.crs()
         if project_crs.isValid() and self._crs_uses_meters(project_crs):
             return project_crs
-        return QgsCoordinateReferenceSystem("EPSG:3857")
+        return QgsCoordinateReferenceSystem(DEFAULT_METRIC_RENDER_CRS_AUTHID)
 
     def _resolve_extent(
         self, params: ExportParams, *, render_crs: QgsCoordinateReferenceSystem

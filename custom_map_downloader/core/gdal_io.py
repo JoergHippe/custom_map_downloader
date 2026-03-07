@@ -12,6 +12,7 @@ import numpy as np
 from osgeo import gdal, osr
 from qgis.core import QgsCoordinateReferenceSystem
 
+from .constants import GTIFF_CREATE_OPTIONS, JPEG_CREATE_OPTIONS
 from .errors import ExportError
 
 
@@ -44,9 +45,9 @@ def tile_extension_for(output_path: str) -> str:
 def gdal_create_options(driver_name: str) -> list[str]:
     """Return GDAL Create() options per driver."""
     if driver_name == "GTiff":
-        return ["COMPRESS=LZW", "TILED=YES", "BIGTIFF=IF_SAFER"]
+        return list(GTIFF_CREATE_OPTIONS)
     if driver_name == "JPEG":
-        return ["QUALITY=90"]
+        return list(JPEG_CREATE_OPTIONS)
     return []
 
 

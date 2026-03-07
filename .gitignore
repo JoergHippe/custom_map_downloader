@@ -30,6 +30,7 @@ Thumbs.db
 # Documentation (except README)
 *.md
 !README.md
+!CHANGELOG.md
 !docs/*.md
 
 # Local tool caches

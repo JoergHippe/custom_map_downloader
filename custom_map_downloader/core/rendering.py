@@ -21,6 +21,11 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication, QSize
 from qgis.PyQt.QtGui import QColor, QImage
 
+from .constants import (
+    TILE_RENDER_BASE_BACKOFF_S,
+    TILE_RENDER_MAX_BACKOFF_S,
+    TILE_RENDER_MAX_RETRIES,
+)
 from .errors import ExportError
 from .models import CancelToken
 from .tiling import TileSpec
@@ -112,9 +117,9 @@ def render_tile_with_retry(
     wait_fn: Callable[..., None],
     render_fn: Callable[..., np.ndarray],
     check_cancel: CheckCancelCallback,
-    max_retries: int = 3,
-    base_backoff_s: float = 0.7,
-    max_backoff_s: float = 8.0,
+    max_retries: int = TILE_RENDER_MAX_RETRIES,
+    base_backoff_s: float = TILE_RENDER_BASE_BACKOFF_S,
+    max_backoff_s: float = TILE_RENDER_MAX_BACKOFF_S,
 ) -> tuple[np.ndarray, bool]:
     """Render a tile with retry/backoff logic and blank-tile detection."""
     tile_overlaps_layer = True
