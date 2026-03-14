@@ -161,7 +161,11 @@
       },
       "small_scale": 1500,
       "large_scale": 6000,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_hashes": {
+        "small": "c6367a4faf1757d70981236c77cccb8b299a66e6b8216837829825ba7e64c074",
+        "large": "4e6154de72b7c0f0f0fa1906afed21d567f285f2fe2d5e702151311378eb8e07"
+      }
     },
     {
       "name": "basemap_gray_scale_matrix",
@@ -175,7 +179,11 @@
       },
       "small_scale": 5000,
       "large_scale": 25000,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_hashes": {
+        "small": "b47deeef2d0af358cafcf017e24ca7b1dd14f43a30cad73fcc43252198d3c114",
+        "large": "b4a15f30f4af2ff7266ec992ca9523b221d0396c1ceabaac7fb620a34a27c92d"
+      }
     },
     {
       "name": "basemap_color_scale_matrix",
@@ -189,7 +197,11 @@
       },
       "small_scale": 4000,
       "large_scale": 20000,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_hashes": {
+        "small": "508b4a8163e8094c60fdc32fc21fc1e11933398dad610123a10f1968fef2ef12",
+        "large": "ed7c811cd41d135dd348fd9f93001acc195a0ae95a1dea1a93cee35c7cd1e976"
+      }
     }
   ]
 }
