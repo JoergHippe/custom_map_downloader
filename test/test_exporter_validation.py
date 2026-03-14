@@ -483,7 +483,7 @@ class ExporterValidationTests(unittest.TestCase):
         self.assertEqual(calls["tiled"], 1)
         self.assertEqual(calls["warp"], 1)
 
-    def test_scale_sensitive_wms_forces_tiled_path_even_below_tile_limit(self):
+    def test_web_map_layer_forces_tiled_path_even_below_tile_limit(self):
         exporter = GeoTiffExporter()
 
         class FakeLayer:
@@ -496,7 +496,6 @@ class ExporterValidationTests(unittest.TestCase):
         params = replace(
             self._base_params(width=595, height=595, path_suffix=".tif"),
             layer=FakeLayer(),
-            target_scale_denominator=6000.0,
         )
 
         calls = {"tiled": 0}

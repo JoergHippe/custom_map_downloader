@@ -13,6 +13,7 @@ Typical causes:
 - service-side `WIDTH` / `HEIGHT` limits
 - extent outside valid layer coverage
 - provider throttling
+- unstable provider/runtime interaction in direct single-render requests
 
 Actions:
 
@@ -20,6 +21,10 @@ Actions:
 2. Increase ground resolution (larger `m/px`) or use a larger target scale denominator.
 3. Verify the chosen extent against the source layer.
 4. Retry with a projected metric CRS.
+
+Note:
+
+- the exporter now prefers tiled rendering for web layers to avoid known Windows/QGIS crashes in direct render mode
 
 ## VRT Not Portable
 
@@ -72,6 +77,46 @@ Actions:
 2. Use a coarser resolution or larger target scale denominator.
 3. Reduce extent size.
 4. Prefer tiling for large requests.
+
+## Public WMS Changes Style or Content
+
+Symptoms:
+
+- a previously stable topographic map, orthophoto or relief export suddenly looks different
+- Windows/QGIS scale matrix starts reporting hash drift
+- export still succeeds, but visual portrayal changed
+
+Typical causes:
+
+- upstream provider changed symbology or cartographic rules
+- service backend or cache was updated
+- the public service now serves different source data
+
+Actions:
+
+1. Check the latest `scale_matrix_report.md` or `scale_matrix_report.json`.
+2. Re-run the affected case in real Windows/QGIS runtime.
+3. Distinguish between expected upstream change and plugin regression.
+4. Only update `expected_hashes` after repeated confirmation on the maintained runtime.
+
+## Windows/QGIS Validation Workflow Failed
+
+Symptoms:
+
+- scheduled or manual Windows/QGIS workflow fails
+- CI artifacts contain `scale_matrix_summary.json` but the gate is red
+- one or more required matrix rows show `drift`, `missing` or `error`
+
+Actions:
+
+1. Inspect uploaded artifacts, especially:
+   - `scale_matrix_summary.json`
+   - `scale_matrix_report.json`
+   - `scale_matrix_report.md`
+   - per-case `stdout.log` / `stderr.log`
+2. Re-run the failing case with `scripts/probe_windows_scale_case.py`.
+3. If the issue is provider-side drift, keep the release blocked until the baseline decision is explicit.
+4. If the issue is a plugin regression, fix the exporter or service handling before promoting a new baseline.
 
 ## Export Works But Layer Does Not Reload
 

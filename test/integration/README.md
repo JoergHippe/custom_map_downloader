@@ -40,6 +40,11 @@ Die lokale Smoke-Suite deckt aktuell ab:
 - `scale_matrix`: explizite Matrix für stabile, verpflichtende Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
 - `experimental_scale_matrix`: Reserve für instabile oder noch nicht freigegebene öffentliche Maßstabsfälle.
 - Optional `expected_hashes`: Referenz-Hashes für `small` und `large`. Wenn gesetzt, vergleicht der Test gegen diese Baselines.
+- Der aktuelle Szenarienkatalog deckt bewusst mehrere amtliche Diensttypen ab:
+  - BKG: Basemap und DGM-Relief
+  - Sachsen: Orthofoto
+  - Bayern: Orthofoto und Relief aus DGM
+  - NRW: topographische Karte
 - Umgebungsvariablen:
   - `ALLOW_INTEGRATION_NETWORK=1` aktiviert Netztests.
   - `CRS=EPSG:xxxx` überschreibt CRS global für alle Szenarien.
@@ -65,6 +70,12 @@ Für die Feineingrenzung eines einzelnen Falls gibt es zusätzlich `scripts/prob
 `expected_hashes` sind für Pflichtfälle verbindlich. In `experimental_scale_matrix` dürfen sie ebenfalls gepflegt werden, um Stil- oder Serveränderungen sichtbar zu machen.
 `scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der Windows-CI-Workflow hängt den Markdown-Report zusätzlich an die Step Summary.
 `scripts/check_scale_matrix_report.py` prüft den JSON-Report anschließend als kompaktes Gate: für `scale_matrix` ist nur `ok` erlaubt, für optionale Experimental-Reports zusätzlich `untracked`.
+Für isolierte Katalogläufe ohne Maßstabsmatrix gibt es zusätzlich `scripts/run_windows_qgis_scenarios.py`, z. B. `python scripts\\run_windows_qgis_scenarios.py --group official_webmaps_catalog`.
+
+Gezielte lokale Läufe für den erweiterten Dienstkatalog:
+
+- `set SCENARIOS=bkg_dgm200_relief_tif,nrw_dtk_color_tif,bayern_dop40_tif,bayern_relief_tif`
+- danach `run_integration_tests.bat network`
 
 ## Hinweise
 

@@ -54,6 +54,7 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 Some WMS services change portrayal depending on scale. For those services, `Target scale (1:n)` is the correct mode.
 
 - target scale mode requires a projected output CRS with meter units
+- web map layers are rendered through the tiled export path for runtime stability
 - for stable portrayal, the plugin may render internally in a metric CRS and then reproject the final raster into the requested output CRS
 - VRT export is most predictable when render CRS and output CRS are identical
 

@@ -56,6 +56,51 @@
       "provider": "wms",
       "uri": "type=xyz&url=https://tile.openstreetmap.org/{z}/{x}/{y}.png",
       "default_crs": "EPSG:3857"
+    },
+    {
+      "name": "bkg_dgm200_relief",
+      "provider": "wms",
+      "uri": "url=https://sgx.geodatenzentrum.de/wms_dgm200?&layers=schummerung&format=image/png&crs=EPSG:25833&styles=",
+      "default_crs": "EPSG:25833"
+    },
+    {
+      "name": "nrw_dtk_color",
+      "provider": "wms",
+      "uri": "url=https://www.wms.nrw.de/geobasis/wms_nw_dtk?&layers=nw_dtk_col&format=image/png&crs=EPSG:25832&styles=",
+      "default_crs": "EPSG:25832",
+      "extent": {
+        "west": 355500,
+        "east": 357500,
+        "south": 5648500,
+        "north": 5650500
+      },
+      "gsd": 2.0
+    },
+    {
+      "name": "bayern_dop40_color",
+      "provider": "wms",
+      "uri": "url=https://geoservices.bayern.de/od/wms/dop/v1/dop40?&layers=by_dop40c&format=image/png&crs=EPSG:25832&styles=",
+      "default_crs": "EPSG:25832",
+      "extent": {
+        "west": 690000,
+        "east": 691000,
+        "south": 5332000,
+        "north": 5333000
+      },
+      "gsd": 0.8
+    },
+    {
+      "name": "bayern_relief",
+      "provider": "wms",
+      "uri": "url=https://geoservices.bayern.de/od/wms/dgm/v1/relief?&layers=by_relief_kombiniert&format=image/png&crs=EPSG:25832&styles=",
+      "default_crs": "EPSG:25832",
+      "extent": {
+        "west": 690000,
+        "east": 691000,
+        "south": 5332000,
+        "north": 5333000
+      },
+      "gsd": 2.0
     }
   ],
   "scenarios": [
@@ -145,6 +190,44 @@
       "gsd": 1.5,
       "create_vrt": false,
       "output_extension": ".png"
+    },
+    {
+      "name": "bkg_dgm200_relief_tif",
+      "source": "bkg_dgm200_relief",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 461000,
+        "south": 5658000,
+        "north": 5660000
+      },
+      "gsd": 10.0,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "nrw_dtk_color_tif",
+      "source": "nrw_dtk_color",
+      "crs": "EPSG:25832",
+      "gsd": 2.0,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "bayern_dop40_tif",
+      "source": "bayern_dop40_color",
+      "crs": "EPSG:25832",
+      "gsd": 0.8,
+      "create_vrt": false,
+      "output_extension": ".tif"
+    },
+    {
+      "name": "bayern_relief_tif",
+      "source": "bayern_relief",
+      "crs": "EPSG:25832",
+      "gsd": 2.0,
+      "create_vrt": false,
+      "output_extension": ".tif"
     }
   ],
   "scale_matrix": [
@@ -203,5 +286,15 @@
       }
     }
   ],
-  "experimental_scale_matrix": []
+  "experimental_scale_matrix": [],
+  "scenario_groups": {
+    "official_webmaps_catalog": [
+      "basemap_gray_tif",
+      "bkg_dgm200_relief_tif",
+      "geosn_ortho_color",
+      "bayern_dop40_tif",
+      "nrw_dtk_color_tif",
+      "bayern_relief_tif"
+    ]
+  }
 }

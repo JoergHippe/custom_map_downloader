@@ -213,12 +213,12 @@ class GeoTiffExporter:
                 tile_height_px=tile_h_px,
             )
 
-        force_tiling_for_scale_service = bool(
-            params.target_scale_denominator and self._layer_looks_scale_sensitive(layer)
-        )
+        # Web map providers are materially more stable in the tiled path on
+        # Windows/QGIS than in the direct single-render path.
+        force_tiling_for_web_service = self._layer_looks_like_web_map(layer)
         use_tiling = (
             params.create_vrt
-            or force_tiling_for_scale_service
+            or force_tiling_for_web_service
             or (width > tile_w_px)
             or (height > tile_h_px)
         )
@@ -226,7 +226,7 @@ class GeoTiffExporter:
             "export_mode",
             create_vrt=bool(params.create_vrt),
             use_tiling=bool(use_tiling),
-            force_tiling_for_scale_service=bool(force_tiling_for_scale_service),
+            force_tiling_for_web_service=bool(force_tiling_for_web_service),
             width_px=width,
             height_px=height,
             tile_width_px=tile_w_px,
@@ -561,7 +561,7 @@ class GeoTiffExporter:
     def _pick_tile_size(self, params: ExportParams) -> tuple[int, int]:
         return pick_tile_size(params, default_max_tile_px=self.MAX_TILE_PX)
 
-    def _layer_looks_scale_sensitive(self, layer: QgsMapLayer) -> bool:
+    def _layer_looks_like_web_map(self, layer: QgsMapLayer) -> bool:
         """Best-effort heuristic for web map sources that can vary by scale."""
         provider = ""
         source = ""
