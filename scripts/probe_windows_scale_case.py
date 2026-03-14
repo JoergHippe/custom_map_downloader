@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from custom_map_downloader.core.constants import DEFAULT_MAX_TILE_PX
 from scripts.run_windows_qgis_matrix import CONFIG_PATH, REPO_ROOT, detect_python_qgis_bat
 
 DEFAULT_REPORT_DIR = REPO_ROOT / "artifacts" / "scale_probe"
@@ -21,6 +22,25 @@ def load_case_names(matrix_key: str) -> dict[str, dict[str, object]]:
         str(case["name"]): case
         for case in config.get(matrix_key, [])
         if isinstance(case, dict) and "name" in case
+    }
+
+
+def build_probe_metadata(case: dict[str, object], label: str) -> dict[str, object]:
+    key = f"{label}_scale"
+    scale = float(case[key])
+    extent = case["extent"]
+    assert isinstance(extent, dict)
+    width_m = float(extent["east"]) - float(extent["west"])
+    height_m = float(extent["north"]) - float(extent["south"])
+    gsd = scale * 0.00028
+    width_px = max(1, int(round(width_m / gsd)))
+    height_px = max(1, int(round(height_m / gsd)))
+    return {
+        "scale": scale,
+        "gsd_m_per_px": gsd,
+        "width_px": width_px,
+        "height_px": height_px,
+        "expected_tiling": bool(width_px > DEFAULT_MAX_TILE_PX or height_px > DEFAULT_MAX_TILE_PX),
     }
 
 
@@ -97,6 +117,7 @@ def main() -> int:
     summary: list[dict[str, object]] = []
     failed = False
     for label in labels:
+        metadata = build_probe_metadata(cases[args.case_name], label)
         exit_code = run_probe(
             python_qgis=python_qgis,
             case_name=args.case_name,
@@ -111,6 +132,7 @@ def main() -> int:
                 "label": label,
                 "exit_code": exit_code,
                 "report_dir": str(report_root / label),
+                **metadata,
             }
         )
         if exit_code != 0:
