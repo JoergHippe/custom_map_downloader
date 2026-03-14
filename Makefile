@@ -1,4 +1,4 @@
-.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit translations-update translations-compile translations-status release-governance-check
+.PHONY: help install-dev deploy-dev undeploy-dev dev-check format format-check lint lint-pylint test test-qgis test-all package package-check release-check precommit translations-update translations-compile translations-status release-governance-check scale-report-check
 
 PYTHON ?= python3
 PLUGIN_DIR := custom_map_downloader
@@ -26,6 +26,7 @@ help:
 	@echo "  translations-compile  Build .qm files for LOCALES=$(LOCALES)"
 	@echo "  translations-status   Show translation coverage summary"
 	@echo "  release-governance-check Validate metadata/changelog release governance"
+	@echo "  scale-report-check Validate a generated scale matrix report JSON"
 
 install-dev:
 	$(PYTHON) -m pip install -r requirements-dev.txt
@@ -77,6 +78,9 @@ translations-status:
 
 release-governance-check:
 	$(PYTHON) scripts/check_release_governance.py
+
+scale-report-check:
+	$(PYTHON) scripts/check_scale_matrix_report.py artifacts/matrix_default/scale_matrix_report.json
 
 package:
 	@if [ -x "$(dir $(PYTHON))/qgis-plugin-ci" ]; then \

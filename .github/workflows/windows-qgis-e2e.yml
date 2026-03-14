@@ -28,9 +28,23 @@ jobs:
           set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
           python scripts\summarize_scale_matrix.py --write-summary
 
+      - name: Validate scale matrix report
+        shell: cmd
+        run: |
+          python scripts\check_scale_matrix_report.py artifacts\scale_matrix_report.json
+
       - name: Upload QGIS E2E artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-qgis-e2e-artifacts
           path: artifacts
           if-no-files-found: warn
+
+      - name: Upload scale matrix report
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-qgis-scale-report
+          path: |
+            artifacts/scale_matrix_report.json
+            artifacts/scale_matrix_report.md
+          if-no-files-found: error
