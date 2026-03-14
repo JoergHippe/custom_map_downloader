@@ -448,6 +448,41 @@ class ExporterValidationTests(unittest.TestCase):
         self.assertTrue(result.endswith(".vrt"))
         self.assertTrue(any(key == "WARN_VRT_ABSOLUTE_PATHS" for _, key, _ in progress_events))
 
+    def test_tiled_png_uses_intermediate_gtiff_conversion(self):
+        exporter = GeoTiffExporter()
+        params = self._base_params(width=5000, height=5000, path_suffix=".png")
+
+        calls = {"tiled": 0, "warp": 0}
+        original_export_tiled = exporter._export_tiled
+        original_warp = exporter._warp_rendered_raster
+
+        def fake_export_tiled(*args, **kwargs):
+            calls["tiled"] += 1
+            output_path = (
+                kwargs["params"].output_path if "params" in kwargs else args[0].output_path
+            )
+            Path(output_path).write_bytes(b"fake-tiff")
+            return output_path
+
+        def fake_warp(source_path, **kwargs):
+            calls["warp"] += 1
+            self.assertTrue(str(source_path).endswith(".tif"))
+            final_output = kwargs["final_output_path"]
+            Path(final_output).write_bytes(b"fake-png")
+            return final_output
+
+        exporter._export_tiled = fake_export_tiled
+        exporter._warp_rendered_raster = fake_warp
+        try:
+            result = exporter.export(params)
+        finally:
+            exporter._export_tiled = original_export_tiled
+            exporter._warp_rendered_raster = original_warp
+
+        self.assertEqual(result, params.output_path)
+        self.assertEqual(calls["tiled"], 1)
+        self.assertEqual(calls["warp"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

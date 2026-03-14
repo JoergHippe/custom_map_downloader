@@ -13,10 +13,18 @@ jobs:
       - name: Run deployed-plugin E2E smoke tests
         shell: cmd
         run: |
+          set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
           run_integration_tests.bat e2e github-actions
 
       - name: Run network scale matrix
         shell: cmd
         run: |
-          set ALLOW_INTEGRATION_NETWORK=1
-          run_integration_tests.bat network github-actions
+          set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
+          python scripts\run_windows_qgis_matrix.py
+
+      - name: Upload QGIS E2E artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-qgis-e2e-artifacts
+          path: artifacts
+          if-no-files-found: warn

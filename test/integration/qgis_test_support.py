@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING, Optional, Tuple
 if TYPE_CHECKING:
     from qgis.core import QgsApplication
 else:
-    QgsApplication = object  # type: ignore
+    try:
+        from qgis.core import QgsApplication  # type: ignore
+    except Exception:
+        QgsApplication = object  # type: ignore
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

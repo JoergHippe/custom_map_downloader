@@ -124,6 +124,7 @@ Recommended local loop:
 - opt-in execution via `ALLOW_INTEGRATION_NETWORK=1`
 
 The scenario source of truth is `test/integration/config.json`.
+If `CMD_INTEGRATION_REPORT_DIR` is set, the network suite writes JSON reports for scenario runs and the scale matrix.
 
 ## Translations
 
@@ -176,6 +177,10 @@ The repository uses two layers of automated validation:
 
 - fast lint + stubbed Python suite on plain CI runners
 - QGIS-backed suite inside the official `qgis/qgis` container image
+- optional self-hosted Windows/QGIS workflow via `.github/workflows/windows-qgis-e2e.yml`
+
+The Windows workflow runs the required scale matrix in isolated child processes via `scripts/run_windows_qgis_matrix.py` so that a crashing provider case does not hide the outcome of the remaining cases.
+Unstable public-service probes stay in `experimental_scale_matrix` and should be executed manually via `--matrix-key experimental_scale_matrix` until they are proven reliable.
 
 ## Troubleshooting for Developers
 

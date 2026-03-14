@@ -147,7 +147,22 @@
       "output_extension": ".png"
     }
   ],
-  "scale_matrix": [
+  "scale_matrix": [],
+  "experimental_scale_matrix": [
+    {
+      "name": "geosn_ortho_gray_scale_matrix",
+      "source": "geosn_ortho_gray",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 460000,
+        "south": 5658500,
+        "north": 5659500
+      },
+      "small_scale": 1500,
+      "large_scale": 6000,
+      "output_extension": ".tif"
+    },
     {
       "name": "basemap_gray_scale_matrix",
       "source": "basemap_gray",
@@ -175,20 +190,6 @@
       "small_scale": 4000,
       "large_scale": 20000,
       "output_extension": ".tif"
-    },
-    {
-      "name": "geosn_ortho_gray_scale_matrix",
-      "source": "geosn_ortho_gray",
-      "crs": "EPSG:25833",
-      "extent": {
-        "west": 459000,
-        "east": 460000,
-        "south": 5658500,
-        "north": 5659500
-      },
-      "small_scale": 1500,
-      "large_scale": 6000,
-      "output_extension": ".png"
     }
   ]
 }

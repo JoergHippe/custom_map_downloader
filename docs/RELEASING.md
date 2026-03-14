@@ -50,6 +50,8 @@ Before publishing, validate the built plugin once in a real QGIS runtime:
 4. Remove the dev deployment if needed:
    - `make undeploy-dev`
 
+For Windows/QGIS E2E verification you can also set `CMD_INTEGRATION_REPORT_DIR` before running the integration batch helper. The network suite then writes JSON result artifacts, including scale-matrix hashes. Keep unstable public-service probes in `experimental_scale_matrix`; only stable cases belong in the default release gate.
+
 ## Package Output
 
 Release archives are built from `custom_map_downloader/` only. The package validator ensures that the ZIP does not accidentally include:

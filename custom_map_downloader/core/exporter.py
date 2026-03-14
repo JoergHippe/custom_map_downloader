@@ -224,6 +224,7 @@ class GeoTiffExporter:
             tile_height_px=tile_h_px,
         )
         if use_tiling:
+            driver_name = self._driver_for_output(output_path)
             # UI-Logik: "Create VRT" bedeutet VRT-only (Tiles + .vrt), kein Merge in ein großes GeoTIFF.
             if params.create_vrt:
                 return self._export_tiled_vrt(
@@ -237,6 +238,19 @@ class GeoTiffExporter:
                     tile_h_px=tile_h_px,
                     width_px=width,
                     height_px=height,
+                    report_done=report_done,
+                    write_sidecars=write_sidecars,
+                )
+
+            if driver_name != "GTiff":
+                return self._export_tiled_via_intermediate_gtiff(
+                    params,
+                    extent=extent,
+                    render_crs=render_crs,
+                    output_crs=output_crs,
+                    progress_cb=progress_cb,
+                    cancel_token=cancel_token,
+                    tile_size_px=max(tile_w_px, tile_h_px),
                     report_done=report_done,
                     write_sidecars=write_sidecars,
                 )
@@ -320,6 +334,56 @@ class GeoTiffExporter:
         if report_done:
             self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return output_path
+
+    def _export_tiled_via_intermediate_gtiff(
+        self,
+        params: ExportParams,
+        *,
+        extent: QgsRectangle,
+        render_crs: QgsCoordinateReferenceSystem,
+        output_crs: QgsCoordinateReferenceSystem,
+        progress_cb: Optional[ProgressCallback],
+        cancel_token: Optional[CancelToken],
+        tile_size_px: int,
+        report_done: bool,
+        write_sidecars: bool,
+    ) -> str:
+        """Render tiled output into a temporary GeoTIFF, then convert to the requested format.
+
+        This avoids depending on windowed Create()/WriteArray support for PNG/JPEG in
+        the GDAL build shipped with QGIS on Windows.
+        """
+        with tempfile.TemporaryDirectory(prefix="cmd_tiled_convert_") as tmp_dir:
+            temp_path = str(Path(tmp_dir) / "tiled_intermediate.tif")
+            temp_params = replace(
+                params,
+                output_path=temp_path,
+            )
+            rendered_path = self._export_tiled(
+                temp_params,
+                extent=extent,
+                render_crs=render_crs,
+                output_crs=output_crs,
+                progress_cb=progress_cb,
+                cancel_token=cancel_token,
+                tile_size_px=tile_size_px,
+                report_done=False,
+                write_sidecars=False,
+            )
+            self._check_cancel(cancel_token)
+            self._report(progress_cb, 92, "STEP_REPROJECT", {"step": 5, "total": 6})
+            result = self._warp_rendered_raster(
+                rendered_path,
+                final_output_path=params.output_path,
+                render_extent=extent,
+                render_crs=output_crs,
+                output_crs=output_crs,
+                progress_cb=progress_cb,
+                cancel_token=cancel_token,
+            )
+            if not write_sidecars:
+                return result
+            return result
 
     @staticmethod
     def estimate_raw_bytes(width_px: int, height_px: int, *, bands: int) -> int:

@@ -37,12 +37,15 @@ Die lokale Smoke-Suite deckt aktuell ab:
 - `defaults`: zentrale Defaults (CRS, Extent, GSD, VRT/Output), die von Quellen/Szenarien geerbt werden.
 - `sources`: Datenquellen mit `name`, `provider`, `uri`, optional `default_crs`, `extent`, `gsd`, `create_vrt`, `output_extension`.
 - `scenarios`: konkrete Testläufe mit `name`, `source`-Verweis und optionalen Overrides (`crs`, `extent`, `gsd`, `vrt_preset_size`, `create_vrt`, `output_extension`).
-- `scale_matrix`: explizite Matrix für echte Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
+- `scale_matrix`: explizite Matrix für stabile, verpflichtende Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
+- `experimental_scale_matrix`: instabile oder aktuell nicht CI-taugliche öffentliche Maßstabsfälle. Diese Fälle werden bewusst separat gehalten.
+- Optional `expected_hashes`: Referenz-Hashes für `small` und `large`. Wenn gesetzt, vergleicht der Test gegen diese Baselines.
 - Umgebungsvariablen:
   - `ALLOW_INTEGRATION_NETWORK=1` aktiviert Netztests.
   - `CRS=EPSG:xxxx` überschreibt CRS global für alle Szenarien.
   - `EXTENT_W/E/S/N` überschreibt Extent global (z. B. `EXTENT_W=458000`).
   - `SCENARIOS=name1,name2` führt nur die genannten Szenarien aus.
+  - `CMD_INTEGRATION_REPORT_DIR=pfad` schreibt JSON-Reports für Netzszenarien und Scale-Matrix.
 
 ### Batch-Helfer (Windows)
 
@@ -54,6 +57,10 @@ Die lokale Smoke-Suite deckt aktuell ab:
 
 Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.bat`, prüft `qgis.core` vorab und gibt den Rückgabecode der Tests aus. Keine langen Pfade nötig.
 Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e2e` deployt das Plugin zuerst in das gewählte QGIS-Profil und testet anschließend bewusst den deployten Stand.
+
+Für die Windows-Self-Hosted-CI läuft die Scale-Matrix zusätzlich isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
+Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich die experimentellen Fälle gezielt manuell ausführen.
+Die experimentelle Matrix ist bewusst kein Pflicht-Gate: öffentliche WMS-Fälle können unter echter Windows/QGIS-Runtime auch dann hart abstürzen, wenn der normale Repo- und Smoke-Stand grün ist.
 
 ## Hinweise
 

@@ -26,6 +26,8 @@ Thumbs.db
 *.tmp
 *.bak
 *~
+artifacts/
+symbology-style.db
 
 # Documentation (except README)
 *.md

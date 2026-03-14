@@ -68,6 +68,19 @@ def _load_config():
         return json.load(fh)
 
 
+def _report_dir() -> Optional[Path]:
+    raw = os.environ.get("CMD_INTEGRATION_REPORT_DIR", "").strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _matrix_key() -> str:
+    return os.environ.get("CMD_SCALE_MATRIX_KEY", "scale_matrix").strip() or "scale_matrix"
+
+
 def _env_override_extent() -> dict:
     """Allow extent override via ENV: EXTENT_W/E/S/N (float)."""
     keys = ["WEST", "EAST", "SOUTH", "NORTH"]
@@ -123,6 +136,7 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
 
         cls.app, cls.app_created = init_qgis_app()
         cls.project = QgsProject.instance()
+        cls.report_dir = _report_dir()
 
     @classmethod
     def tearDownClass(cls):
@@ -143,6 +157,7 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
         ok_count = 0
         skip_count = 0
         fail_messages: list[str] = []
+        report_entries: list[dict[str, object]] = []
 
         print("[INFO] Starte Netz-Szenarien...")
 
@@ -265,10 +280,31 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                     raise RuntimeError("Export fehlgeschlagen, Datei fehlt.")
                 print(f"[OK]   {name}")
                 ok_count += 1
+                report_entries.append(
+                    {
+                        "name": name,
+                        "provider": provider,
+                        "output_extension": out_ext,
+                        "width_px": width_px,
+                        "height_px": height_px,
+                        "result": "ok",
+                    }
+                )
             except Exception as ex:
                 msg = f"[ERROR] {name}: {ex}"
                 print(msg)
                 fail_messages.append(msg)
+                report_entries.append(
+                    {
+                        "name": name,
+                        "provider": provider,
+                        "output_extension": out_ext,
+                        "width_px": width_px,
+                        "height_px": height_px,
+                        "result": "error",
+                        "error": str(ex),
+                    }
+                )
             finally:
                 # Cleanup layer/file
                 try:
@@ -279,15 +315,30 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                     out_path.unlink()
 
         print(f"[INFO] Summary: OK={ok_count}, SKIP={skip_count}, FAIL={len(fail_messages)}")
+        if self.report_dir is not None:
+            (self.report_dir / "network_scenarios.json").write_text(
+                json.dumps(report_entries, indent=2),
+                encoding="utf-8",
+            )
         if fail_messages:
             self.fail("\n".join(fail_messages))
 
     def test_scale_dependent_scenarios(self):
-        matrix_cases = self.config.get("scale_matrix", [])
+        matrix_key = _matrix_key()
+        matrix_cases = self.config.get(matrix_key, [])
         if not matrix_cases:
-            self.skipTest("No scale matrix configured")
+            self.skipTest(f"No scale matrix configured for key '{matrix_key}'")
+        if self.scenario_filter:
+            matrix_cases = [
+                case
+                for case in matrix_cases
+                if str(case.get("name", "") or "") in self.scenario_filter
+            ]
+            if not matrix_cases:
+                self.skipTest("No matching scale matrix cases for SCENARIOS filter")
 
         tmpdir = Path(tempfile.gettempdir())
+        report_entries: list[dict[str, object]] = []
         for case in matrix_cases:
             name = case.get("name", "unnamed")
             source = self.sources.get(case.get("source", ""), {}) or {}
@@ -330,6 +381,13 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
             widths: list[int] = []
             out_paths: list[Path] = []
             try:
+                case_entry: dict[str, object] = {
+                    "name": name,
+                    "provider": provider,
+                    "small_scale": small_scale,
+                    "large_scale": large_scale,
+                    "results": [],
+                }
                 for scale_value, suffix in ((small_scale, "small"), (large_scale, "large")):
                     gsd = scale_to_gsd_m_per_px(scale_value)
                     width_px = max(1, int(round(rect.width() / gsd)))
@@ -365,7 +423,18 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                     self.assertTrue(
                         Path(result_path).exists(), f"{name}: scale export missing for {suffix}"
                     )
-                    hashes.append(sha256(Path(result_path).read_bytes()).hexdigest())
+                    digest = sha256(Path(result_path).read_bytes()).hexdigest()
+                    hashes.append(digest)
+                    case_entry["results"].append(
+                        {
+                            "label": suffix,
+                            "scale": scale_value,
+                            "width_px": width_px,
+                            "height_px": height_px,
+                            "sha256": digest,
+                            "output_path": str(out_path),
+                        }
+                    )
 
                 self.assertNotEqual(
                     widths[0], widths[1], f"{name}: expected different raster dimensions"
@@ -373,6 +442,18 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                 self.assertNotEqual(
                     hashes[0], hashes[1], f"{name}: expected different raster content"
                 )
+                expected_hashes = case.get("expected_hashes", {}) or {}
+                expected_small = str(expected_hashes.get("small", "") or "")
+                expected_large = str(expected_hashes.get("large", "") or "")
+                if expected_small:
+                    self.assertEqual(
+                        hashes[0], expected_small, f"{name}: unexpected hash for small scale"
+                    )
+                if expected_large:
+                    self.assertEqual(
+                        hashes[1], expected_large, f"{name}: unexpected hash for large scale"
+                    )
+                report_entries.append(case_entry)
             finally:
                 try:
                     self.project.removeMapLayer(layer.id())
@@ -385,6 +466,11 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                         sidecar = out_path.with_suffix(suffix)
                         if sidecar.exists():
                             sidecar.unlink()
+        if self.report_dir is not None:
+            (self.report_dir / "scale_matrix.json").write_text(
+                json.dumps(report_entries, indent=2),
+                encoding="utf-8",
+            )
 
 
 if __name__ == "__main__":
