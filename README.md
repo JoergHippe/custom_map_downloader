@@ -95,6 +95,7 @@ Translations are maintained via the standard Qt Linguist workflow under `custom_
 ## Documentation
 
 - user operations and support: `docs/TROUBLESHOOTING.md`
+- validation status and verified service coverage: `docs/VALIDATION_STATUS.md`
 - development workflow: `docs/DEVELOPING.md`
 - release process: `docs/RELEASING.md`
 - integration test details: `test/integration/README.md`
