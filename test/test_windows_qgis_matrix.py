@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts import run_windows_qgis_matrix
+from scripts import probe_windows_scale_case, run_windows_qgis_matrix
 
 
 class WindowsQgisMatrixScriptTests(unittest.TestCase):
@@ -28,6 +28,24 @@ class WindowsQgisMatrixScriptTests(unittest.TestCase):
 
         self.assertEqual(stable, ["stable_case"])
         self.assertEqual(experimental, ["experimental_case"])
+
+    def test_probe_loader_reads_cases_from_requested_matrix_key(self):
+        config = {
+            "scale_matrix": [{"name": "stable_case"}],
+            "experimental_scale_matrix": [{"name": "experimental_case"}],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            original_config_path = probe_windows_scale_case.CONFIG_PATH
+            probe_windows_scale_case.CONFIG_PATH = config_path
+            try:
+                cases = probe_windows_scale_case.load_case_names("experimental_scale_matrix")
+            finally:
+                probe_windows_scale_case.CONFIG_PATH = original_config_path
+
+        self.assertEqual(list(cases), ["experimental_case"])
 
 
 if __name__ == "__main__":

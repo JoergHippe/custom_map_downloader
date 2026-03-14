@@ -81,6 +81,13 @@ def _matrix_key() -> str:
     return os.environ.get("CMD_SCALE_MATRIX_KEY", "scale_matrix").strip() or "scale_matrix"
 
 
+def _scale_only() -> Optional[str]:
+    value = os.environ.get("CMD_SCALE_ONLY", "").strip().lower()
+    if value in {"small", "large"}:
+        return value
+    return None
+
+
 def _env_override_extent() -> dict:
     """Allow extent override via ENV: EXTENT_W/E/S/N (float)."""
     keys = ["WEST", "EAST", "SOUTH", "NORTH"]
@@ -325,6 +332,7 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
 
     def test_scale_dependent_scenarios(self):
         matrix_key = _matrix_key()
+        scale_only = _scale_only()
         matrix_cases = self.config.get(matrix_key, [])
         if not matrix_cases:
             self.skipTest(f"No scale matrix configured for key '{matrix_key}'")
@@ -388,7 +396,13 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                     "large_scale": large_scale,
                     "results": [],
                 }
-                for scale_value, suffix in ((small_scale, "small"), (large_scale, "large")):
+                scale_runs = [(small_scale, "small"), (large_scale, "large")]
+                if scale_only is not None:
+                    scale_runs = [item for item in scale_runs if item[1] == scale_only]
+                    if not scale_runs:
+                        self.fail(f"{name}: invalid CMD_SCALE_ONLY={scale_only}")
+
+                for scale_value, suffix in scale_runs:
                     gsd = scale_to_gsd_m_per_px(scale_value)
                     width_px = max(1, int(round(rect.width() / gsd)))
                     height_px = max(1, int(round(rect.height() / gsd)))
@@ -436,23 +450,24 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                         }
                     )
 
-                self.assertNotEqual(
-                    widths[0], widths[1], f"{name}: expected different raster dimensions"
-                )
-                self.assertNotEqual(
-                    hashes[0], hashes[1], f"{name}: expected different raster content"
-                )
-                expected_hashes = case.get("expected_hashes", {}) or {}
-                expected_small = str(expected_hashes.get("small", "") or "")
-                expected_large = str(expected_hashes.get("large", "") or "")
-                if expected_small:
-                    self.assertEqual(
-                        hashes[0], expected_small, f"{name}: unexpected hash for small scale"
+                if scale_only is None:
+                    self.assertNotEqual(
+                        widths[0], widths[1], f"{name}: expected different raster dimensions"
                     )
-                if expected_large:
-                    self.assertEqual(
-                        hashes[1], expected_large, f"{name}: unexpected hash for large scale"
+                    self.assertNotEqual(
+                        hashes[0], hashes[1], f"{name}: expected different raster content"
                     )
+                    expected_hashes = case.get("expected_hashes", {}) or {}
+                    expected_small = str(expected_hashes.get("small", "") or "")
+                    expected_large = str(expected_hashes.get("large", "") or "")
+                    if expected_small:
+                        self.assertEqual(
+                            hashes[0], expected_small, f"{name}: unexpected hash for small scale"
+                        )
+                    if expected_large:
+                        self.assertEqual(
+                            hashes[1], expected_large, f"{name}: unexpected hash for large scale"
+                        )
                 report_entries.append(case_entry)
             finally:
                 try:

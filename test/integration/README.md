@@ -61,6 +61,7 @@ Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e
 Für die Windows-Self-Hosted-CI läuft die Scale-Matrix zusätzlich isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
 Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich die experimentellen Fälle gezielt manuell ausführen.
 Die experimentelle Matrix ist bewusst kein Pflicht-Gate: öffentliche WMS-Fälle können unter echter Windows/QGIS-Runtime auch dann hart abstürzen, wenn der normale Repo- und Smoke-Stand grün ist.
+Für die Feineingrenzung eines einzelnen Crash-Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Damit lassen sich `small` und `large` in getrennten QGIS-Prozessen fahren.
 
 ## Hinweise
 
