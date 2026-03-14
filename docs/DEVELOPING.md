@@ -182,7 +182,7 @@ The repository uses two layers of automated validation:
 The Windows workflow runs the required scale matrix in isolated child processes via `scripts/run_windows_qgis_matrix.py` so that a crashing provider case does not hide the outcome of the remaining cases.
 Unstable public-service probes stay in `experimental_scale_matrix` and should be executed manually via `--matrix-key experimental_scale_matrix` until they are proven reliable.
 For single-case crash analysis, use `scripts/probe_windows_scale_case.py`. It runs `small` and `large` in separate QGIS processes, which is the quickest way to see whether only one scale step is crashing.
-Current empirical finding on Windows/QGIS: the public WMS crash cases are concentrated in the non-tiled scale-probe path. For example, `geosn_ortho_gray_scale_matrix` succeeds for the tiled `small` export and crashes for the non-tiled `large` export.
+Previous Windows/QGIS crash probes pointed at the non-tiled scale-service path. The exporter now forces the tile render path for scale-sensitive web layers in target-scale mode; verify that behavior with `scripts/probe_windows_scale_case.py` before promoting any public-service case into a required gate.
 
 ## Troubleshooting for Developers
 

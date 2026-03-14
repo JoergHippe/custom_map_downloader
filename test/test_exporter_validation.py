@@ -483,6 +483,176 @@ class ExporterValidationTests(unittest.TestCase):
         self.assertEqual(calls["tiled"], 1)
         self.assertEqual(calls["warp"], 1)
 
+    def test_scale_sensitive_wms_forces_tiled_path_even_below_tile_limit(self):
+        exporter = GeoTiffExporter()
+
+        class FakeLayer:
+            def providerType(self):
+                return "wms"
+
+            def source(self):
+                return "url=https://example.test/wms"
+
+        params = replace(
+            self._base_params(width=595, height=595, path_suffix=".tif"),
+            layer=FakeLayer(),
+            target_scale_denominator=6000.0,
+        )
+
+        calls = {"tiled": 0}
+        original_export_tiled = exporter._export_tiled
+
+        def fake_export_tiled(*args, **kwargs):
+            calls["tiled"] += 1
+            output_path = (
+                kwargs["params"].output_path if "params" in kwargs else args[0].output_path
+            )
+            Path(output_path).write_bytes(b"fake-tif")
+            return output_path
+
+        exporter._export_tiled = fake_export_tiled
+        try:
+            result = exporter.export(params)
+        finally:
+            exporter._export_tiled = original_export_tiled
+
+        self.assertEqual(result, params.output_path)
+        self.assertEqual(calls["tiled"], 1)
+
+    def test_non_scale_sensitive_layer_keeps_direct_path_below_tile_limit(self):
+        exporter = GeoTiffExporter()
+
+        class FakeLayer:
+            def providerType(self):
+                return "gdal"
+
+            def source(self):
+                return "/tmp/local.tif"
+
+        params = replace(
+            self._base_params(width=595, height=595, path_suffix=".tif"),
+            layer=FakeLayer(),
+            target_scale_denominator=6000.0,
+        )
+
+        original_create_dataset = exporter._gdal_create_dataset
+        original_render_tile = exporter._render_tile_rgba
+        original_wait = exporter._wait_with_events
+        calls = {"direct_write": 0, "tile_render": 0}
+
+        class FakeDataset:
+            def SetGeoTransform(self, *_args, **_kwargs):
+                return None
+
+            def SetProjection(self, *_args, **_kwargs):
+                return None
+
+            def GetRasterBand(self, *_args, **_kwargs):
+                class FakeBand:
+                    def WriteArray(self, *_args, **_kwargs):
+                        return None
+
+                    def FlushCache(self):
+                        return None
+
+                return FakeBand()
+
+        class FakeRenderedImage:
+            def convertToFormat(self, *_args, **_kwargs):
+                return self
+
+            def bits(self):
+                class _Bits:
+                    def setsize(self, *_args, **_kwargs):
+                        return None
+
+                return _Bits()
+
+            def sizeInBytes(self):
+                return 4
+
+        class FakeRenderJob:
+            def start(self):
+                return None
+
+            def isActive(self):
+                return False
+
+            def waitForFinished(self):
+                return None
+
+            def renderedImage(self):
+                return FakeRenderedImage()
+
+        class FakeMapSettings:
+            def setBackgroundColor(self, *_args, **_kwargs):
+                return None
+
+            def setLayers(self, *_args, **_kwargs):
+                return None
+
+            def setExtent(self, *_args, **_kwargs):
+                return None
+
+            def setOutputSize(self, *_args, **_kwargs):
+                return None
+
+            def setDestinationCrs(self, *_args, **_kwargs):
+                return None
+
+            def setOutputDpi(self, *_args, **_kwargs):
+                return None
+
+        def fake_create_dataset(**_kwargs):
+            return FakeDataset()
+
+        def fake_qimage_to_rgba_array(*_args, **_kwargs):
+            class FakeArray:
+                ndim = 3
+                shape = (1, 1, 4)
+
+                def __getitem__(self, _key):
+                    return self
+
+                def astype(self, *_args, **_kwargs):
+                    return self
+
+                def max(self):
+                    return 255
+
+            return FakeArray()
+
+        exporter._gdal_create_dataset = fake_create_dataset
+        exporter._render_tile_rgba = lambda **_kwargs: calls.__setitem__("tile_render", 1)
+        exporter._wait_with_events = lambda *_args, **_kwargs: None
+
+        import custom_map_downloader.core.exporter as exporter_module
+
+        original_renderer_cls = exporter_module.QgsMapRendererParallelJob
+        original_map_settings_cls = exporter_module.QgsMapSettings
+        original_qimage_to_rgba_array = exporter_module.qimage_to_rgba_array
+        original_write_full_raster_fn = exporter_module.write_full_raster
+        exporter_module.QgsMapRendererParallelJob = lambda *_args, **_kwargs: FakeRenderJob()
+        exporter_module.QgsMapSettings = FakeMapSettings
+        exporter_module.qimage_to_rgba_array = fake_qimage_to_rgba_array
+        exporter_module.write_full_raster = lambda **_kwargs: calls.__setitem__(
+            "direct_write", calls["direct_write"] + 1
+        )
+        try:
+            result = exporter.export(params)
+        finally:
+            exporter._gdal_create_dataset = original_create_dataset
+            exporter._render_tile_rgba = original_render_tile
+            exporter._wait_with_events = original_wait
+            exporter_module.QgsMapRendererParallelJob = original_renderer_cls
+            exporter_module.QgsMapSettings = original_map_settings_cls
+            exporter_module.qimage_to_rgba_array = original_qimage_to_rgba_array
+            exporter_module.write_full_raster = original_write_full_raster_fn
+
+        self.assertEqual(result, params.output_path)
+        self.assertEqual(calls["direct_write"], 1)
+        self.assertEqual(calls["tile_render"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

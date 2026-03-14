@@ -213,11 +213,20 @@ class GeoTiffExporter:
                 tile_height_px=tile_h_px,
             )
 
-        use_tiling = params.create_vrt or (width > tile_w_px) or (height > tile_h_px)
+        force_tiling_for_scale_service = bool(
+            params.target_scale_denominator and self._layer_looks_scale_sensitive(layer)
+        )
+        use_tiling = (
+            params.create_vrt
+            or force_tiling_for_scale_service
+            or (width > tile_w_px)
+            or (height > tile_h_px)
+        )
         log_event(
             "export_mode",
             create_vrt=bool(params.create_vrt),
             use_tiling=bool(use_tiling),
+            force_tiling_for_scale_service=bool(force_tiling_for_scale_service),
             width_px=width,
             height_px=height,
             tile_width_px=tile_w_px,
@@ -551,6 +560,25 @@ class GeoTiffExporter:
 
     def _pick_tile_size(self, params: ExportParams) -> tuple[int, int]:
         return pick_tile_size(params, default_max_tile_px=self.MAX_TILE_PX)
+
+    def _layer_looks_scale_sensitive(self, layer: QgsMapLayer) -> bool:
+        """Best-effort heuristic for web map sources that can vary by scale."""
+        provider = ""
+        source = ""
+        try:
+            if hasattr(layer, "providerType") and callable(layer.providerType):
+                provider = str(layer.providerType() or "").strip().lower()
+        except Exception:
+            provider = ""
+        try:
+            if hasattr(layer, "source") and callable(layer.source):
+                source = str(layer.source() or "").strip().lower()
+        except Exception:
+            source = ""
+
+        if provider in {"wms", "xyz", "arcgismapserver"}:
+            return True
+        return "type=xyz" in source or "contextualwmslegend" in source or "url=" in source
 
     def _crs_differs(
         self,
