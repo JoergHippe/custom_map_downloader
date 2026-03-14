@@ -285,6 +285,7 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                 result_path = exporter.export(params)
                 if not Path(result_path).exists():
                     raise RuntimeError("Export fehlgeschlagen, Datei fehlt.")
+                digest = sha256(Path(result_path).read_bytes()).hexdigest()
                 print(f"[OK]   {name}")
                 ok_count += 1
                 report_entries.append(
@@ -294,6 +295,7 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                         "output_extension": out_ext,
                         "width_px": width_px,
                         "height_px": height_px,
+                        "sha256": digest,
                         "result": "ok",
                     }
                 )

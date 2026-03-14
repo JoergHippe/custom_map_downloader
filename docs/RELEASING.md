@@ -63,16 +63,21 @@ Recommended release-grade runtime validation:
    - `experimental_scale_matrix` may contain `untracked` reserve probes
 4. Treat any `drift`, `missing` or `error` status in the required matrix as a release blocker.
 5. If the scheduled Windows/QGIS workflow has failed recently, do not publish before the failure is explained or the matrix is revalidated manually.
+6. Treat the strict `official_webmaps_catalog` report the same way: no `drift`, `missing`, `error` or `untracked` rows before release.
 
 Relevant report files:
 
 - `scale_matrix_summary.json`
 - `scale_matrix_report.json`
 - `scale_matrix_report.md`
+- `official_webmaps_catalog/scenario_summary.json`
+- `official_webmaps_catalog/scenario_catalog_report.json`
+- `official_webmaps_catalog/scenario_catalog_report.md`
 
 Relevant gate:
 
 - `scripts/check_scale_matrix_report.py`
+- `scripts/check_network_catalog_report.py`
 
 ## Package Output
 

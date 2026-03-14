@@ -71,6 +71,7 @@ Für die Feineingrenzung eines einzelnen Falls gibt es zusätzlich `scripts/prob
 `scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der Windows-CI-Workflow hängt den Markdown-Report zusätzlich an die Step Summary.
 `scripts/check_scale_matrix_report.py` prüft den JSON-Report anschließend als kompaktes Gate: für `scale_matrix` ist nur `ok` erlaubt, für optionale Experimental-Reports zusätzlich `untracked`.
 Für isolierte Katalogläufe ohne Maßstabsmatrix gibt es zusätzlich `scripts/run_windows_qgis_scenarios.py`, z. B. `python scripts\\run_windows_qgis_scenarios.py --group official_webmaps_catalog`.
+Für diesen Katalog gibt es außerdem `scripts/summarize_network_catalog.py` und `scripts/check_network_catalog_report.py`, sodass auch der breite amtliche Dienstmix hashbasiert als Report/Gate ausgewertet werden kann.
 
 Gezielte lokale Läufe für den erweiterten Dienstkatalog:
 

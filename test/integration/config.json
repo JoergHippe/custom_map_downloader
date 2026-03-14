@@ -116,7 +116,8 @@
       },
       "gsd": 2.0,
       "create_vrt": false,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_sha256": "60f9f19c8757aad1b0d9f354f81033fd740822b2d44c39b243a31bbe7bf9f4f4"
     },
     {
       "name": "basemap_color_vrt",
@@ -139,7 +140,8 @@
       "crs": "EPSG:25833",
       "gsd": 0.2,
       "create_vrt": false,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_sha256": "a5d18b3a2732435af9ee5bc2a418affcf30e2b47b071a39b0ecde8df8752bfde"
     },
     {
       "name": "geosn_ortho_gray",
@@ -203,7 +205,8 @@
       },
       "gsd": 10.0,
       "create_vrt": false,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_sha256": "a03d06bd4c2c55bb7ff5e908eb742198ed9371ea3e7293976bac0e7850655a7a"
     },
     {
       "name": "nrw_dtk_color_tif",
@@ -211,7 +214,8 @@
       "crs": "EPSG:25832",
       "gsd": 2.0,
       "create_vrt": false,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_sha256": "aac68ebef8537087edf05251b617732af96bd582e814b32254debb7ee8d0c1d0"
     },
     {
       "name": "bayern_dop40_tif",
@@ -219,7 +223,8 @@
       "crs": "EPSG:25832",
       "gsd": 0.8,
       "create_vrt": false,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_sha256": "f38c8a896f03412f43143059aea349508e6191621438ed3d894b47c65e5afece"
     },
     {
       "name": "bayern_relief_tif",
@@ -227,7 +232,8 @@
       "crs": "EPSG:25832",
       "gsd": 2.0,
       "create_vrt": false,
-      "output_extension": ".tif"
+      "output_extension": ".tif",
+      "expected_sha256": "0299bb2651063ca34a7d01bc7ae0b967475a820f29798a4be4e67791bf7122a9"
     }
   ],
   "scale_matrix": [

@@ -183,11 +183,13 @@ The Windows workflow runs the required scale matrix in isolated child processes 
 It is intended to run both on demand and on a weekly schedule.
 Unstable public-service probes stay in `experimental_scale_matrix` and should be executed manually via `--matrix-key experimental_scale_matrix` until they are proven reliable.
 For broader non-scale service coverage, use `scripts/run_windows_qgis_scenarios.py`. It isolates named network scenarios or a configured scenario group and writes per-scenario logs plus `scenario_summary.json`.
+The maintained broad catalog currently lives in `scenario_groups.official_webmaps_catalog` and is intended to cover official topographic, orthophoto and DGM-derived WMS services from BKG and multiple states.
 For single-case analysis, use `scripts/probe_windows_scale_case.py`. It runs `small` and `large` in separate QGIS processes, which is the quickest way to isolate one failing label. The default matrix is now `scale_matrix`; use `--matrix-key experimental_scale_matrix` only for reserve cases.
 Previous Windows/QGIS crash probes pointed at the non-tiled scale-service path. The exporter now forces the tile render path for scale-sensitive web layers in target-scale mode; verify that behavior with `scripts/probe_windows_scale_case.py` before promoting any public-service case into a required gate.
 Promotion rule of thumb: keep public-service cases in `experimental_scale_matrix` until they survive repeated Windows/QGIS runs with stable `expected_hashes`. The current `scale_matrix` cases were promoted only after repeated identical hash runs on the Windows/QGIS host.
 For CI readability, run `scripts/summarize_scale_matrix.py` after the matrix. It emits `scale_matrix_report.json` and `scale_matrix_report.md` and can append the Markdown view to `GITHUB_STEP_SUMMARY`.
 Use `scripts/check_scale_matrix_report.py` as the final gate on top of that summary. For the required `scale_matrix`, any row that is not `ok` fails the workflow.
+For the broader official service catalog, use `scripts/summarize_network_catalog.py` and `scripts/check_network_catalog_report.py`. The strict group `official_webmaps_catalog` also requires all rows to be `ok`.
 The workflow is configured with `if: always()` on summary, gate and artifact upload steps so failed smoke or matrix runs still leave behind usable diagnostics.
 
 ## Troubleshooting for Developers

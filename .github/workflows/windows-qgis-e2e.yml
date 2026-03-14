@@ -37,6 +37,25 @@ jobs:
         if: always()
         run: python scripts\check_scale_matrix_report.py artifacts\scale_matrix_report.json
 
+      - name: Run official webmaps catalog
+        shell: cmd
+        if: always()
+        env:
+          CMD_INTEGRATION_REPORT_DIR: ${{ github.workspace }}\artifacts\official_webmaps_catalog
+        run: python scripts\run_windows_qgis_scenarios.py --group official_webmaps_catalog
+
+      - name: Summarize official webmaps catalog
+        shell: cmd
+        if: always()
+        env:
+          CMD_INTEGRATION_REPORT_DIR: ${{ github.workspace }}\artifacts\official_webmaps_catalog
+        run: python scripts\summarize_network_catalog.py --group official_webmaps_catalog --write-summary
+
+      - name: Validate official webmaps catalog report
+        shell: cmd
+        if: always()
+        run: python scripts\check_network_catalog_report.py artifacts\official_webmaps_catalog\scenario_catalog_report.json
+
       - name: Upload QGIS E2E artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,5 +73,16 @@ jobs:
           path: |
             artifacts/scale_matrix_report.json
             artifacts/scale_matrix_report.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload network catalog report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-qgis-network-catalog-report
+          path: |
+            artifacts/official_webmaps_catalog/scenario_catalog_report.json
+            artifacts/official_webmaps_catalog/scenario_catalog_report.md
           if-no-files-found: error
           retention-days: 14
