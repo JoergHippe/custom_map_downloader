@@ -59,12 +59,12 @@ Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.b
 Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e2e` deployt das Plugin zuerst in das gewählte QGIS-Profil und testet anschließend bewusst den deployten Stand.
 
 Für die Windows-Self-Hosted-CI läuft die Scale-Matrix zusätzlich isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
-Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich die experimentellen Fälle gezielt manuell ausführen.
-Die experimentelle Matrix ist bewusst kein Pflicht-Gate: dort landen nur Fälle, die noch nicht ausreichend reproduzierbar sind. Die aktuelle Pflichtmatrix wurde mehrfach auf echter Windows/QGIS-Runtime mit identischen Hashes verifiziert.
-Für die Feineingrenzung eines einzelnen Crash-Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Damit lassen sich `small` und `large` in getrennten QGIS-Prozessen fahren.
-`expected_hashes` dürfen auch in der experimentellen Matrix gepflegt werden. Damit lassen sich stilistische oder serverseitige Änderungen sichtbar machen, ohne den Fall sofort in das Pflicht-Gate zu ziehen.
+Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich optionale Reservefälle gezielt manuell ausführen.
+Die aktuelle Pflichtmatrix wurde mehrfach auf echter Windows/QGIS-Runtime mit identischen Hashes verifiziert.
+Für die Feineingrenzung eines einzelnen Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Standardmäßig arbeitet der Probe-Runner gegen `scale_matrix`.
+`expected_hashes` sind für Pflichtfälle verbindlich. In `experimental_scale_matrix` dürfen sie ebenfalls gepflegt werden, um Stil- oder Serveränderungen sichtbar zu machen.
 `scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der Windows-CI-Workflow hängt den Markdown-Report zusätzlich an die Step Summary.
-`scripts/check_scale_matrix_report.py` prüft den JSON-Report anschließend als kompaktes Gate: nur `ok` und `untracked` sind erlaubt.
+`scripts/check_scale_matrix_report.py` prüft den JSON-Report anschließend als kompaktes Gate: für `scale_matrix` ist nur `ok` erlaubt, für optionale Experimental-Reports zusätzlich `untracked`.
 
 ## Hinweise
 

@@ -85,7 +85,7 @@ def main() -> int:
     parser.add_argument("case_name", help="Scale case name from integration config")
     parser.add_argument(
         "--matrix-key",
-        default=os.environ.get("CMD_SCALE_MATRIX_KEY", "experimental_scale_matrix"),
+        default=os.environ.get("CMD_SCALE_MATRIX_KEY", "scale_matrix"),
         help="JSON key in test/integration/config.json to probe",
     )
     parser.add_argument(

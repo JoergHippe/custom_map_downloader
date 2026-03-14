@@ -20,12 +20,34 @@ class ScaleMatrixReportCheckTests(unittest.TestCase):
                 check=False,
             )
 
-    def test_accepts_ok_and_untracked_rows(self):
+    def test_accepts_ok_rows_for_required_matrix(self):
         proc = self._run(
             {
                 "matrix_key": "scale_matrix",
                 "rows": [
                     {"case": "a", "label": "small", "status": "ok", "exit_code": 0},
+                ],
+            }
+        )
+        self.assertEqual(proc.returncode, 0)
+
+    def test_rejects_untracked_rows_for_required_matrix(self):
+        proc = self._run(
+            {
+                "matrix_key": "scale_matrix",
+                "rows": [
+                    {"case": "b", "label": "large", "status": "untracked", "exit_code": 0},
+                ],
+            }
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("untracked", proc.stderr)
+
+    def test_accepts_untracked_rows_for_experimental_matrix(self):
+        proc = self._run(
+            {
+                "matrix_key": "experimental_scale_matrix",
+                "rows": [
                     {"case": "b", "label": "large", "status": "untracked", "exit_code": 0},
                 ],
             }

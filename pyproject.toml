@@ -16,12 +16,6 @@ extend-exclude = '''
   | custom_map_downloader/resources_rc\.py
   | custom_map_downloader/CustomMapDownloader_dialog_base_ui\.py
   | test/integration/__init__\.py
-  | test/qgis_interface\.py
-  | test/test_CustomMapDownloader_dialog\.py
-  | test/test_qgis_environment\.py
-  | test/test_resources\.py
-  | test/test_translations\.py
-  | test/utilities\.py
 )$
 '''
 
@@ -32,12 +26,6 @@ extend-exclude = [
   "custom_map_downloader/resources.py",
   "custom_map_downloader/resources_rc.py",
   "custom_map_downloader/CustomMapDownloader_dialog_base_ui.py",
-  "test/qgis_interface.py",
-  "test/test_CustomMapDownloader_dialog.py",
-  "test/test_qgis_environment.py",
-  "test/test_resources.py",
-  "test/test_translations.py",
-  "test/utilities.py",
 ]
 
 [tool.ruff.lint]
