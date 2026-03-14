@@ -62,6 +62,7 @@ Recommended release-grade runtime validation:
    - required `scale_matrix` cases must all be `ok`
    - `experimental_scale_matrix` may contain `untracked` reserve probes
 4. Treat any `drift`, `missing` or `error` status in the required matrix as a release blocker.
+5. If the scheduled Windows/QGIS workflow has failed recently, do not publish before the failure is explained or the matrix is revalidated manually.
 
 Relevant report files:
 

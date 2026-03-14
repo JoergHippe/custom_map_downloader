@@ -2,45 +2,52 @@ name: Windows QGIS E2E
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+concurrency:
+  group: windows-qgis-e2e-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   windows-qgis-e2e:
     runs-on: [self-hosted, windows, qgis]
+    timeout-minutes: 45
+    env:
+      CMD_INTEGRATION_REPORT_DIR: ${{ github.workspace }}\artifacts
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run deployed-plugin E2E smoke tests
         shell: cmd
-        run: |
-          set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
-          run_integration_tests.bat e2e github-actions
+        run: run_integration_tests.bat e2e github-actions
 
       - name: Run network scale matrix
         shell: cmd
-        run: |
-          set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
-          python scripts\run_windows_qgis_matrix.py
+        run: python scripts\run_windows_qgis_matrix.py
 
       - name: Summarize scale matrix
         shell: cmd
-        run: |
-          set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
-          python scripts\summarize_scale_matrix.py --write-summary
+        if: always()
+        run: python scripts\summarize_scale_matrix.py --write-summary
 
       - name: Validate scale matrix report
         shell: cmd
-        run: |
-          python scripts\check_scale_matrix_report.py artifacts\scale_matrix_report.json
+        if: always()
+        run: python scripts\check_scale_matrix_report.py artifacts\scale_matrix_report.json
 
       - name: Upload QGIS E2E artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-qgis-e2e-artifacts
           path: artifacts
           if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload scale matrix report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-qgis-scale-report
@@ -48,3 +55,4 @@ jobs:
             artifacts/scale_matrix_report.json
             artifacts/scale_matrix_report.md
           if-no-files-found: error
+          retention-days: 14

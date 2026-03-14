@@ -177,15 +177,17 @@ The repository uses two layers of automated validation:
 
 - fast lint + stubbed Python suite on plain CI runners
 - QGIS-backed suite inside the official `qgis/qgis` container image
-- optional self-hosted Windows/QGIS workflow via `.github/workflows/windows-qgis-e2e.yml`
+- self-hosted Windows/QGIS workflow via `.github/workflows/windows-qgis-e2e.yml`
 
 The Windows workflow runs the required scale matrix in isolated child processes via `scripts/run_windows_qgis_matrix.py` so that a crashing provider case does not hide the outcome of the remaining cases.
+It is intended to run both on demand and on a weekly schedule.
 Unstable public-service probes stay in `experimental_scale_matrix` and should be executed manually via `--matrix-key experimental_scale_matrix` until they are proven reliable.
 For single-case analysis, use `scripts/probe_windows_scale_case.py`. It runs `small` and `large` in separate QGIS processes, which is the quickest way to isolate one failing label. The default matrix is now `scale_matrix`; use `--matrix-key experimental_scale_matrix` only for reserve cases.
 Previous Windows/QGIS crash probes pointed at the non-tiled scale-service path. The exporter now forces the tile render path for scale-sensitive web layers in target-scale mode; verify that behavior with `scripts/probe_windows_scale_case.py` before promoting any public-service case into a required gate.
 Promotion rule of thumb: keep public-service cases in `experimental_scale_matrix` until they survive repeated Windows/QGIS runs with stable `expected_hashes`. The current `scale_matrix` cases were promoted only after repeated identical hash runs on the Windows/QGIS host.
 For CI readability, run `scripts/summarize_scale_matrix.py` after the matrix. It emits `scale_matrix_report.json` and `scale_matrix_report.md` and can append the Markdown view to `GITHUB_STEP_SUMMARY`.
 Use `scripts/check_scale_matrix_report.py` as the final gate on top of that summary. For the required `scale_matrix`, any row that is not `ok` fails the workflow.
+The workflow is configured with `if: always()` on summary, gate and artifact upload steps so failed smoke or matrix runs still leave behind usable diagnostics.
 
 ## Troubleshooting for Developers
 
