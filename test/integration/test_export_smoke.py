@@ -4,7 +4,6 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from custom_map_downloader.core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator
 from test.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
 
@@ -46,10 +45,16 @@ try:
         ExportParams,
         ExtentSpec,
     )
+    from custom_map_downloader.core.scale import (  # type: ignore
+        OGC_STANDARD_DPI,
+        gsd_to_scale_denominator,
+    )
 
     HAS_QGIS = True
 except Exception:
     HAS_QGIS = False
+    OGC_STANDARD_DPI = 0.0  # type: ignore
+    gsd_to_scale_denominator = None  # type: ignore
 else:
     warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 

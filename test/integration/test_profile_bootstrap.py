@@ -21,9 +21,21 @@ class PluginProfileBootstrapTest(unittest.TestCase):
         self.assertTrue(module_path.exists())
 
         if plugin_import_mode() == "profile":
+            resolved_plugin_root = plugin_root.resolve()
+            accepted_paths = {
+                plugin_root,
+                resolved_plugin_root,
+            }
             self.assertTrue(
-                str(plugin_root) in str(module_path.parent),
-                f"Expected deployed plugin import under {plugin_root}, got {module_path}",
+                any(
+                    str(candidate) in str(module_path.parent)
+                    or str(candidate) in str(module_path.resolve().parent)
+                    for candidate in accepted_paths
+                ),
+                (
+                    f"Expected deployed plugin import under {plugin_root} "
+                    f"(resolved {resolved_plugin_root}), got {module_path}"
+                ),
             )
         else:
             self.assertIn("custom_map_downloader", str(module_path))

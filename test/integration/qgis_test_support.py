@@ -45,8 +45,13 @@ def ensure_plugin_import_path() -> Path:
         if not plugin_dir.exists():
             raise RuntimeError(f"Deployed plugin directory not found: {plugin_dir}")
         parent = plugin_dir.parent
-        if str(parent) not in sys.path:
-            sys.path.insert(0, str(parent))
+        sys.path[:] = [entry for entry in sys.path if entry != str(parent)]
+        sys.path.insert(0, str(parent))
+        # If repo modules were already imported during test discovery, force a
+        # clean re-import from the deployed profile path.
+        for module_name in list(sys.modules):
+            if module_name == PLUGIN_NAME or module_name.startswith(f"{PLUGIN_NAME}."):
+                sys.modules.pop(module_name, None)
         return plugin_dir
 
     if str(REPO_ROOT) not in sys.path:

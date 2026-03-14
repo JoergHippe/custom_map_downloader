@@ -49,6 +49,14 @@ def remove_existing(target: Path) -> None:
         target.unlink()
         return
     if target.is_dir():
+        if os.name == "nt":
+            subprocess.run(
+                ["cmd", "/c", "rmdir", "/S", "/Q", str(target)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            return
         shutil.rmtree(target)
         return
     target.unlink()

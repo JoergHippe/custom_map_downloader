@@ -1,81 +1,163 @@
-# Validation Status
+# Validierungsstand
 
-This document summarizes the currently verified runtime status of the plugin against real Windows/QGIS runs and the maintained automated checks.
+Dieses Dokument beschreibt den aktuell verifizierten Qualitäts- und Laufzeitstand des Plugins auf Basis von:
 
-## Current Overall Assessment
+- lokalen Repository-Checks
+- echten Windows/QGIS-Läufen
+- hashbasierten Reports für Maßstabsfälle und den breiten amtlichen WMS-Katalog
 
-Current state:
+Stand dieses Dokuments:
 
-- release-capable
-- operationally well structured
-- repeatedly validated on real Windows/QGIS runtime
-- not risk-free in the absolute sense, because public web services can still change upstream
+- Datum der letzten Abschlussvalidierung: `2026-03-14`
 
-Practical conclusion:
+## Kurzurteil
 
-- the plugin is in a professional and production-ready state for normal release and use
-- remaining risks are now mostly external runtime risks, not obvious engineering gaps in the plugin core
+Aktueller Stand:
 
-## Verified Test Layers
+- releasefähig
+- technisch professionell umgesetzt
+- auf echter Windows/QGIS-Runtime wiederholt validiert
+- mit verbleibenden Restrisiken vor allem auf Seiten externer Webdienste, nicht im grundlegenden Engineering-Kern
 
-### Local repository checks
+Praktische Einordnung:
 
-Verified locally:
+- Das Plugin ist aktuell in einem seriösen Sinn produktionsreif.
+- Das bedeutet nicht, dass nie wieder ein Problem auftreten kann.
+- Die wichtigsten verbleibenden Risiken liegen bei öffentlichen WMS-Diensten, deren Darstellung, Verfügbarkeit oder Backend sich ändern kann.
 
-- `ruff` on `custom_map_downloader`, `scripts`, `test`
-- `black --check` on `custom_map_downloader`, `scripts`, `test`
+## Lokal verifizierte Checks
+
+Lokal geprüft:
+
+- `ruff` auf `custom_map_downloader`, `scripts`, `test`
+- `black --check` auf `custom_map_downloader`, `scripts`, `test`
 - `python3 -m unittest discover -s test -v`
 
-Latest local suite result:
+Letztes Ergebnis der lokalen Suite:
 
-- `67 tests`
+- `67 Tests`
 - `OK`
-- `8 skipped` because QGIS-backed integration tests require real QGIS runtime
+- `8 skipped`
 
-### Real Windows/QGIS validation
+Die übersprungenen Tests sind die erwarteten QGIS-gebundenen Integrationstests in einer Nicht-QGIS-Umgebung.
 
-Verified on host runtime:
+## Echte Windows/QGIS-Abschlussvalidierung
 
-- QGIS import path / profile bootstrap
-- E2E smoke path
-- required scale matrix
-- broad official WMS catalog
+Die Abschlussvalidierung auf echter Windows/QGIS-Runtime umfasste diese Blöcke:
 
-The broad catalog was first used to reproduce native Windows/QGIS crashes in the direct web-layer render path. After moving web layers to the tiled render path, the same catalog was re-run successfully and then hash-baselined.
+1. Smoke-Pfad
+2. Deploy-/Profil-E2E-Pfad
+3. verpflichtende `scale_matrix`
+4. breiten amtlichen WMS-Katalog `official_webmaps_catalog`
 
-## Required Scale Matrix
+### 1. Smoke-Pfad
 
-The following scale-dependent cases are currently part of the strict required `scale_matrix` and are hash-gated:
+Direkt gegen echte QGIS-Runtime validiert:
 
-| Case | Service Type | Source | Status |
+- `test_export_small_raster`
+- `test_export_small_raster_as_vrt`
+- `test_export_small_raster_with_reprojection`
+- `test_export_small_raster_with_target_scale`
+
+Ergebnis:
+
+- `4 Tests`
+- `OK`
+
+Damit sind auf echter Runtime ausdrücklich geprüft:
+
+- normaler GeoTIFF-Export
+- Tiling/VRT
+- Reprojektion zwischen Render-CRS und Ausgabe-CRS
+- Zielmaßstab / scale-dependent Rendering
+
+### 2. Deployter Plugin-Stand im QGIS-Profil
+
+Direkt gegen den deployten Plugin-Stand im Profil validiert:
+
+- `test_class_factory_is_available`
+- `test_plugin_import_source_matches_requested_mode`
+- `test_export_small_raster`
+- `test_export_small_raster_as_vrt`
+- `test_export_small_raster_with_reprojection`
+- `test_export_small_raster_with_target_scale`
+
+Ergebnis:
+
+- `6 Tests`
+- `OK`
+
+Wichtiger Befund:
+
+- Der E2E-/Profilpfad wurde im Zuge der Abschlussvalidierung noch einmal gehärtet.
+- Dabei wurden zwei echte Workflow-Themen korrigiert:
+  - Profil-Importtests mussten Link-/Junction-Semantik auf Windows korrekt berücksichtigen
+  - `scripts/install_dev_plugin.py` musste vorhandene Windows-Junctions robuster entfernen
+
+## Verpflichtende Scale-Matrix
+
+Die folgende `scale_matrix` ist verpflichtend und hash-gated:
+
+| Fall | Diensttyp | Quelle | Status |
 | --- | --- | --- | --- |
-| `geosn_ortho_gray_scale_matrix` | Orthophoto | Sachsen | verified |
-| `basemap_gray_scale_matrix` | Topographic basemap | BKG | verified |
-| `basemap_color_scale_matrix` | Topographic basemap | BKG | verified |
+| `geosn_ortho_gray_scale_matrix` | Orthofoto | Sachsen | verifiziert |
+| `basemap_gray_scale_matrix` | topographische Basemap | BKG | verifiziert |
+| `basemap_color_scale_matrix` | topographische Basemap | BKG | verifiziert |
 
-Validation model:
+Validierungsmodell:
 
-- two target scales per case
-- real Windows/QGIS runtime
-- required hash comparison for `small` and `large`
-- CI gate via `scripts/check_scale_matrix_report.py`
+- zwei Zielmaßstäbe pro Fall
+- echter Windows/QGIS-Lauf
+- Hashvergleich für `small` und `large`
+- striktes Gate über `scripts/check_scale_matrix_report.py`
 
-## Official Webmaps Catalog
+Letztes Abschlussresultat:
 
-The following broad official-service catalog is now maintained as `scenario_groups.official_webmaps_catalog` and is also hash-gated:
+- alle `6` Matrix-Zeilen `status = ok`
 
-| Scenario | Category | Provider | Region | Result |
+Verifizierte Größen und Hashes:
+
+| Fall | Label | Größe | SHA256 |
+| --- | --- | --- | --- |
+| `basemap_color_scale_matrix` | `small` | `1429x1429` | `508b4a8163e8094c60fdc32fc21fc1e11933398dad610123a10f1968fef2ef12` |
+| `basemap_color_scale_matrix` | `large` | `286x286` | `ed7c811cd41d135dd348fd9f93001acc195a0ae95a1dea1a93cee35c7cd1e976` |
+| `basemap_gray_scale_matrix` | `small` | `1429x1429` | `b47deeef2d0af358cafcf017e24ca7b1dd14f43a30cad73fcc43252198d3c114` |
+| `basemap_gray_scale_matrix` | `large` | `286x286` | `b4a15f30f4af2ff7266ec992ca9523b221d0396c1ceabaac7fb620a34a27c92d` |
+| `geosn_ortho_gray_scale_matrix` | `small` | `2381x2381` | `c6367a4faf1757d70981236c77cccb8b299a66e6b8216837829825ba7e64c074` |
+| `geosn_ortho_gray_scale_matrix` | `large` | `595x595` | `4e6154de72b7c0f0f0fa1906afed21d567f285f2fe2d5e702151311378eb8e07` |
+
+## Breiter amtlicher WMS-Katalog
+
+Der breite amtliche Katalog wird als `scenario_groups.official_webmaps_catalog` gepflegt und ist inzwischen ebenfalls hash-gated.
+
+Abgedeckte amtliche Diensttypen:
+
+- topographische Basemap
+- topographische Karte
+- Orthofoto
+- reliefartige DGM-Ableitung
+
+Abgedeckte Anbieter:
+
+- BKG
+- Sachsen
+- Bayern
+- Nordrhein-Westfalen
+
+### Verifizierte Fälle
+
+| Szenario | Kategorie | Anbieter | Region | Ergebnis |
 | --- | --- | --- | --- | --- |
-| `basemap_gray_tif` | Topographic basemap | BKG | Germany | verified |
-| `bkg_dgm200_relief_tif` | DGM-derived relief | BKG | Germany | verified |
-| `geosn_ortho_color` | Orthophoto | GeoSN | Sachsen | verified |
-| `bayern_dop40_tif` | Orthophoto | Bayern | Bayern | verified |
-| `nrw_dtk_color_tif` | Topographic map | NRW | Nordrhein-Westfalen | verified |
-| `bayern_relief_tif` | DGM-derived relief | Bayern | Bayern | verified |
+| `basemap_gray_tif` | topographische Basemap | BKG | Deutschland | verifiziert |
+| `bkg_dgm200_relief_tif` | Relief aus DGM | BKG | Deutschland | verifiziert |
+| `geosn_ortho_color` | Orthofoto | GeoSN | Sachsen | verifiziert |
+| `bayern_dop40_tif` | Orthofoto | Bayern | Bayern | verifiziert |
+| `nrw_dtk_color_tif` | topographische Karte | NRW | Nordrhein-Westfalen | verifiziert |
+| `bayern_relief_tif` | Relief aus DGM | Bayern | Bayern | verifiziert |
 
-Verified baseline hashes:
+### Verifizierte Baseline-Hashes
 
-| Scenario | Size | SHA256 |
+| Szenario | Größe | SHA256 |
 | --- | --- | --- |
 | `basemap_gray_tif` | `1000x1000` | `60f9f19c8757aad1b0d9f354f81033fd740822b2d44c39b243a31bbe7bf9f4f4` |
 | `bkg_dgm200_relief_tif` | `200x200` | `a03d06bd4c2c55bb7ff5e908eb742198ed9371ea3e7293976bac0e7850655a7a` |
@@ -84,69 +166,77 @@ Verified baseline hashes:
 | `nrw_dtk_color_tif` | `1000x1000` | `aac68ebef8537087edf05251b617732af96bd582e814b32254debb7ee8d0c1d0` |
 | `bayern_relief_tif` | `500x500` | `0299bb2651063ca34a7d01bc7ae0b967475a820f29798a4be4e67791bf7122a9` |
 
-Validation model:
+Validierungsmodell:
 
-- isolated per-scenario Windows/QGIS child process
-- per-scenario `stdout.log` and `stderr.log`
-- per-scenario `network_scenarios.json`
-- catalog report:
+- isolierter Windows/QGIS-Kindprozess pro Szenario
+- pro Szenario:
+  - `stdout.log`
+  - `stderr.log`
+  - `network_scenarios.json`
+- zusammenfassende Reports:
   - `scenario_catalog_report.json`
   - `scenario_catalog_report.md`
-- strict gate via `scripts/check_network_catalog_report.py`
+- striktes Gate über `scripts/check_network_catalog_report.py`
 
-## Important Historical Finding
+Letztes Abschlussresultat:
 
-Before the latest exporter change, several real web-map scenarios crashed natively on Windows/QGIS in the small direct render path with `3221225477`.
+- alle `6` Katalog-Zeilen `status = ok`
 
-Affected before the fix:
+## Wichtiger historischer Befund
+
+Vor der jüngsten Exporter-Anpassung gab es bei mehreren echten Webkartenfällen native Windows/QGIS-Abstürze im kleinen Direktrender-Pfad mit `3221225477`.
+
+Betroffen waren vor dem Fix:
 
 - `basemap_gray_tif`
 - `bayern_dop40_tif`
 - `nrw_dtk_color_tif`
 - `bayern_relief_tif`
 
-Engineering consequence:
+Technische Konsequenz:
 
-- web layers are now routed through the tiled export path for runtime stability
+- Web-Layer werden jetzt grundsätzlich über den Tilepfad exportiert
 
-Re-validation after the fix:
+Re-Validierung nach dem Fix:
 
-- the same official catalog completed successfully
-- the strict hash-gated verification run also completed successfully
+- derselbe breite amtliche Katalog lief vollständig erfolgreich
+- die hashbasierte Verifikation lief anschließend ebenfalls vollständig erfolgreich
 
-## Remaining Risks
+## Gibt es aktuell noch Probleme?
 
-There are still residual risks, but they are now mostly external and expected:
+Stand heute: keine bekannten offenen Kernprobleme, die gegen einen produktiven Release sprechen.
 
-1. Public service drift
-   - styles, caches, backend software or source data can change upstream
-   - this can trigger hash drift even when the plugin code is still correct
+Es gibt aber weiterhin normale Restrisiken:
 
-2. Environment variation
-   - different QGIS / GDAL builds can still behave differently
-   - the strongest current assurance is the maintained Windows/QGIS host runtime
+1. Drift öffentlicher Dienste
+   - Styles, Caches, Backend-Versionen oder Datenstände können sich upstream ändern
+   - Das kann Hash-Drift auslösen, obwohl der Plugin-Code korrekt bleibt
 
-3. Uncovered service classes
-   - the project now covers a solid set of official WMS types
-   - it still does not prove correctness for every possible third-party WMS/WMTS implementation
+2. Umgebungsunterschiede
+   - andere QGIS-/GDAL-Builds können sich anders verhalten
+   - die stärkste aktuelle Absicherung ist die gepflegte Windows/QGIS-Host-Runtime
 
-## Professionalism / Production Readiness
+3. Nicht vollständig abgedeckte Dienstlandschaft
+   - der aktuelle Katalog deckt wichtige amtliche WMS-Typen ab
+   - er beweist nicht automatisch Korrektheit für jeden beliebigen Drittanbieter-WMS/WMTS
 
-Honest current answer:
+## Ist der Stand jetzt produktionsreif?
 
-- yes, the project is now professionally implemented and production-ready in a serious sense
-- no, that does not mean "nothing can ever fail"
+Ehrliche Antwort:
 
-More precise wording:
+- Ja, der Stand ist aktuell professionell umgesetzt und produktionsreif.
+- Nein, das ist kein Versprechen, dass externe Webdienste sich nie ändern oder nie ausfallen.
 
-- code structure, tests, CI gates, release governance, diagnostics and real-runtime validation are now at a clearly professional level
-- the main remaining failure modes are public-service drift and environment differences, not missing basic engineering discipline
+Präziser:
 
-## Recommended Operational Use
+- Architektur, Tests, Release-Governance, CI-Gates, Diagnostik und echte Runtime-Validierung sind auf einem klar professionellen Niveau.
+- Die verbleibenden Risiken sind überwiegend betriebliche und externe Risiken, nicht fehlende Basistechnik im Plugin.
 
-Before a release:
+## Empfehlung für Releases
 
-1. run the normal local release gate
-2. check the latest Windows/QGIS scale matrix report
-3. check the latest official webmaps catalog report
-4. if either report shows drift or error, stop and classify it before publishing
+Vor einem Release:
+
+1. lokalen Release-Gate laufen lassen
+2. aktuellen `scale_matrix`-Report prüfen
+3. aktuellen `official_webmaps_catalog`-Report prüfen
+4. bei `drift`, `missing`, `error` oder ungeklärten Runtime-Abweichungen nicht veröffentlichen
