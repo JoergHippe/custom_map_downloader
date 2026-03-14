@@ -63,6 +63,7 @@ Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experime
 Die experimentelle Matrix ist bewusst kein Pflicht-Gate: dort landen nur Fälle, die noch nicht ausreichend reproduzierbar sind. Die aktuelle Pflichtmatrix wurde mehrfach auf echter Windows/QGIS-Runtime mit identischen Hashes verifiziert.
 Für die Feineingrenzung eines einzelnen Crash-Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Damit lassen sich `small` und `large` in getrennten QGIS-Prozessen fahren.
 `expected_hashes` dürfen auch in der experimentellen Matrix gepflegt werden. Damit lassen sich stilistische oder serverseitige Änderungen sichtbar machen, ohne den Fall sofort in das Pflicht-Gate zu ziehen.
+`scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der Windows-CI-Workflow hängt den Markdown-Report zusätzlich an die Step Summary.
 
 ## Hinweise
 

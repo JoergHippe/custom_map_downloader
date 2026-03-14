@@ -22,6 +22,12 @@ jobs:
           set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
           python scripts\run_windows_qgis_matrix.py
 
+      - name: Summarize scale matrix
+        shell: cmd
+        run: |
+          set CMD_INTEGRATION_REPORT_DIR=%CD%\artifacts
+          python scripts\summarize_scale_matrix.py --write-summary
+
       - name: Upload QGIS E2E artifacts
         uses: actions/upload-artifact@v4
         with:
