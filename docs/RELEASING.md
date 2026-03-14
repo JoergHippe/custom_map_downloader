@@ -32,6 +32,8 @@ This runs:
 - package build via `qgis-plugin-ci`
 - package content validation via `scripts/check_package.py`
 
+`make release-check` covers the repository-local gate. It does not replace the Windows/QGIS runtime verification below.
+
 ## Recommended Manual Smoke Check
 
 Before publishing, validate the built plugin once in a real QGIS runtime:
@@ -52,6 +54,25 @@ Before publishing, validate the built plugin once in a real QGIS runtime:
 
 For Windows/QGIS E2E verification you can also set `CMD_INTEGRATION_REPORT_DIR` before running the integration batch helper. The network suite then writes JSON result artifacts, including scale-matrix hashes. The required `scale_matrix` now contains only repeatedly validated public-service cases; reserve or newly added probes belong in `experimental_scale_matrix` until they prove stable.
 
+Recommended release-grade runtime validation:
+
+1. Run the Windows/QGIS E2E workflow or the equivalent local batch helper against a real QGIS installation.
+2. Generate the scale-matrix summary and report artifacts.
+3. Enforce the report gate:
+   - required `scale_matrix` cases must all be `ok`
+   - `experimental_scale_matrix` may contain `untracked` reserve probes
+4. Treat any `drift`, `missing` or `error` status in the required matrix as a release blocker.
+
+Relevant report files:
+
+- `scale_matrix_summary.json`
+- `scale_matrix_report.json`
+- `scale_matrix_report.md`
+
+Relevant gate:
+
+- `scripts/check_scale_matrix_report.py`
+
 ## Package Output
 
 Release archives are built from `custom_map_downloader/` only. The package validator ensures that the ZIP does not accidentally include:
@@ -67,3 +88,4 @@ Release archives are built from `custom_map_downloader/` only. The package valid
 - Keep `CHANGELOG.md` aligned with the version in `custom_map_downloader/metadata.txt`.
 - Keep the short `changelog=` summary in `custom_map_downloader/metadata.txt` aligned with the current release.
 - If the release changes export semantics or operational behavior, update `docs/TROUBLESHOOTING.md`.
+- Keep `experimental_scale_matrix` empty unless you intentionally park non-baselined reserve probes there.

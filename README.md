@@ -28,6 +28,14 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 2. Extract it into your QGIS plugin directory.
 3. Restart QGIS and enable the plugin.
 
+## Compatibility
+
+- supported QGIS baseline: `3.34+`
+- developed and repeatedly validated with real Windows/QGIS runtime checks
+- public WMS/XYZ services can still change portrayal, availability or response behavior upstream
+- scale-dependent web-layer validation is covered by the maintained Windows/QGIS `scale_matrix`
+- for scale-sensitive exports, prefer a projected CRS with meter units
+
 ## Basic Workflow
 
 1. Open the plugin from the toolbar or plugin menu.
