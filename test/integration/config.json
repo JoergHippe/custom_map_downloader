@@ -147,8 +147,7 @@
       "output_extension": ".png"
     }
   ],
-  "scale_matrix": [],
-  "experimental_scale_matrix": [
+  "scale_matrix": [
     {
       "name": "geosn_ortho_gray_scale_matrix",
       "source": "geosn_ortho_gray",
@@ -203,5 +202,7 @@
         "large": "ed7c811cd41d135dd348fd9f93001acc195a0ae95a1dea1a93cee35c7cd1e976"
       }
     }
+  ],
+  "experimental_scale_matrix": [
   ]
 }

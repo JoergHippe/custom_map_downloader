@@ -183,7 +183,7 @@ The Windows workflow runs the required scale matrix in isolated child processes 
 Unstable public-service probes stay in `experimental_scale_matrix` and should be executed manually via `--matrix-key experimental_scale_matrix` until they are proven reliable.
 For single-case crash analysis, use `scripts/probe_windows_scale_case.py`. It runs `small` and `large` in separate QGIS processes, which is the quickest way to see whether only one scale step is crashing.
 Previous Windows/QGIS crash probes pointed at the non-tiled scale-service path. The exporter now forces the tile render path for scale-sensitive web layers in target-scale mode; verify that behavior with `scripts/probe_windows_scale_case.py` before promoting any public-service case into a required gate.
-Promotion rule of thumb: keep public-service cases in `experimental_scale_matrix` until they survive repeated Windows/QGIS runs with stable `expected_hashes`. Only then move them into `scale_matrix`.
+Promotion rule of thumb: keep public-service cases in `experimental_scale_matrix` until they survive repeated Windows/QGIS runs with stable `expected_hashes`. The current `scale_matrix` cases were promoted only after repeated identical hash runs on the Windows/QGIS host.
 
 ## Troubleshooting for Developers
 

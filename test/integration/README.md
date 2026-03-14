@@ -38,7 +38,7 @@ Die lokale Smoke-Suite deckt aktuell ab:
 - `sources`: Datenquellen mit `name`, `provider`, `uri`, optional `default_crs`, `extent`, `gsd`, `create_vrt`, `output_extension`.
 - `scenarios`: konkrete Testläufe mit `name`, `source`-Verweis und optionalen Overrides (`crs`, `extent`, `gsd`, `vrt_preset_size`, `create_vrt`, `output_extension`).
 - `scale_matrix`: explizite Matrix für stabile, verpflichtende Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
-- `experimental_scale_matrix`: instabile oder aktuell nicht CI-taugliche öffentliche Maßstabsfälle. Diese Fälle werden bewusst separat gehalten.
+- `experimental_scale_matrix`: Reserve für instabile oder noch nicht freigegebene öffentliche Maßstabsfälle.
 - Optional `expected_hashes`: Referenz-Hashes für `small` und `large`. Wenn gesetzt, vergleicht der Test gegen diese Baselines.
 - Umgebungsvariablen:
   - `ALLOW_INTEGRATION_NETWORK=1` aktiviert Netztests.
@@ -60,7 +60,7 @@ Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e
 
 Für die Windows-Self-Hosted-CI läuft die Scale-Matrix zusätzlich isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
 Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich die experimentellen Fälle gezielt manuell ausführen.
-Die experimentelle Matrix ist bewusst kein Pflicht-Gate: öffentliche WMS-Fälle können unter echter Windows/QGIS-Runtime auch dann hart abstürzen, wenn der normale Repo- und Smoke-Stand grün ist.
+Die experimentelle Matrix ist bewusst kein Pflicht-Gate: dort landen nur Fälle, die noch nicht ausreichend reproduzierbar sind. Die aktuelle Pflichtmatrix wurde mehrfach auf echter Windows/QGIS-Runtime mit identischen Hashes verifiziert.
 Für die Feineingrenzung eines einzelnen Crash-Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Damit lassen sich `small` und `large` in getrennten QGIS-Prozessen fahren.
 `expected_hashes` dürfen auch in der experimentellen Matrix gepflegt werden. Damit lassen sich stilistische oder serverseitige Änderungen sichtbar machen, ohne den Fall sofort in das Pflicht-Gate zu ziehen.
 
