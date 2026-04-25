@@ -78,6 +78,26 @@ Actions:
 3. Reduce extent size.
 4. Prefer tiling for large requests.
 
+## MBTiles Export Is Very Large
+
+Symptoms:
+
+- tile estimate is unexpectedly high
+- export is slow or creates a large `.mbtiles` file
+
+Typical causes:
+
+- high maximum zoom
+- broad selected extent
+- non-zero padding across several zoom levels
+
+Actions:
+
+1. Reduce `Max zoom`.
+2. Keep `Padding tiles` at `0` unless the consuming map client needs surrounding tiles.
+3. Split the area into smaller exact extents.
+4. Use `Auto-detect min zoom` only as a starting point and review the resulting tile estimate.
+
 ## Public WMS Changes Style or Content
 
 Symptoms:

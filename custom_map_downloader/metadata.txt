@@ -5,12 +5,12 @@
 [general]
 name=Custom Map Downloader
 qgisMinimumVersion=3.34
-description=Extent-based export of georeferenced rasters (GeoTIFF/PNG/JPEG) with GSD control and optional VRT tiling
-version=0.4.0
+description=Extent-based export of georeferenced rasters (GeoTIFF/PNG/JPEG), VRT mosaics and MBTiles with GSD/scale control
+version=0.5.0
 author=Abhinav Jayswal
 email=abhinavjayaswal10@gmail.com
 
-about=Custom Map Downloader exports visible QGIS layers extent-based: pick a layer, choose an output CRS, set ground sampling distance (map units per pixel) and export a georeferenced raster. Pixel width/height are derived from extent and GSD; world files are always written. Optional VRT mode writes tiled GeoTIFFs plus a portable VRT instead of a merged raster. Designed for XYZ/WMTS/WMS, raster and vector layers with progress feedback and automatic layer loading.
+about=Custom Map Downloader exports visible QGIS layers extent-based: pick a layer, choose an output CRS, set ground sampling distance (map units per pixel) or target scale and export georeferenced rasters. Pixel width/height are derived from extent and GSD; world files are always written. Optional VRT mode writes tiled GeoTIFFs plus a portable VRT instead of a merged raster. MBTiles mode writes an exact-extent Web Mercator tile pyramid with configurable zoom range, tile size, padding, tile estimates and SQLite metadata. Designed for XYZ/WMTS/WMS, raster and vector layers with progress feedback and automatic layer loading for raster outputs.
 
 tracker=https://github.com/JoergHippe/custom_map_downloader/issues
 repository=https://github.com/JoergHippe/custom_map_downloader
@@ -19,10 +19,10 @@ repository=https://github.com/JoergHippe/custom_map_downloader
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=0.4.0: validated Windows/QGIS runtime, strict scale and WMS catalog gates, stabilized web map export path and German validation status.
+changelog=0.5.0: added exact-extent MBTiles export with zoom range, auto min zoom, padding and tile estimates. 0.4.0: validated Windows/QGIS runtime, strict scale and WMS catalog gates, stabilized web map export path and German validation status.
 
 # Tags are comma separated with spaces allowed
-tags=raster,export,geotiff,satellite,imagery,download,georeferencing,map
+tags=raster,export,geotiff,mbtiles,tiles,offline,satellite,imagery,download,georeferencing,map
 
 homepage=https://github.com/JoergHippe/custom_map_downloader
 category=Raster

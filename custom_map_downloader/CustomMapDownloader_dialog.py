@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import math
 import os
+from pathlib import Path
 from typing import Optional, Tuple, cast
 
 from qgis.core import (
@@ -42,6 +43,7 @@ from .core.constants import (
     GSD_MIN,
     GSD_STEP,
 )
+from .core.mbtiles import auto_detect_min_zoom, count_tiles, estimate_mbtiles_size
 from .core.profile_io import read_profile, write_profile
 from .core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 from .core.validation import pixel_limit_status
@@ -80,13 +82,18 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         # Polling timer for "Draw on canvas" mode (extentChanged may not fire reliably)
         self._extent_poll_timer: Optional[QTimer] = None
         self._last_extent_signature: Optional[Tuple[float, float, float, float, str]] = None
+        self._last_layer_id: str | None = None
+        self._selected_output_ext = ".tif"
         self._resolution_syncing = False
 
         # ------------------------------------------------------------------
         # Wire basic UI
         # ------------------------------------------------------------------
         if hasattr(self, "pushButton_browse"):
-            self.pushButton_browse.clicked.connect(self.select_output_directory)
+            self.pushButton_browse.clicked.connect(self.select_output_file)
+
+        if hasattr(self, "lineEdit_outputDirectory"):
+            self.lineEdit_outputDirectory.editingFinished.connect(self._apply_output_path_suffix)
 
         if hasattr(self, "pushButton_refreshLayers"):
             self.pushButton_refreshLayers.clicked.connect(self.populate_layers)
@@ -130,6 +137,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.spinBox_vrtMaxCols.valueChanged.connect(self._update_vrt_info)
         if hasattr(self, "spinBox_vrtMaxRows"):
             self.spinBox_vrtMaxRows.valueChanged.connect(self._update_vrt_info)
+        for name in (
+            "spinBox_mbtilesZoomMin",
+            "spinBox_mbtilesZoomMax",
+            "spinBox_mbtilesTileSize",
+            "spinBox_mbtilesPadding",
+        ):
+            if hasattr(self, name):
+                getattr(self, name).valueChanged.connect(self._update_mbtiles_info)
+        if hasattr(self, "pushButton_mbtilesAutoZoom"):
+            self.pushButton_mbtilesAutoZoom.clicked.connect(self._on_mbtiles_auto_zoom_clicked)
 
         # ------------------------------------------------------------------
         # Init
@@ -150,11 +167,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
         self._update_scale_hint()
 
         # Start polling (kept lightweight; only updates when something really changed)
         self._start_extent_polling()
-        self._last_layer_id: str | None = None
         self._load_settings()
 
     def tr(
@@ -286,6 +303,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self.comboBox_outputFormat.addItem(self.tr("GeoTIFF (*.tif)"), ".tif")
         self.comboBox_outputFormat.addItem(self.tr("PNG (*.png)"), ".png")
         self.comboBox_outputFormat.addItem(self.tr("JPEG (*.jpg)"), ".jpg")
+        self.comboBox_outputFormat.addItem(self.tr("MBTiles (*.mbtiles)"), ".mbtiles")
         self.comboBox_outputFormat.setCurrentIndex(0)
 
         # Keep UI state consistent
@@ -296,14 +314,25 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._update_output_controls_state()
 
     def _update_output_controls_state(self) -> None:
-        """Enable/disable output format based on VRT mode."""
-        create_vrt = (
-            bool(self.checkBox_createVrt.isChecked())
-            if hasattr(self, "checkBox_createVrt")
-            else False
-        )
-        if hasattr(self, "comboBox_outputFormat"):
-            self.comboBox_outputFormat.setEnabled(not create_vrt)
+        """Enable/disable controls based on VRT/MBTiles mode."""
+        mbtiles = self._is_mbtiles_selected()
+        if hasattr(self, "checkBox_createVrt"):
+            if mbtiles and self.checkBox_createVrt.isChecked():
+                self.checkBox_createVrt.setChecked(False)
+            self.checkBox_createVrt.setEnabled(not mbtiles)
+        if hasattr(self, "groupBox_vrt"):
+            self.groupBox_vrt.setEnabled(not mbtiles)
+        if hasattr(self, "groupBox_mbtiles"):
+            self.groupBox_mbtiles.setVisible(mbtiles)
+            self.groupBox_mbtiles.setEnabled(mbtiles)
+        if hasattr(self, "checkBox_loadLayer"):
+            self.checkBox_loadLayer.setEnabled(not mbtiles)
+        self._sync_output_path_extension()
+        self._update_vrt_info()
+        self._update_mbtiles_info()
+
+    def _is_mbtiles_selected(self) -> bool:
+        return self._selected_output_extension() == ".mbtiles"
 
     def _selected_output_extension(self) -> str:
         """Return desired output extension for single export."""
@@ -316,19 +345,48 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                     return ".jpg"
                 if ext == ".png":
                     return ".png"
+                if ext == ".mbtiles":
+                    return ".mbtiles"
             except Exception:
                 pass
-        return ".tif"
+        return getattr(self, "_selected_output_ext", ".tif")
 
-    def _sanitize_prefix(self, prefix: str) -> str:
-        """Strip known file extensions from a user-provided prefix."""
-        p = (prefix or "").strip()
-        if not p:
-            return p
-        base, ext = os.path.splitext(p)
-        if base and ext.lower() in {".tif", ".tiff", ".png", ".jpg", ".jpeg", ".vrt"}:
-            return base
-        return p
+    def _effective_output_extension(self) -> str:
+        create_vrt = (
+            bool(self.checkBox_createVrt.isChecked())
+            if hasattr(self, "checkBox_createVrt")
+            else False
+        )
+        if create_vrt:
+            return ".vrt"
+        return self._selected_output_extension()
+
+    def _sync_output_path_extension(self) -> None:
+        if not hasattr(self, "lineEdit_outputDirectory"):
+            return
+        path = (self.lineEdit_outputDirectory.text() or "").strip()
+        if not path:
+            return
+        desired = self._effective_output_extension()
+        root, ext = os.path.splitext(path)
+        if ext.lower() == desired:
+            return
+        self.lineEdit_outputDirectory.setText((root or path) + desired)
+
+    def _apply_output_path_suffix(self) -> None:
+        if not hasattr(self, "lineEdit_outputDirectory"):
+            return
+        suffix = Path((self.lineEdit_outputDirectory.text() or "").strip()).suffix.lower()
+        if not suffix:
+            return
+        if suffix == ".vrt":
+            if hasattr(self, "checkBox_createVrt"):
+                self.checkBox_createVrt.setChecked(True)
+            return
+        if suffix in {".tif", ".tiff", ".png", ".jpg", ".jpeg", ".mbtiles"}:
+            if hasattr(self, "checkBox_createVrt"):
+                self.checkBox_createVrt.setChecked(False)
+            self._set_output_format_from_extension(suffix)
 
     def _apply_tooltips(self) -> None:
         """Apply QGIS-typical tooltips and What's-This help texts."""
@@ -367,17 +425,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             )
 
         if hasattr(self, "lineEdit_outputDirectory"):
-            self.lineEdit_outputDirectory.setToolTip(self.tr("Target folder for exported files."))
+            self.lineEdit_outputDirectory.setToolTip(self.tr("Target file for the export."))
             self.lineEdit_outputDirectory.setWhatsThis(
-                self.tr("Select the directory where output files will be written.")
-            )
-
-        if hasattr(self, "lineEdit_outputPrefix"):
-            self.lineEdit_outputPrefix.setToolTip(self.tr("Base filename without extension."))
-            self.lineEdit_outputPrefix.setWhatsThis(
                 self.tr(
-                    "Provide a filename prefix without extension. "
-                    "The extension is selected via 'Output format' (single export) or forced to .vrt in VRT mode."
+                    "Select the full output file path. The extension follows the selected output format."
                 )
             )
 
@@ -399,13 +450,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             )
 
         if hasattr(self, "comboBox_outputFormat"):
-            self.comboBox_outputFormat.setToolTip(
-                self.tr("Output raster format (single export only).")
-            )
+            self.comboBox_outputFormat.setToolTip(self.tr("Output format for the export."))
             self.comboBox_outputFormat.setWhatsThis(
                 self.tr(
                     "GeoTIFF stores georeferencing internally. PNG/JPEG require worldfile + .prj. "
-                    "In VRT mode, the output is always a .vrt mosaic and tiles are written as GeoTIFF."
+                    "MBTiles writes a Web Mercator tile pyramid. In VRT mode, the output is always "
+                    "a .vrt mosaic and tiles are written as GeoTIFF."
                 )
             )
 
@@ -421,6 +471,22 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         if hasattr(self, "checkBox_loadLayer"):
             self.checkBox_loadLayer.setToolTip(self.tr("Load the result as a layer after export."))
+        if hasattr(self, "groupBox_mbtiles"):
+            self.groupBox_mbtiles.setToolTip(
+                self.tr("MBTiles uses the exact selected extent and Web Mercator zoom levels.")
+            )
+        if hasattr(self, "spinBox_mbtilesPadding"):
+            self.spinBox_mbtilesPadding.setToolTip(
+                self.tr(
+                    "Optional surrounding tile rings. 0 keeps the tile range closest to the selected extent."
+                )
+            )
+        if hasattr(self, "pushButton_mbtilesAutoZoom"):
+            self.pushButton_mbtilesAutoZoom.setToolTip(
+                self.tr(
+                    "Set min zoom to the first zoom level where the extent spans more than one tile."
+                )
+            )
 
     # ------------------------------------------------------------------
     # Qt lifecycle
@@ -438,9 +504,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         base = "CustomMapDownloader/"
 
         try:
-            out_dir = settings.value(base + "last_output_dir", "", type=str) or ""
-            if out_dir and hasattr(self, "lineEdit_outputDirectory"):
-                self.lineEdit_outputDirectory.setText(out_dir)
+            output_path = settings.value(base + "last_output_path", "", type=str) or ""
+            if output_path and hasattr(self, "lineEdit_outputDirectory"):
+                self.lineEdit_outputDirectory.setText(output_path)
+                self._set_output_format_from_extension(Path(output_path).suffix)
         except Exception:
             pass
 
@@ -492,8 +559,8 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         base = "CustomMapDownloader/"
 
         if hasattr(self, "lineEdit_outputDirectory"):
-            out_dir = (self.lineEdit_outputDirectory.text() or "").strip()
-            settings.setValue(base + "last_output_dir", out_dir)
+            output_path = (self.lineEdit_outputDirectory.text() or "").strip()
+            settings.setValue(base + "last_output_path", output_path)
 
         if hasattr(self, "spinBox_gsd"):
             try:
@@ -549,18 +616,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         project = self._project()
         canvas = self.iface.mapCanvas()
 
-        try:
-            current_rect = canvas.extent()
-            current_crs = canvas.mapSettings().destinationCrs()
-        except Exception:
-            current_crs = project.crs()
-            current_rect = QgsRectangle(-1000.0, -1000.0, 1000.0, 1000.0)
-
         self.extentGroupBox.setMapCanvas(canvas, True)
-        self.extentGroupBox.setOriginalExtent(current_rect, current_crs)
-        self.extentGroupBox.setCurrentExtent(current_rect, current_crs)
         self.extentGroupBox.setOutputCrs(project.crs())
         self.extentGroupBox.setTitleBase(self.tr("Extent"))
+        self.reset_extent_to_canvas()
         # Cache internal extent widget + visible line edits for robust extent retrieval.
         self._extent_widget = self._find_extent_widget()
         self._cache_extent_line_edits()
@@ -575,6 +634,55 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 self._extent_widget.validationChanged.connect(self._on_extent_validation_changed)
             except Exception:
                 pass
+
+    def reset_extent_to_canvas(self) -> None:
+        """Set the extent widget to the current map canvas extent."""
+        if not hasattr(self, "extentGroupBox"):
+            return
+        project = self._project()
+        try:
+            canvas = self.iface.mapCanvas()
+            current_rect = canvas.extent()
+            current_crs = canvas.mapSettings().destinationCrs()
+        except Exception:
+            current_crs = project.crs()
+            current_rect = QgsRectangle(-1000.0, -1000.0, 1000.0, 1000.0)
+
+        try:
+            output_crs = self.mQgsProjectionSelectionWidget.crs()
+            if not output_crs or not output_crs.isValid():
+                output_crs = project.crs()
+        except Exception:
+            output_crs = project.crs()
+
+        output_rect = QgsRectangle(current_rect)
+        try:
+            if current_crs.isValid() and output_crs.isValid() and current_crs != output_crs:
+                transform = QgsCoordinateTransform(current_crs, output_crs, project)
+                output_rect = transform.transformBoundingBox(current_rect)
+        except Exception:
+            output_rect = QgsRectangle(current_rect)
+
+        try:
+            self.extentGroupBox.setOriginalExtent(current_rect, current_crs)
+            self.extentGroupBox.setCurrentExtent(current_rect, current_crs)
+            self.extentGroupBox.setOutputCrs(output_crs)
+            try:
+                self.extentGroupBox.setOutputExtentFromCurrent()
+            except Exception:
+                pass
+            try:
+                self.extentGroupBox.setOutputExtentFromUser(output_rect, output_crs)
+            except Exception:
+                self.extentGroupBox.setCurrentExtent(output_rect, output_crs)
+        except Exception:
+            pass
+        self._cache_extent_line_edits()
+        self._write_extent_line_edits(output_rect)
+        self._update_extent_info()
+        self._update_vrt_info()
+        self._update_mbtiles_info()
+        self._last_extent_signature = None
 
     def _hide_project_layer_extent_button(self) -> None:
         """Hide the 'current layer extent' button of QgsExtentGroupBox."""
@@ -643,6 +751,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._last_extent_signature = sig
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
 
     @staticmethod
     def _extent_signature(
@@ -707,39 +816,70 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         self.comboBox_layer.setFocus()
 
-    def select_output_directory(self) -> None:
-        """Open a dialog to select the output directory."""
+    def select_output_file(self) -> None:
+        """Open a save dialog for the full output file path."""
         current = ""
         if hasattr(self, "lineEdit_outputDirectory"):
             current = (self.lineEdit_outputDirectory.text() or "").strip()
 
-        directory = QtWidgets.QFileDialog.getExistingDirectory(
+        if not current:
+            current = str(Path.home() / f"custom_map_download{self._effective_output_extension()}")
+        else:
+            root, _ext = os.path.splitext(current)
+            current = (root or current) + self._effective_output_extension()
+
+        path, selected_filter = QtWidgets.QFileDialog.getSaveFileName(
             self,
-            self.tr("Select output directory"),
-            current or "",
+            self.tr("Save output file"),
+            current,
+            self.tr(
+                "GeoTIFF (*.tif);;PNG (*.png);;JPEG (*.jpg);;MBTiles (*.mbtiles);;VRT mosaic (*.vrt)"
+            ),
         )
-        if directory and hasattr(self, "lineEdit_outputDirectory"):
-            self.lineEdit_outputDirectory.setText(directory)
+        if not path or not hasattr(self, "lineEdit_outputDirectory"):
+            return
+
+        if "PNG" in selected_filter:
+            self._set_output_format_from_extension(".png")
+        elif "JPEG" in selected_filter:
+            self._set_output_format_from_extension(".jpg")
+        elif "MBTiles" in selected_filter:
+            self._set_output_format_from_extension(".mbtiles")
+        elif "VRT" in selected_filter and hasattr(self, "checkBox_createVrt"):
+            self.checkBox_createVrt.setChecked(True)
+        else:
+            self._set_output_format_from_extension(".tif")
+
+        root, ext = os.path.splitext(path)
+        if ext:
+            self._set_output_format_from_extension(ext)
+        self.lineEdit_outputDirectory.setText((root or path) + self._effective_output_extension())
 
     def _default_profile_path(self) -> str:
         """Return a sensible default path for save/load profile dialogs."""
-        output_directory = ""
+        output_directory = os.path.expanduser("~")
+        base_name = "custom_map_download"
         if hasattr(self, "lineEdit_outputDirectory"):
-            output_directory = (self.lineEdit_outputDirectory.text() or "").strip()
+            output_path = Path((self.lineEdit_outputDirectory.text() or "").strip())
+            if str(output_path):
+                output_directory = str(output_path.parent)
+                base_name = output_path.stem or base_name
         if not output_directory or not os.path.isdir(output_directory):
             output_directory = os.path.expanduser("~")
-
-        prefix = ""
-        if hasattr(self, "lineEdit_outputPrefix"):
-            prefix = self._sanitize_prefix(self.lineEdit_outputPrefix.text())
-        prefix = prefix or "custom_map_download"
-        return os.path.join(output_directory, f"{prefix}.cmdprofile.json")
+        return os.path.join(output_directory, f"{base_name}.cmdprofile.json")
 
     def _set_output_format_from_extension(self, extension: str) -> None:
         """Select output format combo entry from a file extension."""
-        if not hasattr(self, "comboBox_outputFormat"):
-            return
         wanted = (extension or "").strip().lower()
+        if wanted == ".tiff":
+            wanted = ".tif"
+        elif wanted == ".jpeg":
+            wanted = ".jpg"
+        if wanted in {".tif", ".png", ".jpg", ".mbtiles"}:
+            self._selected_output_ext = wanted
+        if not hasattr(self, "comboBox_outputFormat"):
+            self._update_output_controls_state()
+            return
         for idx in range(self.comboBox_outputFormat.count()):
             try:
                 current = str(self.comboBox_outputFormat.itemData(idx) or "").strip().lower()
@@ -796,17 +936,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
     def _collect_profile_state(self) -> dict:
         """Capture current dialog state for JSON profile export."""
         state = {
-            "output_directory": (
+            "output_path": (
                 (self.lineEdit_outputDirectory.text() or "").strip()
                 if hasattr(self, "lineEdit_outputDirectory")
                 else ""
             ),
-            "output_prefix": (
-                self._sanitize_prefix(self.lineEdit_outputPrefix.text())
-                if hasattr(self, "lineEdit_outputPrefix")
-                else ""
-            ),
-            "output_extension": self._selected_output_extension(),
             "resolution_mode": self._resolution_mode(),
             "gsd": self._current_gsd(),
             "target_scale_denominator": self._current_target_scale(),
@@ -819,6 +953,26 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 bool(self.checkBox_createVrt.isChecked())
                 if hasattr(self, "checkBox_createVrt")
                 else False
+            ),
+            "mbtiles_zoom_min": (
+                int(self.spinBox_mbtilesZoomMin.value())
+                if hasattr(self, "spinBox_mbtilesZoomMin")
+                else 0
+            ),
+            "mbtiles_zoom_max": (
+                int(self.spinBox_mbtilesZoomMax.value())
+                if hasattr(self, "spinBox_mbtilesZoomMax")
+                else 0
+            ),
+            "mbtiles_tile_size": (
+                int(self.spinBox_mbtilesTileSize.value())
+                if hasattr(self, "spinBox_mbtilesTileSize")
+                else 256
+            ),
+            "mbtiles_padding": (
+                int(self.spinBox_mbtilesPadding.value())
+                if hasattr(self, "spinBox_mbtilesPadding")
+                else 0
             ),
             "vrt_max_cols": (
                 int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
@@ -877,12 +1031,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         warnings: list[str] = []
 
         if hasattr(self, "lineEdit_outputDirectory"):
-            self.lineEdit_outputDirectory.setText(str(profile.get("output_directory") or ""))
-
-        if hasattr(self, "lineEdit_outputPrefix"):
-            self.lineEdit_outputPrefix.setText(str(profile.get("output_prefix") or ""))
-
-        self._set_output_format_from_extension(str(profile.get("output_extension") or ".tif"))
+            output_path = str(profile.get("output_path") or "")
+            self.lineEdit_outputDirectory.setText(output_path)
+            self._apply_output_path_suffix()
 
         resolution_mode = str(profile.get("resolution_mode") or "gsd")
         if hasattr(self, "comboBox_resolutionMode"):
@@ -902,7 +1053,22 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.checkBox_loadLayer.setChecked(bool(profile.get("load_as_layer")))
 
         if hasattr(self, "checkBox_createVrt"):
-            self.checkBox_createVrt.setChecked(bool(profile.get("create_vrt")))
+            output_suffix = Path(str(profile.get("output_path") or "")).suffix.lower()
+            self.checkBox_createVrt.setChecked(
+                bool(profile.get("create_vrt")) and output_suffix != ".mbtiles"
+            )
+
+        if hasattr(self, "spinBox_mbtilesZoomMin"):
+            self.spinBox_mbtilesZoomMin.setValue(int(profile.get("mbtiles_zoom_min") or 0))
+
+        if hasattr(self, "spinBox_mbtilesZoomMax"):
+            self.spinBox_mbtilesZoomMax.setValue(int(profile.get("mbtiles_zoom_max") or 16))
+
+        if hasattr(self, "spinBox_mbtilesTileSize"):
+            self.spinBox_mbtilesTileSize.setValue(int(profile.get("mbtiles_tile_size") or 256))
+
+        if hasattr(self, "spinBox_mbtilesPadding"):
+            self.spinBox_mbtilesPadding.setValue(int(profile.get("mbtiles_padding") or 0))
 
         if hasattr(self, "spinBox_vrtMaxCols"):
             self.spinBox_vrtMaxCols.setValue(int(profile.get("vrt_max_cols") or 0))
@@ -951,6 +1117,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._update_output_controls_state()
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
         self._update_scale_hint()
         return warnings
 
@@ -1007,23 +1174,25 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
     def get_parameters(self) -> Optional[dict]:
         """Collect and validate dialog parameters."""
-        output_directory = (
+        self._apply_output_path_suffix()
+        output_path = (
             self.lineEdit_outputDirectory.text().strip()
             if hasattr(self, "lineEdit_outputDirectory")
             else ""
         )
-        output_prefix = (
-            self._sanitize_prefix(self.lineEdit_outputPrefix.text().strip())
-            if hasattr(self, "lineEdit_outputPrefix")
-            else ""
-        )
 
-        if not output_directory or not output_prefix:
+        if not output_path:
+            self._mark_output_path_valid(False)
             return None
-        if not os.path.isdir(output_directory):
+        output_path_obj = Path(output_path)
+        output_dir = output_path_obj.parent if str(output_path_obj.parent) else Path(".")
+        if not output_path_obj.name:
+            self._mark_output_path_valid(False)
             return None
-        if os.path.sep in output_prefix or (os.altsep and os.altsep in output_prefix):
+        if not output_dir.exists() or not output_dir.is_dir():
+            self._mark_output_path_valid(False)
             return None
+        self._mark_output_path_valid(True)
 
         gsd = self._current_gsd()
         if gsd <= 0.0:
@@ -1095,11 +1264,14 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             else False
         )
 
+        mbtiles = self._is_mbtiles_selected()
         create_vrt = (
             bool(self.checkBox_createVrt.isChecked())
             if hasattr(self, "checkBox_createVrt")
             else False
         )
+        if mbtiles:
+            create_vrt = False
         vrt_max_cols = (
             int(self.spinBox_vrtMaxCols.value()) if hasattr(self, "spinBox_vrtMaxCols") else 0
         )
@@ -1113,10 +1285,14 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             except Exception:
                 vrt_preset_size = 0
         ext = ".vrt" if create_vrt else self._selected_output_extension()
-        output_path = os.path.join(output_directory, f"{output_prefix}{ext}")
+        output_path = str(output_path_obj.with_suffix(ext))
+        if output_path != (self.lineEdit_outputDirectory.text() or "").strip():
+            self.lineEdit_outputDirectory.setText(output_path)
 
         # Worldfiles are always written (PNG/JPEG require them). No checkbox in UI.
         add_georeferencing = True
+        if mbtiles:
+            load_as_layer = False
 
         return {
             "use_extent": True,
@@ -1129,11 +1305,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             "gsd": gsd,
             "width": width_px,
             "height": height_px,
-            "output_directory": output_directory,
-            "output_prefix": output_prefix,
             "output_path": output_path,
             "output_extension": ext,
-            "output_format": ("VRT" if create_vrt else ext.lstrip(".").upper()),
+            "output_format": (
+                "VRT" if create_vrt else ("MBTiles" if mbtiles else ext.lstrip(".").upper())
+            ),
             "layer": layer,
             "layer_id": layer.id() if layer is not None and hasattr(layer, "id") else "",
             "load_as_layer": load_as_layer,
@@ -1142,6 +1318,26 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             "vrt_max_cols": vrt_max_cols,
             "vrt_max_rows": vrt_max_rows,
             "vrt_preset_size": vrt_preset_size,
+            "mbtiles_zoom_min": (
+                int(self.spinBox_mbtilesZoomMin.value())
+                if hasattr(self, "spinBox_mbtilesZoomMin")
+                else 0
+            ),
+            "mbtiles_zoom_max": (
+                int(self.spinBox_mbtilesZoomMax.value())
+                if hasattr(self, "spinBox_mbtilesZoomMax")
+                else 0
+            ),
+            "mbtiles_tile_size": (
+                int(self.spinBox_mbtilesTileSize.value())
+                if hasattr(self, "spinBox_mbtilesTileSize")
+                else 256
+            ),
+            "mbtiles_padding": (
+                int(self.spinBox_mbtilesPadding.value())
+                if hasattr(self, "spinBox_mbtilesPadding")
+                else 0
+            ),
             "output_crs": output_crs,
             "target_scale_denominator": self._current_target_scale(),
             "output_dpi": OGC_STANDARD_DPI if self._resolution_mode() == "scale" else None,
@@ -1153,7 +1349,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
     # ------------------------------------------------------------------
 
     def _on_layer_changed(self, index: int) -> None:  # noqa: ARG002
-        """Handle layer combobox change and wire QgsExtentGroupBox to the selected layer."""
+        """Handle layer changes without replacing the current canvas-based extent."""
         layer = None
         if hasattr(self, "comboBox_layer"):
             try:
@@ -1166,23 +1362,17 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 self.extentGroupBox.setLayer(layer)
             except Exception:
                 pass
-            try:
-                self.extentGroupBox.setOutputExtentFromLayer(layer)
-            except Exception:
-                try:
-                    rect = layer.extent()
-                    self.extentGroupBox.setCurrentExtent(rect, layer.crs())
-                except Exception:
-                    pass
 
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
 
     def _on_resolution_mode_changed(self, _index: int) -> None:
         """Toggle the active resolution input."""
         self._update_resolution_controls()
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
         self._update_scale_hint()
 
     def _on_gsd_changed(self, value: float) -> None:
@@ -1203,6 +1393,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
         self._update_scale_hint()
 
     def _on_extent_changed(self, _rect: QgsRectangle) -> None:  # noqa: ARG002
@@ -1210,6 +1401,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._get_best_output_extent(commit=True)
         self._update_extent_info()
         self._update_vrt_info()
+        self._update_mbtiles_info()
         self._update_scale_hint()
 
     def _on_create_vrt_toggled(self, enabled: bool) -> None:
@@ -1427,6 +1619,23 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         return rect
 
+    def _write_extent_line_edits(self, rect: QgsRectangle) -> None:
+        """Update visible extent fields if QgsExtentGroupBox did not repaint them."""
+        if not hasattr(self, "_extent_line_edits") or not isinstance(self._extent_line_edits, dict):
+            self._cache_extent_line_edits()
+
+        values = {
+            "xmin": rect.xMinimum(),
+            "xmax": rect.xMaximum(),
+            "ymin": rect.yMinimum(),
+            "ymax": rect.yMaximum(),
+        }
+        locale = QLocale.system()
+        for key, value in values.items():
+            edit = self._extent_line_edits.get(key)
+            if edit is not None:
+                edit.setText(locale.toString(float(value), "f", 4))
+
     def _get_best_output_extent(self, *, commit: bool) -> Optional[QgsRectangle]:
         """Return the most reliable extent."""
         if not hasattr(self, "extentGroupBox"):
@@ -1521,6 +1730,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         height_px = int(round(h_m / gsd))
         return max(1, width_px), max(1, height_px)
 
+    def _pixel_size_limit_status(self, width_px: int, height_px: int) -> Tuple[str, str]:
+        """Return pixel-limit status for the current derived output size."""
+        return pixel_limit_status(width_px, height_px)
+
     def _update_extent_info(self) -> None:
         """Compute and show derived metrics (physical size and pixel size) for the current extent."""
         if not hasattr(self, "label_extentInfo"):
@@ -1599,6 +1812,106 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 total=total,
             )
         )
+
+    def _current_extent_bounds_4326(self) -> Optional[tuple[float, float, float, float]]:
+        if not hasattr(self, "extentGroupBox"):
+            return None
+
+        rect = self._get_best_output_extent(commit=False)
+        if rect is None or rect.isEmpty() or rect.width() <= 0.0 or rect.height() <= 0.0:
+            return None
+
+        try:
+            src_crs = self.extentGroupBox.outputCrs()
+            dst_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+            rect_4326 = QgsRectangle(rect)
+            if src_crs and src_crs.isValid() and src_crs != dst_crs:
+                transform = QgsCoordinateTransform(src_crs, dst_crs, self._project())
+                rect_4326 = transform.transformBoundingBox(rect)
+            return (
+                float(rect_4326.xMinimum()),
+                float(rect_4326.yMinimum()),
+                float(rect_4326.xMaximum()),
+                float(rect_4326.yMaximum()),
+            )
+        except Exception:
+            return None
+
+    def _format_bytes(self, value: int) -> str:
+        size = float(max(0, int(value)))
+        for unit in ("B", "KB", "MB", "GB"):
+            if size < 1024.0 or unit == "GB":
+                return f"{size:.0f} {unit}" if unit == "B" else f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} GB"
+
+    def _update_mbtiles_info(self) -> None:
+        if not hasattr(self, "label_mbtilesInfo"):
+            return
+        if not self._is_mbtiles_selected():
+            self.label_mbtilesInfo.setText("")
+            return
+
+        bounds = self._current_extent_bounds_4326()
+        if bounds is None:
+            self.label_mbtilesInfo.setText(self.tr("MBTiles: extent is empty or invalid."))
+            return
+
+        z_min = (
+            int(self.spinBox_mbtilesZoomMin.value())
+            if hasattr(self, "spinBox_mbtilesZoomMin")
+            else 0
+        )
+        z_max = (
+            int(self.spinBox_mbtilesZoomMax.value())
+            if hasattr(self, "spinBox_mbtilesZoomMax")
+            else z_min
+        )
+        if z_max < z_min:
+            self.label_mbtilesInfo.setText(self.tr("MBTiles: max zoom must be >= min zoom."))
+            self.label_mbtilesInfo.setStyleSheet("color: #a00000;")
+            return
+
+        padding = (
+            int(self.spinBox_mbtilesPadding.value())
+            if hasattr(self, "spinBox_mbtilesPadding")
+            else 0
+        )
+        try:
+            tiles = count_tiles(bounds, z_min, z_max, padding=padding)
+        except Exception:
+            self.label_mbtilesInfo.setText(self.tr("MBTiles: extent is outside supported bounds."))
+            self.label_mbtilesInfo.setStyleSheet("color: #a00000;")
+            return
+
+        estimated = self._format_bytes(estimate_mbtiles_size(tiles))
+        self.label_mbtilesInfo.setStyleSheet("")
+        self.label_mbtilesInfo.setText(
+            self.tr("MBTiles: {tiles} tile(s), estimated {size}").format(
+                tiles=f"{tiles:,}",
+                size=estimated,
+            )
+        )
+
+    def _on_mbtiles_auto_zoom_clicked(self) -> None:
+        if not hasattr(self, "spinBox_mbtilesZoomMin"):
+            return
+        bounds = self._current_extent_bounds_4326()
+        if bounds is None:
+            self._update_mbtiles_info()
+            return
+        z_max = (
+            int(self.spinBox_mbtilesZoomMax.value())
+            if hasattr(self, "spinBox_mbtilesZoomMax")
+            else 22
+        )
+        try:
+            z_min = auto_detect_min_zoom(bounds, zoom_min=0, zoom_max=z_max)
+        except Exception:
+            self._update_mbtiles_info()
+            return
+        self.spinBox_mbtilesZoomMin.setValue(z_min)
+        self._update_mbtiles_info()
 
     def _layer_looks_scale_sensitive(self) -> bool:
         """Best-effort heuristic for web map sources that can vary by scale."""
@@ -1704,6 +2017,19 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self.label_extentInfo.setStyleSheet(
             "color: #a00000;" if not self._extent_info_default else ""
         )
+
+    def _mark_output_path_valid(self, valid: bool) -> None:
+        """Visually mark the output-file field when OK validation fails."""
+        if not hasattr(self, "lineEdit_outputDirectory"):
+            return
+        if valid:
+            self.lineEdit_outputDirectory.setStyleSheet("")
+            self.lineEdit_outputDirectory.setToolTip(self.tr("Target file for the export."))
+            return
+        self.lineEdit_outputDirectory.setStyleSheet(
+            "border: 1px solid #b00020; background-color: #fff1f3;"
+        )
+        self.lineEdit_outputDirectory.setToolTip(self.tr("Output file is required."))
 
     def _crs_uses_meters(self, crs: QgsCoordinateReferenceSystem) -> bool:
         """Return True if the CRS uses meters as distance unit."""

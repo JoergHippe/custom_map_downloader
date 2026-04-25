@@ -123,6 +123,10 @@ Recommended local loop:
 - small VRT export with tile creation
 - small export with render/output CRS reprojection
 
+Fast unit tests cover MBTiles tile math, padding, TMS row flipping, metadata and SQLite schema
+without requiring QGIS runtime. QGIS-backed MBTiles smoke coverage should be kept small and
+network-gated when public web services are involved.
+
 ### Current network coverage
 
 `tests/integration/test_export_network.py` covers:

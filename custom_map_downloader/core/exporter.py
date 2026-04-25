@@ -38,8 +38,8 @@ from qgis.core import (
     QgsRectangle,
     QgsUnitTypes,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QSize
-from qgis.PyQt.QtGui import QColor
+from qgis.PyQt.QtCore import QBuffer, QByteArray, QCoreApplication, QIODevice, QSize
+from qgis.PyQt.QtGui import QColor, QImage
 
 from .constants import (
     DEFAULT_MAX_TILE_PX,
@@ -61,6 +61,15 @@ from .gdal_io import (
     write_prj_file,
     write_sidecars,
     write_world_file,
+)
+from .mbtiles import (
+    WEB_MERCATOR_AUTHID,
+    WGS84_AUTHID,
+    MbtilesPlan,
+    build_mbtiles_plan,
+    create_mbtiles_database,
+    insert_tile,
+    write_metadata,
 )
 from .models import CancelToken, ExportParams
 from .raster_ops import (
@@ -113,6 +122,16 @@ class GeoTiffExporter:
             ExportError: On export failure.
         """
         self._report(progress_cb, 2, "STEP_VALIDATE", {"step": 1, "total": 6})
+        if Path(params.output_path).suffix.lower() == ".mbtiles":
+            self._validate_mbtiles(params)
+            result = self._export_mbtiles(
+                params,
+                progress_cb=progress_cb,
+                cancel_token=cancel_token,
+            )
+            log_event("export_success", output_path=result, mode="mbtiles")
+            return result
+
         self._validate(params)
         self._check_cancel(cancel_token)
 
@@ -444,6 +463,43 @@ class GeoTiffExporter:
         if params.center is None:
             raise ValidationError("ERR_VALIDATION_CENTER_MISSING", "No center provided.")
 
+    def _validate_mbtiles(self, params: ExportParams) -> None:
+        validate_output_path(params.output_path)
+
+        if Path(params.output_path).suffix.lower() != ".mbtiles":
+            raise ValidationError(
+                "ERR_VALIDATION_OUTPUT_EXT",
+                "MBTiles export requires a .mbtiles output path.",
+            )
+        if params.layer is None:
+            raise ValidationError("ERR_VALIDATION_LAYER_MISSING", "No layer provided.")
+
+        ext = params.extent
+        if ext is None or ext.east <= ext.west or ext.north <= ext.south:
+            raise ValidationError("ERR_VALIDATION_EXTENT_INVALID", "Invalid MBTiles extent.")
+
+        zoom_min = int(params.mbtiles_zoom_min)
+        zoom_max = int(params.mbtiles_zoom_max)
+        if zoom_min < 0 or zoom_max < zoom_min or zoom_max > 22:
+            raise ValidationError(
+                "ERR_VALIDATION_MBTILES_ZOOM",
+                f"Invalid MBTiles zoom range: {zoom_min}..{zoom_max}",
+            )
+
+        tile_size = int(params.mbtiles_tile_size)
+        if tile_size < 64 or tile_size > 1024:
+            raise ValidationError(
+                "ERR_VALIDATION_MBTILES_TILE_SIZE",
+                f"Invalid MBTiles tile size: {tile_size}",
+            )
+
+        padding = int(params.mbtiles_padding)
+        if padding < 0 or padding > 5:
+            raise ValidationError(
+                "ERR_VALIDATION_MBTILES_PADDING",
+                f"Invalid MBTiles padding: {padding}",
+            )
+
     def _default_render_crs(self) -> QgsCoordinateReferenceSystem:
         """Policy:
         - If project CRS uses meters -> use it.
@@ -610,6 +666,141 @@ class GeoTiffExporter:
             return transform.transformBoundingBox(rect)
         except Exception as ex:
             raise ExportError("ERR_WARP_FAILED", f"Failed to transform output extent: {ex}") from ex
+
+    def _export_mbtiles(
+        self,
+        params: ExportParams,
+        *,
+        progress_cb: Optional[ProgressCallback],
+        cancel_token: Optional[CancelToken],
+    ) -> str:
+        """Render the explicit extent as Web Mercator PNG tiles in an MBTiles DB."""
+        self._check_cancel(cancel_token)
+        self._report(progress_cb, 8, "STEP_PREPARE", {"step": 2, "total": 6})
+
+        bounds_4326 = self._mbtiles_bounds_4326(params)
+        plan = build_mbtiles_plan(
+            bounds_4326,
+            zoom_min=params.mbtiles_zoom_min,
+            zoom_max=params.mbtiles_zoom_max,
+            tile_size=params.mbtiles_tile_size,
+            padding=params.mbtiles_padding,
+        )
+        render_crs = QgsCoordinateReferenceSystem(WEB_MERCATOR_AUTHID)
+        layer_extent_render = layer_extent_in_render_crs(params.layer, render_crs=render_crs)
+
+        conn = create_mbtiles_database(params.output_path)
+        blank_tiles = 0
+        try:
+            write_metadata(
+                conn,
+                name=Path(params.output_path).stem,
+                description="Exported by Custom Map Downloader QGIS plugin",
+                bounds_4326=plan.bounds_4326,
+                zoom_min=plan.zoom_min,
+                zoom_max=plan.zoom_max,
+            )
+            self._report(progress_cb, 15, "STEP_RENDER", {"step": 3, "total": 6})
+
+            for tile in plan.tiles:
+                self._check_cancel(cancel_token)
+                arr, was_blank = render_tile_with_retry(
+                    tile=self._mbtiles_tile_to_render_spec(tile, plan),
+                    layer=params.layer,
+                    render_crs=render_crs,
+                    output_dpi=params.output_dpi,
+                    cancel_token=cancel_token,
+                    layer_extent_render=layer_extent_render,
+                    progress_cb=progress_cb,
+                    report=self._report,
+                    wait_fn=self._wait_with_events,
+                    render_fn=self._render_tile_rgba,
+                    check_cancel=self._check_cancel,
+                )
+                if was_blank:
+                    blank_tiles += 1
+                insert_tile(conn, tile, self._rgba_to_png_bytes(arr))
+                self._report(
+                    progress_cb,
+                    tile.percent,
+                    "STEP_WRITE_MBTILES",
+                    {"step": 4, "total": 6},
+                )
+
+            if blank_tiles == plan.tile_count:
+                raise ExportError(
+                    "ERR_RENDER_EMPTY",
+                    "All MBTiles tiles rendered fully transparent.",
+                )
+            self._check_cancel(cancel_token)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+        self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
+        return params.output_path
+
+    def _mbtiles_bounds_4326(self, params: ExportParams) -> tuple[float, float, float, float]:
+        ext = params.extent
+        if ext is None:
+            raise ValidationError("ERR_VALIDATION_EXTENT_INVALID", "Invalid MBTiles extent.")
+
+        rect = QgsRectangle(ext.west, ext.south, ext.east, ext.north)
+        src_crs = ext.crs
+        wgs84 = QgsCoordinateReferenceSystem(WGS84_AUTHID)
+        if src_crs is not None and src_crs.isValid() and src_crs != wgs84:
+            try:
+                transform = QgsCoordinateTransform(src_crs, wgs84, QgsProject.instance())
+                rect = transform.transformBoundingBox(rect)
+            except Exception as ex:
+                raise ValidationError("ERR_VALIDATION_EXTENT_TRANSFORM_FAILED", str(ex)) from ex
+
+        return (
+            rect.xMinimum(),
+            rect.yMinimum(),
+            rect.xMaximum(),
+            rect.yMaximum(),
+        )
+
+    def _mbtiles_tile_to_render_spec(self, tile, plan: MbtilesPlan):
+        from .tiling import TileSpec
+
+        return TileSpec(
+            row=tile.y,
+            col=tile.x,
+            xoff=0,
+            yoff=0,
+            width_px=plan.tile_size,
+            height_px=plan.tile_size,
+            extent=tile.extent_3857,
+            percent=tile.percent,
+        )
+
+    def _rgba_to_png_bytes(self, arr_rgba: np.ndarray) -> bytes:
+        arr = np.ascontiguousarray(arr_rgba)
+        height, width, bands = arr.shape
+        if bands != 4:
+            raise ExportError("ERR_IMAGE_SAVE_FAILED", "Expected RGBA tile data.")
+
+        image = QImage(
+            arr.data,
+            int(width),
+            int(height),
+            int(arr.strides[0]),
+            QImage.Format_RGBA8888,
+        )
+        buffer = QBuffer()
+        write_only = getattr(QIODevice, "WriteOnly", None)
+        if write_only is None:
+            write_only = QIODevice.OpenModeFlag.WriteOnly
+        buffer.open(write_only)
+        if not image.save(buffer, "PNG"):
+            raise ExportError("ERR_IMAGE_SAVE_FAILED", "Failed to encode MBTiles PNG tile.")
+        data: QByteArray = buffer.data()
+        return bytes(data)
 
     def _export_tiled_vrt(
         self,

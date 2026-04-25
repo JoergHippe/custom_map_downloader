@@ -28,7 +28,7 @@ from qgis.core import (
     QgsRasterLayer,
     QgsUnitTypes,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QSettings, Qt, QTranslator
+from qgis.PyQt.QtCore import QCoreApplication, QSettings, Qt, QTimer, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QCheckBox, QMessageBox, QProgressDialog
 
@@ -228,8 +228,10 @@ class CustomMapDownloader:
 
         # Always refresh layer list
         self.dlg.populate_layers()
+        self.dlg.reset_extent_to_canvas()
 
         self.dlg.show()
+        QTimer.singleShot(0, self.dlg.reset_extent_to_canvas)
         result = self.dlg.exec_()
         if not result:
             return
@@ -240,7 +242,9 @@ class CustomMapDownloader:
             QMessageBox.critical(
                 self.iface.mainWindow(),
                 self.tr("Error"),
-                self.tr("Invalid input parameters. Please check values."),
+                self.tr(
+                    "Invalid input parameters. Please check output directory, filename, extent and size."
+                ),
             )
             return
 
@@ -331,6 +335,10 @@ class CustomMapDownloader:
             vrt_max_cols=vrt_max_cols,
             vrt_max_rows=vrt_max_rows,
             vrt_preset_size=vrt_preset_size,
+            mbtiles_zoom_min=int(params.get("mbtiles_zoom_min", 0) or 0),
+            mbtiles_zoom_max=int(params.get("mbtiles_zoom_max", 0) or 0),
+            mbtiles_tile_size=int(params.get("mbtiles_tile_size", 256) or 256),
+            mbtiles_padding=int(params.get("mbtiles_padding", 0) or 0),
         )
 
         conflicts = self._find_loaded_layer_conflicts(
@@ -582,8 +590,11 @@ class CustomMapDownloader:
             "ERR_VALIDATION_VRT_OUTPUT_CRS_UNSUPPORTED": self.tr(
                 "VRT export currently requires identical render and output CRS."
             ),
-            "ERR_IMAGE_SAVE_FAILED": self.tr("Failed to write TIFF."),
-            "ERR_GDAL_CREATE_FAILED": self.tr("Failed to create GeoTIFF."),
+            "ERR_VALIDATION_MBTILES_ZOOM": self.tr("Invalid MBTiles zoom range."),
+            "ERR_VALIDATION_MBTILES_TILE_SIZE": self.tr("Invalid MBTiles tile size."),
+            "ERR_VALIDATION_MBTILES_PADDING": self.tr("Invalid MBTiles padding value."),
+            "ERR_IMAGE_SAVE_FAILED": self.tr("Failed to write image data."),
+            "ERR_GDAL_CREATE_FAILED": self.tr("Failed to create raster output."),
             "ERR_CRS_INVALID": self.tr("Invalid CRS."),
             "ERR_CRS_TO_WKT_FAILED": self.tr("Failed to convert CRS to WKT."),
             "ERR_WARP_FAILED": self.tr(
@@ -708,15 +719,37 @@ class CustomMapDownloader:
         lines = [
             self.tr("Layer: {name}").format(name=layer_name),
             self.tr("Output: {path}").format(path=export_params.output_path),
-            self.tr("Render CRS: {crs}").format(crs=render_authid),
-            self.tr("Raster CRS: {crs}").format(crs=output_authid),
-            self.tr("Size: {w} × {h} px @ GSD {gsd}").format(
-                w=export_params.width_px,
-                h=export_params.height_px,
-                gsd=export_params.gsd_m_per_px,
-            ),
         ]
-        if requested_authid and requested_authid != output_authid:
+        is_mbtiles = export_params.output_path.lower().endswith(".mbtiles")
+        if is_mbtiles:
+            lines.extend(
+                [
+                    self.tr("Mode: MBTiles"),
+                    self.tr("Zooms: {min}..{max}").format(
+                        min=export_params.mbtiles_zoom_min,
+                        max=export_params.mbtiles_zoom_max,
+                    ),
+                    self.tr("Tile size: {size} px").format(size=export_params.mbtiles_tile_size),
+                    self.tr("Padding tiles: {padding}").format(
+                        padding=export_params.mbtiles_padding
+                    ),
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    self.tr("Render CRS: {crs}").format(crs=render_authid),
+                    self.tr("Raster CRS: {crs}").format(crs=output_authid),
+                    self.tr("Size: {w} × {h} px @ GSD {gsd}").format(
+                        w=export_params.width_px,
+                        h=export_params.height_px,
+                        gsd=export_params.gsd_m_per_px,
+                    ),
+                ]
+            )
+        if is_mbtiles:
+            pass
+        elif requested_authid and requested_authid != output_authid:
             lines.append(
                 self.tr(
                     "Requested output CRS {requested} is not metric; export falls back to {actual}."
@@ -742,11 +775,14 @@ class CustomMapDownloader:
                 )
             )
 
-        if export_params.create_vrt:
+        if is_mbtiles:
+            mode = self.tr("Mode: MBTiles")
+        elif export_params.create_vrt:
             mode = self.tr("Mode: VRT tiling (no merged raster)")
         else:
             mode = self.tr("Mode: Single raster")
-        lines.append(mode)
+        if not is_mbtiles:
+            lines.append(mode)
 
         settings = QSettings()
         base = "CustomMapDownloader/"
@@ -780,6 +816,7 @@ PROGRESS_TEMPLATES = {
     "STEP_WRITE_TIFF": "{step}/{total}: Writing TIFF",
     "STEP_WRITE_GEOTIFF": "{step}/{total}: Writing GeoTIFF",
     "STEP_WRITE_RASTER": "{step}/{total}: Writing raster",
+    "STEP_WRITE_MBTILES": "{step}/{total}: Writing MBTiles",
     "STEP_BUILD_VRT": "{step}/{total}: Building VRT",
     "STEP_REPROJECT": "{step}/{total}: Reprojecting output raster",
     "STEP_DONE": "{step}/{total}: Finished",

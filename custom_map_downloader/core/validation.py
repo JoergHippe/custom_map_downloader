@@ -27,7 +27,7 @@ def validate_output_path(output_path: str) -> None:
 
     path_obj = Path(output_path)
     suffix = (path_obj.suffix or "").lower()
-    allowed = {".tif", ".tiff", ".png", ".jpg", ".jpeg", ".vrt"}
+    allowed = {".tif", ".tiff", ".png", ".jpg", ".jpeg", ".vrt", ".mbtiles"}
     if suffix not in allowed:
         raise ValidationError(
             "ERR_VALIDATION_OUTPUT_EXT",

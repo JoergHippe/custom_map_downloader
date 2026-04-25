@@ -76,6 +76,10 @@ class ExportParams:
         vrt_preset_size: Optional preset tile size from the UI. Currently
             informational; tile size is derived from ``vrt_max_cols`` and
             ``vrt_max_rows``.
+        mbtiles_zoom_min: Minimum Web Mercator zoom for MBTiles exports.
+        mbtiles_zoom_max: Maximum Web Mercator zoom for MBTiles exports.
+        mbtiles_tile_size: Tile edge length in pixels for MBTiles exports.
+        mbtiles_padding: Optional number of surrounding tile rings included per zoom.
     """
 
     layer: QgsMapLayer
@@ -94,6 +98,10 @@ class ExportParams:
     vrt_max_cols: int = 0
     vrt_max_rows: int = 0
     vrt_preset_size: int = 0
+    mbtiles_zoom_min: int = 0
+    mbtiles_zoom_max: int = 0
+    mbtiles_tile_size: int = 256
+    mbtiles_padding: int = 0
 
 
 @dataclass

@@ -23,7 +23,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label_outputDirectory">
         <property name="text">
-         <string>Output directory:</string>
+         <string>Output file:</string>
         </property>
        </widget>
       </item>
@@ -43,17 +43,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_outputPrefix">
-        <property name="text">
-         <string>Filename prefix:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1" colspan="2">
-       <widget class="QLineEdit" name="lineEdit_outputPrefix" />
-      </item>
-      <item row="1" column="3"><widget class="QComboBox" name="comboBox_outputFormat"><property name="sizePolicy"><sizepolicy hsizetype="Fixed" vsizetype="Fixed"><horstretch>0</horstretch><verstretch>0</verstretch></sizepolicy></property><property name="minimumSize"><size><width>120</width><height>0</height></size></property></widget></item><item row="2" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="label_layer">
         <property name="text">
          <string>Layer name:</string>
@@ -321,6 +311,115 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="groupBox_mbtiles">
+     <property name="title">
+      <string>MBTiles</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_mbtiles">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_mbtilesZoomMin">
+        <property name="text">
+         <string>Min zoom:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QSpinBox" name="spinBox_mbtilesZoomMin">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>22</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_mbtilesZoomMax">
+        <property name="text">
+         <string>Max zoom:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QSpinBox" name="spinBox_mbtilesZoomMax">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>22</number>
+        </property>
+        <property name="value">
+         <number>16</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_mbtilesTileSize">
+        <property name="text">
+         <string>Tile size (px):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="spinBox_mbtilesTileSize">
+        <property name="minimum">
+         <number>64</number>
+        </property>
+        <property name="maximum">
+         <number>1024</number>
+        </property>
+        <property name="singleStep">
+         <number>64</number>
+        </property>
+        <property name="value">
+         <number>256</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_mbtilesPadding">
+        <property name="text">
+         <string>Padding tiles:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QSpinBox" name="spinBox_mbtilesPadding">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QPushButton" name="pushButton_mbtilesAutoZoom">
+        <property name="text">
+         <string>Auto-detect min zoom</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="4">
+       <widget class="QLabel" name="label_mbtilesInfo">
+        <property name="text">
+         <string />
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QCheckBox" name="checkBox_loadLayer">
      <property name="text">
       <string>Load result as layer</string>
@@ -361,7 +460,6 @@
  <tabstops>
   <tabstop>lineEdit_outputDirectory</tabstop>
   <tabstop>pushButton_browse</tabstop>
-  <tabstop>lineEdit_outputPrefix</tabstop>
   <tabstop>comboBox_layer</tabstop>
   <tabstop>pushButton_refreshLayers</tabstop>
   <tabstop>mQgsProjectionSelectionWidget</tabstop>
@@ -373,6 +471,11 @@
   <tabstop>comboBox_vrtPreset</tabstop>
   <tabstop>spinBox_vrtMaxCols</tabstop>
   <tabstop>spinBox_vrtMaxRows</tabstop>
+  <tabstop>spinBox_mbtilesZoomMin</tabstop>
+  <tabstop>spinBox_mbtilesZoomMax</tabstop>
+  <tabstop>spinBox_mbtilesTileSize</tabstop>
+  <tabstop>spinBox_mbtilesPadding</tabstop>
+  <tabstop>pushButton_mbtilesAutoZoom</tabstop>
   <tabstop>checkBox_loadLayer</tabstop>
   <tabstop>buttonBox</tabstop>
  </tabstops>

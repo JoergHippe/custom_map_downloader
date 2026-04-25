@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Mapping
 
 PROFILE_VERSION = 1
-PROFILE_FORMATS = {".tif", ".png", ".jpg", ".vrt"}
 PROFILE_RESOLUTION_MODES = {"gsd", "scale"}
 
 
@@ -41,10 +40,6 @@ def _clean_bool(value: Any) -> bool:
 
 def normalize_profile_data(data: Mapping[str, Any]) -> dict[str, Any]:
     """Return a normalized, forward-compatible profile payload."""
-    output_extension = _clean_text(data.get("output_extension") or ".tif").lower()
-    if output_extension not in PROFILE_FORMATS:
-        output_extension = ".tif"
-
     resolution_mode = _clean_text(data.get("resolution_mode") or "gsd").lower()
     if resolution_mode not in PROFILE_RESOLUTION_MODES:
         resolution_mode = "gsd"
@@ -69,9 +64,7 @@ def normalize_profile_data(data: Mapping[str, Any]) -> dict[str, Any]:
                 }
 
     return {
-        "output_directory": _clean_text(data.get("output_directory")),
-        "output_prefix": _clean_text(data.get("output_prefix")),
-        "output_extension": output_extension,
+        "output_path": _clean_text(data.get("output_path")),
         "layer_id": _clean_text(data.get("layer_id")),
         "layer_name": _clean_text(data.get("layer_name")),
         "output_crs_authid": _clean_text(data.get("output_crs_authid")),

@@ -13,9 +13,7 @@ class ProfileIoTests(unittest.TestCase):
     def test_normalize_profile_data_sanitizes_values(self):
         profile = normalize_profile_data(
             {
-                "output_directory": " /tmp/out ",
-                "output_prefix": " demo ",
-                "output_extension": ".tiff",
+                "output_path": " /tmp/out/demo.tif ",
                 "resolution_mode": "SCALE",
                 "gsd": "2.5",
                 "target_scale_denominator": "5000",
@@ -30,9 +28,7 @@ class ProfileIoTests(unittest.TestCase):
                 "extent": {"west": "1", "south": "2", "east": "3", "north": "4"},
             }
         )
-        self.assertEqual(profile["output_directory"], "/tmp/out")
-        self.assertEqual(profile["output_prefix"], "demo")
-        self.assertEqual(profile["output_extension"], ".tif")
+        self.assertEqual(profile["output_path"], "/tmp/out/demo.tif")
         self.assertEqual(profile["resolution_mode"], "scale")
         self.assertEqual(profile["gsd"], 2.5)
         self.assertEqual(profile["target_scale_denominator"], 5000.0)
@@ -52,9 +48,7 @@ class ProfileIoTests(unittest.TestCase):
             write_profile(
                 path,
                 {
-                    "output_directory": "/tmp/export",
-                    "output_prefix": "tile",
-                    "output_extension": ".png",
+                    "output_path": "/tmp/export/tile.png",
                     "resolution_mode": "gsd",
                     "gsd": 1.0,
                 },
@@ -64,28 +58,23 @@ class ProfileIoTests(unittest.TestCase):
             if path.exists():
                 path.unlink()
 
-        self.assertEqual(restored["output_directory"], "/tmp/export")
-        self.assertEqual(restored["output_prefix"], "tile")
-        self.assertEqual(restored["output_extension"], ".png")
+        self.assertEqual(restored["output_path"], "/tmp/export/tile.png")
         self.assertEqual(restored["resolution_mode"], "gsd")
         self.assertEqual(restored["gsd"], 1.0)
 
-    def test_profile_roundtrip_supports_legacy_bare_format(self):
-        path = Path(tempfile.gettempdir()) / "cmd_profile_legacy.json"
+    def test_profile_roundtrip_supports_bare_format(self):
+        path = Path(tempfile.gettempdir()) / "cmd_profile_bare.json"
         if path.exists():
             path.unlink()
 
         try:
-            path.write_text(
-                '{"output_prefix": "legacy", "output_extension": ".vrt"}', encoding="utf-8"
-            )
+            path.write_text('{"output_path": "/tmp/export/bare.vrt"}', encoding="utf-8")
             restored = read_profile(path)
         finally:
             if path.exists():
                 path.unlink()
 
-        self.assertEqual(restored["output_prefix"], "legacy")
-        self.assertEqual(restored["output_extension"], ".vrt")
+        self.assertEqual(restored["output_path"], "/tmp/export/bare.vrt")
 
 
 if __name__ == "__main__":

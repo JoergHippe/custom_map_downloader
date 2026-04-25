@@ -1,3 +1,4 @@
+import sqlite3
 import sys
 import tempfile
 import types
@@ -144,6 +145,25 @@ def install_qgis_stubs():
         def translate(_context, message):
             return message
 
+    class QByteArray(bytes):
+        pass
+
+    class QBuffer:
+        def __init__(self):
+            self._data = QByteArray()
+
+        def open(self, *_args, **_kwargs):
+            return True
+
+        def data(self):
+            return self._data
+
+    class QIODevice:
+        WriteOnly = 1
+
+        class OpenModeFlag:
+            WriteOnly = 1
+
     class QSize:
         def __init__(self, *_args, **_kwargs):
             pass
@@ -159,7 +179,10 @@ def install_qgis_stubs():
     core_mod.QgsProject = QgsProject
     core_mod.QgsRectangle = QgsRectangle
 
+    qtcore_mod.QBuffer = QBuffer
+    qtcore_mod.QByteArray = QByteArray
     qtcore_mod.QCoreApplication = QCoreApplication
+    qtcore_mod.QIODevice = QIODevice
     qtcore_mod.QSize = QSize
     qtgui_mod.QColor = QColor
     qtgui_mod.QImage = QImage
@@ -266,6 +289,7 @@ install_qgis_stubs()
 
 import qgis  # noqa: E402
 
+from custom_map_downloader.core import exporter as exporter_module  # noqa: E402
 from custom_map_downloader.core.constants import (  # noqa: E402
     GSD_MAX,
     GSD_MIN,
@@ -317,6 +341,82 @@ class ExporterValidationTests(unittest.TestCase):
             exporter._validate(params)
 
         self.assertEqual(ctx.exception.code, "ERR_VALIDATION_OUTPUT_EXT")
+
+    def test_accepts_mbtiles_extension_in_mbtiles_validation(self):
+        params = self._base_params(path_suffix=".mbtiles")
+        params = replace(params, mbtiles_zoom_min=0, mbtiles_zoom_max=1)
+        exporter = GeoTiffExporter()
+
+        exporter._validate_mbtiles(params)
+
+    def test_rejects_invalid_mbtiles_zoom_range(self):
+        params = self._base_params(path_suffix=".mbtiles")
+        params = replace(params, mbtiles_zoom_min=4, mbtiles_zoom_max=3)
+        exporter = GeoTiffExporter()
+
+        with self.assertRaises(ValidationError) as ctx:
+            exporter._validate_mbtiles(params)
+
+        self.assertEqual(ctx.exception.code, "ERR_VALIDATION_MBTILES_ZOOM")
+
+    def test_mbtiles_export_path_dispatches_by_extension(self):
+        params = self._base_params(path_suffix=".mbtiles")
+        params = replace(params, mbtiles_zoom_min=0, mbtiles_zoom_max=0)
+        exporter = GeoTiffExporter()
+        calls = {"mbtiles": 0}
+
+        def fake_export_mbtiles(_params, *, progress_cb, cancel_token):
+            calls["mbtiles"] += 1
+            self.assertIsNone(progress_cb)
+            self.assertIsNone(cancel_token)
+            return _params.output_path
+
+        exporter._export_mbtiles = fake_export_mbtiles
+
+        self.assertEqual(exporter.export(params), params.output_path)
+        self.assertEqual(calls["mbtiles"], 1)
+
+    def test_mbtiles_export_writes_sqlite_tiles_and_metadata(self):
+        crs = qgis.core.QgsCoordinateReferenceSystem("EPSG:4326")
+        params = self._base_params(path_suffix=".mbtiles")
+        params = replace(
+            params,
+            extent=ExtentSpec(west=-1.0, south=-1.0, east=1.0, north=1.0, crs=crs),
+            output_path=str(self.out_dir / "exact.mbtiles"),
+            mbtiles_zoom_min=1,
+            mbtiles_zoom_max=1,
+            mbtiles_tile_size=256,
+            mbtiles_padding=0,
+        )
+        exporter = GeoTiffExporter()
+
+        original_render_tile_with_retry = exporter_module.render_tile_with_retry
+        original_encode = exporter._rgba_to_png_bytes
+        try:
+            exporter_module.render_tile_with_retry = lambda **_kwargs: (object(), False)
+            exporter._rgba_to_png_bytes = lambda _arr: b"png"
+
+            result = exporter._export_mbtiles(params, progress_cb=None, cancel_token=None)
+        finally:
+            exporter_module.render_tile_with_retry = original_render_tile_with_retry
+            exporter._rgba_to_png_bytes = original_encode
+
+        self.assertEqual(result, params.output_path)
+        conn = sqlite3.connect(params.output_path)
+        try:
+            metadata = dict(conn.execute("SELECT name, value FROM metadata").fetchall())
+            tiles = conn.execute(
+                "SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles"
+            ).fetchall()
+        finally:
+            conn.close()
+
+        self.assertEqual(metadata["format"], "png")
+        self.assertEqual(metadata["minzoom"], "1")
+        self.assertEqual(metadata["maxzoom"], "1")
+        self.assertEqual(len(tiles), 4)
+        self.assertEqual({row[:3] for row in tiles}, {(1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1)})
+        self.assertEqual({row[3] for row in tiles}, {b"png"})
 
     def test_rejects_missing_directory(self):
         params = self._base_params()

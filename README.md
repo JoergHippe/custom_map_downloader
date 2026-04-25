@@ -1,6 +1,6 @@
 # Custom Map Downloader
 
-Custom Map Downloader is a QGIS plugin for exporting map content from raster, vector and web map layers with controlled extent, resolution, target scale, output CRS and optional tiling/VRT output.
+Custom Map Downloader is a QGIS plugin for exporting map content from raster, vector and web map layers with controlled extent, resolution, target scale, output CRS, optional tiling/VRT output and MBTiles output.
 
 ## What It Does
 
@@ -9,7 +9,7 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 - supports two resolution modes:
   - `Ground resolution (m/px)`
   - `Target scale (1:n)` for scale-dependent WMS portrayal
-- supports `GeoTIFF`, `PNG`, `JPEG` and optional `VRT` tile mosaics
+- supports `GeoTIFF`, `PNG`, `JPEG`, optional `VRT` tile mosaics and `MBTiles`
 - writes georeferenced output, including sidecars where required
 - can load the result back into the current QGIS project
 
@@ -40,12 +40,13 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 
 1. Open the plugin from the toolbar or plugin menu.
 2. Choose the source layer.
-3. Choose output directory and filename prefix.
+3. Choose the output file.
 4. Select the output CRS.
 5. Define the extent.
 6. Choose either `Ground resolution (m/px)` or `Target scale (1:n)`.
-7. Optionally enable `Create VRT` for tiled output.
-8. Start the export.
+7. Choose `MBTiles` when you need a Web Mercator tile pyramid for offline/web use.
+8. Optionally enable `Create VRT` for tiled raster output.
+9. Start the export.
 
 ## Important Behavior
 
@@ -63,6 +64,17 @@ Some WMS services change portrayal depending on scale. For those services, `Targ
 - `GeoTIFF`: internal georeferencing plus world file
 - `PNG` / `JPEG`: world file plus `.prj` sidecar
 - `VRT`: tiled GeoTIFF output plus a `.vrt` mosaic
+- `MBTiles`: SQLite tile pyramid with PNG tiles in Web Mercator (`EPSG:3857`)
+
+### MBTiles
+
+MBTiles export uses the exact selected QGIS extent. It does not provide a center/radius mode.
+
+- bounds are derived from the selected extent and stored in WGS84
+- tiles render as Web Mercator PNG tiles
+- zoom range, tile size and optional padding are configurable
+- padding defaults to `0` so the tile range stays closest to the selected extent
+- the dialog shows live tile count and a rough file size estimate
 
 ## Profiles
 
@@ -70,12 +82,13 @@ The plugin can save and restore reusable JSON export profiles.
 
 Profiles store:
 
-- output location and filename prefix
+- output file path
 - selected layer reference
 - output CRS
 - extent
 - resolution mode, GSD and target scale
 - VRT / tiling settings
+- MBTiles zoom, tile size and padding settings
 - `Load as layer`
 
 ## Diagnostics
