@@ -53,8 +53,8 @@ def remove_existing(target: Path) -> None:
             subprocess.run(
                 ["cmd", "/c", "rmdir", "/S", "/Q", str(target)],
                 check=True,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             return
         shutil.rmtree(target)
@@ -71,8 +71,8 @@ def install_link(target: Path) -> None:
         subprocess.run(
             ["cmd", "/c", "mklink", "/J", str(target), str(PLUGIN_SOURCE)],
             check=True,
-            capture_output=True,
-            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         return
     target.symlink_to(PLUGIN_SOURCE, target_is_directory=True)

@@ -49,7 +49,7 @@ if defined APPDATA (
 )
 set "QGIS_PROFILE=%PROFILE%"
 
-"%PYTHON_CMD%" -c "import qgis.core" >nul 2>nul
+call "%PYTHON_CMD%" -c "import qgis.core" >nul 2>nul
 if errorlevel 1 (
   echo [ERROR] qgis.core is not importable in this shell.
   echo [HINT] Use OSGeo4W/QGIS shell or ensure QGIS Python is on PATH.
@@ -57,27 +57,27 @@ if errorlevel 1 (
 )
 
 if /I "%MODE%"=="all" (
-  "%PYTHON_CMD%" -m unittest discover -s test/integration -v
+  call "%PYTHON_CMD%" -m unittest discover -s test/integration -v
   exit /b %errorlevel%
 )
 
 if /I "%MODE%"=="smoke" (
-  "%PYTHON_CMD%" -m unittest -v test.integration.test_export_smoke
+  call "%PYTHON_CMD%" -m unittest -v test.integration.test_export_smoke
   exit /b %errorlevel%
 )
 
 if /I "%MODE%"=="network" (
   set "ALLOW_INTEGRATION_NETWORK=1"
-  "%PYTHON_CMD%" -m unittest -v test.integration.test_export_network
+  call "%PYTHON_CMD%" -m unittest -v test.integration.test_export_network
   exit /b %errorlevel%
 )
 
 if /I "%MODE%"=="e2e" (
-  "%PYTHON_CMD%" scripts\install_dev_plugin.py --profile "%PROFILE%" --mode link
+  call "%PYTHON_CMD%" scripts\install_dev_plugin.py --profile "%PROFILE%" --mode link
   if errorlevel 1 exit /b %errorlevel%
   set "CMD_PLUGIN_IMPORT_MODE=profile"
   set "CMD_QGIS_PROFILE=%PROFILE%"
-  "%PYTHON_CMD%" -m unittest -v test.integration.test_profile_bootstrap test.integration.test_export_smoke
+  call "%PYTHON_CMD%" -m unittest -v test.integration.test_profile_bootstrap test.integration.test_export_smoke
   exit /b %errorlevel%
 )
 

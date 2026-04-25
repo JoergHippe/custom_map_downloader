@@ -54,7 +54,7 @@ echo [INFO] Profile: %PROFILE%
 echo [INFO] Deploy mode: %MODE%
 echo [INFO] QGIS bin: %QGIS_BIN%
 
-"%PYTHON_CMD%" scripts\install_dev_plugin.py --profile "%PROFILE%" --mode "%MODE%"
+call "%PYTHON_CMD%" scripts\install_dev_plugin.py --profile "%PROFILE%" --mode "%MODE%"
 if errorlevel 1 exit /b %errorlevel%
 
 start "" "%QGIS_BIN%" --profile "%PROFILE%"
