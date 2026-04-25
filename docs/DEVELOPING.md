@@ -11,9 +11,15 @@ Use:
 - Linux: system QGIS Python environment
 - IDEs: a QGIS-aware environment inheriting QGIS site-packages
 
-A local `.venv` remains useful for tooling only.
+A local `.venv` is optional. It remains useful for repository tooling, but the plugin itself is
+loaded and executed by QGIS with QGIS' own Python environment. Do not treat a plain isolated
+`.venv` as proof that PyQGIS runtime behavior works.
 
-## Tooling-Only Environment
+If you want a QGIS-aware virtual environment for IDE indexing or local PyQGIS commands, create one
+that explicitly links to the installed QGIS Python environment. Even then, validate user-facing
+plugin behavior in a real QGIS profile before release.
+
+## Optional Tooling Environment
 
 Typical tooling in `.venv`:
 
@@ -30,6 +36,9 @@ python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install -r requirements-dev.txt
 ```
+
+This environment is for linting, formatting, packaging helpers and fast tests. It is intentionally
+not packaged and is ignored by Git.
 
 Core commands:
 
@@ -63,7 +72,7 @@ run_integration_tests.bat e2e myprofile
 The modes `all`, `smoke` and `network` import the plugin code directly from the repository.
 The mode `e2e` deploys the plugin into the selected QGIS profile first and then runs the smoke suite against the deployed plugin import path.
 
-See also `test/integration/README.md`.
+See also `tests/integration/README.md`.
 
 ## Local QGIS Dev Loop
 
@@ -107,7 +116,7 @@ Recommended local loop:
 
 ### Current smoke coverage
 
-`test/integration/test_export_smoke.py` covers these QGIS-backed paths:
+`tests/integration/test_export_smoke.py` covers these QGIS-backed paths:
 
 - small direct GeoTIFF export
 - small export with target scale mode
@@ -116,14 +125,14 @@ Recommended local loop:
 
 ### Current network coverage
 
-`test/integration/test_export_network.py` covers:
+`tests/integration/test_export_network.py` covers:
 
 - configurable WMS / XYZ export scenarios
 - explicit scale-dependent WMS probes via `scale_matrix`
 - scenario filtering via `SCENARIOS=name1,name2`
 - opt-in execution via `ALLOW_INTEGRATION_NETWORK=1`
 
-The scenario source of truth is `test/integration/config.json`.
+The scenario source of truth is `tests/integration/config.json`.
 If `CMD_INTEGRATION_REPORT_DIR` is set, the network suite writes JSON reports for scenario runs and the scale matrix.
 
 ## Translations

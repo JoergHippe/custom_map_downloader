@@ -5,6 +5,9 @@ exclude = '''
 /(
     \.git
   | \.venv
+  | \.mypy_cache
+  | \.ruff_cache
+  | artifacts
   | build
   | dist
   | __pycache__
@@ -15,7 +18,7 @@ extend-exclude = '''
     custom_map_downloader/resources\.py
   | custom_map_downloader/resources_rc\.py
   | custom_map_downloader/CustomMapDownloader_dialog_base_ui\.py
-  | test/integration/__init__\.py
+  | tests/integration/__init__\.py
 )$
 '''
 
@@ -41,11 +44,11 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"test/**/*.py" = ["E402"]
+"tests/**/*.py" = ["E402"]
 "custom_map_downloader/resources.py" = ["ALL"]
 
 [tool.pytest.ini_options]
-testpaths = ["test"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-ra"
 

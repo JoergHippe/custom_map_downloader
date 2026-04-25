@@ -37,7 +37,7 @@ def run(cmd: list[str]) -> None:
 
 
 def main() -> int:
-    run([sys.executable, "-m", "unittest", "discover", "-s", "test", "-v"])
+    run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
 
     version = read_version()
     run(resolve_qgis_plugin_ci() + ["package", version, "-c"])

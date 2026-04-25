@@ -26,8 +26,13 @@ FORBIDDEN_SUFFIXES = (
 
 FORBIDDEN_PARTS = (
     "/test/",
+    "/tests/",
     "/.github/",
 )
+
+FORBIDDEN_ENTRIES = {
+    "custom_map_downloader/CustomMapDownloader_dialog_base_ui.py",
+}
 
 
 def read_version() -> str:
@@ -53,7 +58,9 @@ def main() -> int:
     forbidden = sorted(
         name
         for name in names
-        if name.endswith(FORBIDDEN_SUFFIXES) or any(part in name for part in FORBIDDEN_PARTS)
+        if name in FORBIDDEN_ENTRIES
+        or name.endswith(FORBIDDEN_SUFFIXES)
+        or any(part in name for part in FORBIDDEN_PARTS)
     )
     if forbidden:
         raise RuntimeError(f"Archive contains forbidden files: {forbidden}")

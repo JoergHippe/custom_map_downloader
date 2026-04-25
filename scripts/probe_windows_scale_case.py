@@ -66,7 +66,7 @@ def run_probe(
         "-m",
         "unittest",
         "-v",
-        "test.integration.test_export_network",
+        "tests.integration.test_export_network",
     ]
     proc = subprocess.run(
         cmd,
@@ -86,7 +86,7 @@ def main() -> int:
     parser.add_argument(
         "--matrix-key",
         default=os.environ.get("CMD_SCALE_MATRIX_KEY", "scale_matrix"),
-        help="JSON key in test/integration/config.json to probe",
+        help="JSON key in tests/integration/config.json to probe",
     )
     parser.add_argument(
         "--label",

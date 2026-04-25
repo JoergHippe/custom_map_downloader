@@ -37,7 +37,11 @@ from .core.exporter import GeoTiffExporter
 from .core.locale import resolve_locale_code
 from .core.models import CancelToken, CenterSpec, ExportParams, ExtentSpec
 from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
-from .resources import *  # noqa: F401,F403
+
+try:
+    from .resources_rc import *  # type: ignore[import-not-found]  # noqa: F401,F403
+except ImportError:
+    from .resources import *  # noqa: F401,F403
 
 LOGGER = logging.getLogger("custom_map_downloader.ui")
 

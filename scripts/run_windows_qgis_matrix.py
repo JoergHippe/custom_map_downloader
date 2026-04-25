@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CONFIG_PATH = REPO_ROOT / "test" / "integration" / "config.json"
+CONFIG_PATH = REPO_ROOT / "tests" / "integration" / "config.json"
 DEFAULT_REPORT_DIR = REPO_ROOT / "artifacts" / "integration"
 
 
@@ -36,7 +36,7 @@ def main() -> int:
     parser.add_argument(
         "--matrix-key",
         default=os.environ.get("CMD_SCALE_MATRIX_KEY", "scale_matrix"),
-        help="JSON key in test/integration/config.json to execute",
+        help="JSON key in tests/integration/config.json to execute",
     )
     args = parser.parse_args()
 
@@ -66,7 +66,7 @@ def main() -> int:
             "-m",
             "unittest",
             "-v",
-            "test.integration.test_export_network",
+            "tests.integration.test_export_network",
         ]
         proc = subprocess.run(
             cmd,

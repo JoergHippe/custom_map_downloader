@@ -14,7 +14,7 @@ Diese Tests benötigen eine echte QGIS-Python-Umgebung (qgis.core/qgis.gui). Unt
 ## Ausführen (lokal)
 
 ```
-python -m unittest discover -s test/integration -v
+python -m unittest discover -s tests/integration -v
 ```
 
 Die lokale Smoke-Suite deckt aktuell ab:
@@ -27,7 +27,7 @@ Die lokale Smoke-Suite deckt aktuell ab:
 
 ## Netzbasierte Szenarien (WMS/XYZ)
 
-- Siehe `test/integration/config.json` für Quellen (`sources`) und Szenarien (`scenarios`).
+- Siehe `tests/integration/config.json` für Quellen (`sources`) und Szenarien (`scenarios`).
 - Quellen definieren Provider/URI/Default-CRS; Szenarien referenzieren eine Quelle (`source`) und überschreiben Extent/GSD/VRT/Output.
 - Alle Szenarien laufen standardmäßig; optional filterbar über Env `SCENARIOS=name1,name2`.
 - Passe CRS/Extent/GSD/Output-Format nach Bedarf an (z. B. EPSG:25833, Dresden-Region).
@@ -83,5 +83,5 @@ Gezielte lokale Läufe für den erweiterten Dienstkatalog:
 - Ohne QGIS-Umgebung werden die Tests automatisch übersprungen.
 - Pfade zum QGIS-Prefix können im Test über `QGIS_PREFIX_PATH` vorgegeben werden.
 - Unter Linux/Container-Umgebungen erkennen die Tests zusätzlich typische Prefix-Pfade wie `/usr` und den zur Laufzeit gemeldeten `QgsApplication.prefixPath()`.
-- Testdaten liegen im Repo unter `test/` (10x10-Raster).
-- Integrationstests sind bewusst minimal gehalten; für umfangreiche Szenarien können zusätzliche Testdaten/Layer ergänzt werden.***
+- Testdaten liegen im Repo unter `tests/data/` (10x10-Raster).
+- Integrationstests sind bewusst minimal gehalten; für umfangreiche Szenarien können zusätzliche Testdaten/Layer ergänzt werden.

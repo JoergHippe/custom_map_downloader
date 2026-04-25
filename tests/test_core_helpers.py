@@ -1,6 +1,6 @@
 import unittest
 
-from test.test_exporter_validation import install_qgis_stubs
+from tests.test_exporter_validation import install_qgis_stubs
 
 install_qgis_stubs()
 

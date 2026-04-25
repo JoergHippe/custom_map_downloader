@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from test.integration.qgis_test_support import ensure_plugin_import_path, plugin_import_mode
+from tests.integration.qgis_test_support import ensure_plugin_import_path, plugin_import_mode
 
 try:
     from qgis.core import QgsProject  # type: ignore  # noqa: F401

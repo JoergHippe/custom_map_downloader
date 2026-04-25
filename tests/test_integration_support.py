@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from test.integration.qgis_test_support import (
+from tests.integration.qgis_test_support import (
     REPO_ROOT,
     deployed_plugin_dir,
     ensure_plugin_import_path,

@@ -11,8 +11,13 @@ fi
 BASE="CustomMapDownloader"
 PLUGIN_DIR="custom_map_downloader"
 
-# Collect all Python/UI files
-PYTHON_FILES=$(find "${PLUGIN_DIR}" -type f \( -name "*.py" -o -name "*.ui" \) | sort)
+# Collect source Python/UI files. Locally generated Python artifacts are intentionally ignored.
+PYTHON_FILES=$(
+  find "${PLUGIN_DIR}" -type f \( -name "*.py" -o -name "*.ui" \) \
+    ! -name "resources_rc.py" \
+    ! -name "CustomMapDownloader_dialog_base_ui.py" \
+    | sort
+)
 
 # Determine newest timestamp of source files
 CHANGED_FILES=0

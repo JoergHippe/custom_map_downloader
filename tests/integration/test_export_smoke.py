@@ -4,7 +4,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from test.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
+from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
 
 def _resolve_repo_root() -> Path:
@@ -12,7 +12,7 @@ def _resolve_repo_root() -> Path:
 
 
 REPO_ROOT = _resolve_repo_root()
-TEST_DATA = REPO_ROOT / "test" / "tenbytenraster.asc"
+TEST_DATA = REPO_ROOT / "tests" / "data" / "tenbytenraster.asc"
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo")

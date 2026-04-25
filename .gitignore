@@ -8,6 +8,7 @@ __pycache__/
 .vscode/
 .idea/
 .venv/
+.codex
 custom_map_downloader/CustomMapDownloader_dialog_base_ui.py
 custom_map_downloader/resources_rc.py
 *.swp

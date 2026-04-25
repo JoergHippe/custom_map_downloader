@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CONFIG_PATH = REPO_ROOT / "test" / "integration" / "config.json"
+CONFIG_PATH = REPO_ROOT / "tests" / "integration" / "config.json"
 DEFAULT_REPORT_DIR = REPO_ROOT / "artifacts" / "network_scenarios"
 
 
@@ -45,7 +45,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--group",
-        help="Scenario group from test/integration/config.json",
+        help="Scenario group from tests/integration/config.json",
     )
     parser.add_argument(
         "--scenario",
@@ -79,7 +79,7 @@ def main() -> int:
             "-m",
             "unittest",
             "-v",
-            "test.integration.test_export_network",
+            "tests.integration.test_export_network",
         ]
         proc = subprocess.run(
             cmd,

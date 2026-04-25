@@ -29,9 +29,9 @@ Praktische Einordnung:
 
 Lokal geprüft:
 
-- `ruff` auf `custom_map_downloader`, `scripts`, `test`
-- `black --check` auf `custom_map_downloader`, `scripts`, `test`
-- `python3 -m unittest discover -s test -v`
+- `ruff` auf `custom_map_downloader`, `scripts`, `tests`
+- `black --check` auf `custom_map_downloader`, `scripts`, `tests`
+- `python3 -m unittest discover -s tests -v`
 
 Letztes Ergebnis der lokalen Suite:
 

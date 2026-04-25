@@ -57,18 +57,18 @@ if errorlevel 1 (
 )
 
 if /I "%MODE%"=="all" (
-  call "%PYTHON_CMD%" -m unittest discover -s test/integration -v
+  call "%PYTHON_CMD%" -m unittest discover -s tests/integration -v
   exit /b %errorlevel%
 )
 
 if /I "%MODE%"=="smoke" (
-  call "%PYTHON_CMD%" -m unittest -v test.integration.test_export_smoke
+  call "%PYTHON_CMD%" -m unittest -v tests.integration.test_export_smoke
   exit /b %errorlevel%
 )
 
 if /I "%MODE%"=="network" (
   set "ALLOW_INTEGRATION_NETWORK=1"
-  call "%PYTHON_CMD%" -m unittest -v test.integration.test_export_network
+  call "%PYTHON_CMD%" -m unittest -v tests.integration.test_export_network
   exit /b %errorlevel%
 )
 
@@ -77,7 +77,7 @@ if /I "%MODE%"=="e2e" (
   if errorlevel 1 exit /b %errorlevel%
   set "CMD_PLUGIN_IMPORT_MODE=profile"
   set "CMD_QGIS_PROFILE=%PROFILE%"
-  call "%PYTHON_CMD%" -m unittest -v test.integration.test_profile_bootstrap test.integration.test_export_smoke
+  call "%PYTHON_CMD%" -m unittest -v tests.integration.test_profile_bootstrap tests.integration.test_export_smoke
   exit /b %errorlevel%
 )
 

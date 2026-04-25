@@ -491,7 +491,7 @@ class ExporterValidationTests(unittest.TestCase):
                 return "wms"
 
             def source(self):
-                return "url=https://example.test/wms"
+                return "url=https://example.tests/wms"
 
         params = replace(
             self._base_params(width=595, height=595, path_suffix=".tif"),

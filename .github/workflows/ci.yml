@@ -31,7 +31,7 @@ jobs:
         run: python -m black --check .
 
       - name: Run unit tests (stubbed)
-        run: python -m unittest discover -s test -v
+        run: python -m unittest discover -s tests -v
 
       - name: Check translation status
         run: python scripts/check_translations.py
@@ -67,4 +67,4 @@ jobs:
             -v "$PWD":/workspace \
             -w /workspace \
             qgis/qgis:latest \
-            bash -lc "python3 -m unittest discover -s test -v"
+            bash -lc "python3 -m unittest discover -s tests -v"

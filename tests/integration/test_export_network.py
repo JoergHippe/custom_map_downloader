@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 from urllib.request import urlopen
 
-from test.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
+from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_PATH = REPO_ROOT / "test" / "integration" / "config.json"
+CONFIG_PATH = REPO_ROOT / "tests" / "integration" / "config.json"
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo.gdal")
 warnings.filterwarnings("ignore", category=FutureWarning, module="osgeo")

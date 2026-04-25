@@ -42,14 +42,14 @@ dev-check:
 	$(PYTHON) scripts/dev_check.py
 
 format:
-	$(PYTHON) -m black .
+	$(PYTHON) -m black custom_map_downloader scripts tests
 
 format-check:
-	$(PYTHON) -m black --check .
+	$(PYTHON) -m black --check custom_map_downloader scripts tests
 
 lint:
 	$(PYTHON) -m ruff check .
-	$(PYTHON) -m black --check .
+	$(PYTHON) -m black --check custom_map_downloader scripts tests
 
 lint-pylint:
 	$(PYTHON) -m pylint --rcfile=pylintrc \
@@ -58,10 +58,10 @@ lint-pylint:
 		$(PLUGIN_DIR)/core
 
 test:
-	$(PYTHON) -m unittest discover -s test -v
+	$(PYTHON) -m unittest discover -s tests -v
 
 test-qgis:
-	$(PYTHON) -m unittest discover -s test/integration -v
+	$(PYTHON) -m unittest discover -s tests/integration -v
 
 test-all: lint test
 

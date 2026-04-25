@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CONFIG_PATH = REPO_ROOT / "test" / "integration" / "config.json"
+CONFIG_PATH = REPO_ROOT / "tests" / "integration" / "config.json"
 DEFAULT_REPORT_DIR = REPO_ROOT / "artifacts"
 
 
