@@ -28,7 +28,7 @@ from qgis.core import (
     QgsRasterLayer,
     QgsUnitTypes,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QSettings, Qt, QTimer, QTranslator
+from qgis.PyQt.QtCore import QCoreApplication, QEventLoop, QSettings, Qt, QTimer, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QCheckBox, QMessageBox, QProgressDialog
 
@@ -230,9 +230,17 @@ class CustomMapDownloader:
         self.dlg.populate_layers()
         self.dlg.reset_extent_to_canvas()
 
+        dialog_loop = QEventLoop()
+        self.dlg.finished.connect(dialog_loop.quit)
+        self.dlg.setModal(False)
         self.dlg.show()
         QTimer.singleShot(0, self.dlg.reset_extent_to_canvas)
-        result = self.dlg.exec_()
+        dialog_loop.exec_()
+        try:
+            self.dlg.finished.disconnect(dialog_loop.quit)
+        except Exception:
+            pass
+        result = self.dlg.result()
         if not result:
             return
 
