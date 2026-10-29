@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint-and-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Install Qt translation tools
+        run: sudo apt-get update && sudo apt-get install -y qttools5-dev-tools
+
+      - name: Run Ruff
+        run: python -m ruff check .
+
+      - name: Run Black check
+        run: python -m black --check .
+
+      - name: Run unit tests (stubbed)
+        run: python -m unittest discover -s tests -v
+
+      - name: Check translation status
+        run: python scripts/check_translations.py
+
+      - name: Rebuild German translation catalog
+        run: bash scripts/compile-strings.sh de
+
+      - name: Validate release governance
+        run: python scripts/check_release_governance.py
+
+      - name: Build package with qgis-plugin-ci
+        run: |
+          VERSION=$(sed -n 's/^version=//p' custom_map_downloader/metadata.txt | head -n 1)
+          qgis-plugin-ci package "$VERSION" -c
+
+      - name: Validate packaged archive
+        run: python scripts/check_package.py
+
+  qgis-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pull official QGIS Docker image
+        run: docker pull qgis/qgis:latest
+
+      - name: Run QGIS-backed test suite
+        run: |
+          docker run --rm \
+            -e QT_QPA_PLATFORM=offscreen \
+            -e QGIS_PREFIX_PATH=/usr \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            qgis/qgis:latest \
+            bash -lc "python3 -m unittest discover -s tests -v"
