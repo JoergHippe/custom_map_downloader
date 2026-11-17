@@ -790,7 +790,7 @@ class GeoTiffExporter:
             int(width),
             int(height),
             int(arr.strides[0]),
-            QImage.Format_RGBA8888,
+            QImage.Format.Format_RGBA8888,
         )
         buffer = QBuffer()
         write_only = getattr(QIODevice, "WriteOnly", None)

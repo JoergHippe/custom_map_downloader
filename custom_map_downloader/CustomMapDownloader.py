@@ -29,8 +29,8 @@ from qgis.core import (
     QgsUnitTypes,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QEventLoop, QSettings, Qt, QTimer, QTranslator
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QCheckBox, QMessageBox, QProgressDialog
+from qgis.PyQt.QtGui import QAction, QIcon
+from qgis.PyQt.QtWidgets import QCheckBox, QMessageBox, QProgressDialog
 
 from .core.errors import CancelledError, ExportError, ValidationError
 from .core.exporter import GeoTiffExporter
@@ -123,7 +123,7 @@ class CustomMapDownloader:
         box.setText(text)
         if details:
             box.setDetailedText(details)
-        box.exec_()
+        box.exec()
 
     def _build_export_context_details(
         self,
@@ -235,7 +235,7 @@ class CustomMapDownloader:
         self.dlg.setModal(False)
         self.dlg.show()
         QTimer.singleShot(0, self.dlg.reset_extent_to_canvas)
-        dialog_loop.exec_()
+        dialog_loop.exec()
         try:
             self.dlg.finished.disconnect(dialog_loop.quit)
         except Exception:
@@ -396,7 +396,7 @@ class CustomMapDownloader:
             self.iface.mainWindow(),
         )
         progress.setWindowTitle(self.tr("Custom Map Downloader"))
-        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setMinimumDuration(0)
         progress.setValue(0)
         progress.show()
@@ -810,7 +810,7 @@ class CustomMapDownloader:
         dont_ask_cb = QCheckBox(self.tr("Do not ask again"))
         msg_box.setCheckBox(dont_ask_cb)
 
-        reply = msg_box.exec_()
+        reply = msg_box.exec()
         if dont_ask_cb.isChecked():
             settings.setValue(base + "confirm_export", False)
 

@@ -68,7 +68,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._init_output_format_combo()
         self._apply_tooltips()
 
-        self.setWindowModality(Qt.WindowModal)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
         # Wire OK / Cancel of QDialogButtonBox
         if hasattr(self, "buttonBox"):

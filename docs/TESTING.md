@@ -52,6 +52,20 @@ bestehenden `run_integration_tests.bat`-Runner benutzen.
 ## CI-Strategie
 
 GitHub-gehostete Linux-Runs für statische Checks, Unit-Tests und Package-Prüfung;
-QGIS-Linux-Testmatrix gesondert aktivieren, sobald Images und Import-Gates bestätigt
-sind. Die archivierte selbstgehostete Windows-CI bleibt vorerst inaktiv;
+QGIS-Linux-Matrix mit offiziellen QGIS-Docker-Images für 3.x und 4.x. Die archivierte selbstgehostete Windows-CI bleibt vorerst inaktiv;
 Windows-E2E werden vor Releases lokal ausgeführt. Kein automatischer Release.
+
+## Automatische QGIS-Runtime-Matrix
+
+Der GitHub-Workflow `.github/workflows/ci.yml` nutzt explizite Docker-Tags:
+
+- QGIS 3.44.15 (Ubuntu Noble, Qt5)
+- QGIS 4.2.3 (Ubuntu Resolute, Qt6)
+
+Jeder Job setzt `CMD_REQUIRE_QGIS=1`, prüft QGIS- und Qt-Hauptversionen,
+lädt das vollständige Plugin via `classFactory` und führt anschließend die
+lokalen Raster-Smoke-Tests aus. Importfehler müssen den Job abbrechen.
+Ein roter QGIS-4-Job bedeutet bis zur vollständigen Migration eine echte
+Kompatibilitätslücke, **keinen Grund, Tests zu überspringen**.
+Die Docker-Tags sind versionsfest, aber nicht auf Image-Digests fixiert;
+Digest-Pinning kann nach dem ersten validierten Lauf ergänzt werden.

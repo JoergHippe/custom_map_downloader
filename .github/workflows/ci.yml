@@ -44,6 +44,34 @@ jobs:
           qgis-plugin-ci package "$VERSION" -c
           python scripts/check_package.py
 
-  # QGIS 3/4 runtime matrix is intentionally deferred until the strict import
-  # probe and basic Qt6 compatibility have been validated. The previous
-  # self-hosted Windows workflow remains archived under ci-disabled/.
+
+
+  qgis-runtime:
+    name: QGIS ${{ matrix.major }} imports and raster smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - major: 3
+            image: 3.44.15-noble
+          - major: 4
+            image: 4.2.3-resolute
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real QGIS import and export integration tests
+        env:
+          IMAGE: ${{ matrix.image }}
+          MAJOR: ${{ matrix.major }}
+        run: |
+          docker run --rm --entrypoint /bin/bash \
+            -e QT_QPA_PLATFORM=offscreen \
+            -e CMD_REQUIRE_QGIS=1 \
+            -e MAJOR \
+            -v "$PWD:/workspace:rw" -w /workspace \
+            "qgis/qgis:$IMAGE" -lc '
+              set -euo pipefail
+              python3 scripts/check_qgis_runtime.py --major "$MAJOR"
+              python3 -m unittest discover -s tests/integration -p test_export_smoke.py -v
+            '
