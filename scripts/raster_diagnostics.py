@@ -120,9 +120,7 @@ def main() -> None:
     """Inspect a GeoTIFF or compare a current export with an archived one."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("raster", type=Path, help="Current GeoTIFF")
-    parser.add_argument(
-        "--reference", type=Path, help="Original archived GeoTIFF, if available"
-    )
+    parser.add_argument("--reference", type=Path, help="Original archived GeoTIFF, if available")
     args = parser.parse_args()
     current = inspect_raster(args.raster)
     result: dict[str, object] = {"current": current}
