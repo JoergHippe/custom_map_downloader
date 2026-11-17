@@ -87,12 +87,14 @@ def compare_against_expected(
         labels = case.get("labels", {})
         expected_case = expected.get(case_name, {})
         if not labels:
+            exit_code = int(case.get("exit_code", 1))
+            status = "error" if case_name in cases and exit_code != 0 else "missing"
             rows.append(
                 {
                     "case": case_name,
                     "label": "-",
-                    "exit_code": int(case.get("exit_code", 1)),
-                    "status": "missing" if case_name not in cases or int(case.get("exit_code", 0)) == 0 else "error",
+                    "exit_code": exit_code,
+                    "status": status,
                     "expected_hash": "",
                     "actual_hash": "",
                     "width_px": "",
