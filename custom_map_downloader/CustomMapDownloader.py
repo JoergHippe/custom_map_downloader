@@ -40,8 +40,8 @@ except ImportError:
 
 from .core.errors import CancelledError, ExportError, ValidationError
 from .core.exporter import GeoTiffExporter
-from .core.mbtiles import build_mbtiles_plan, mbtiles_export_risk
 from .core.locale import resolve_locale_code
+from .core.mbtiles import build_mbtiles_plan, mbtiles_export_risk
 from .core.models import CancelToken, CenterSpec, ExportParams, ExtentSpec
 from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
 
