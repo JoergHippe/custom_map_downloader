@@ -131,6 +131,21 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         self.assertAlmostEqual(actual.yMaximum(), 5700.0, places=3)
         self.assertAlmostEqual(actual.xMinimum(), 1200.0, places=3)
 
+    def test_fallback_parses_german_and_english_decimal_formats(self):
+        """Fallback coordinates must not depend on the CI runner's locale."""
+        cases = (
+            ("1,25", 1.25),
+            ("1.234,50", 1234.5),
+            ("1,234.50", 1234.5),
+            ("1234.50", 1234.5),
+            ("-4,000.0000", -4000.0),
+        )
+        for raw, expected in cases:
+            with self.subTest(raw=raw):
+                self.assertAlmostEqual(
+                    self.dialog._try_parse_float(raw), expected, places=5
+                )
+
     def test_canvas_reset_replaces_user_extent(self):
         self.dialog.extentGroupBox.setOutputExtentFromUser(
             QgsRectangle(9000, 10000, 11000, 12000), self.crs
