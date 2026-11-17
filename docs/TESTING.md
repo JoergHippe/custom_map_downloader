@@ -64,8 +64,22 @@ Der GitHub-Workflow `.github/workflows/ci.yml` nutzt explizite Docker-Tags:
 
 Jeder Job setzt `CMD_REQUIRE_QGIS=1`, prüft QGIS- und Qt-Hauptversionen,
 lädt das vollständige Plugin via `classFactory` und führt anschließend die
-lokalen Raster-Smoke-Tests aus. Importfehler müssen den Job abbrechen.
+lokalen Raster-Smoke-Tests, QImage-Speichertests sowie MBTiles-Erfolgs- und Abbruchtests aus. Importfehler müssen den Job abbrechen.
 Ein roter QGIS-4-Job bedeutet bis zur vollständigen Migration eine echte
 Kompatibilitätslücke, **keinen Grund, Tests zu überspringen**.
 Die Docker-Tags sind versionsfest, aber nicht auf Image-Digests fixiert;
-Digest-Pinning kann nach dem ersten validierten Lauf ergänzt werden.
+Digest-Pinning kann bei Bedarf ergänzend erfolgen; die verwendeten GitHub Actions
+sind bereits auf vollständige Commit-SHAs fixiert.
+
+## MBTiles-Dateisicherheit
+
+MBTiles wird zunächst als temporäre SQLite-Datei **im Zielverzeichnis** geschrieben.
+Erst nach erfolgreichem Commit und Schließen der Verbindung erfolgt
+`os.replace` auf das endgültige Ziel. Bei Fehler/Abbruch bleibt eine bestehende
+Datei unverändert; das temporäre Verzeichnis wird entfernt.
+
+Automatisiert geprüft werden Datenbank-Schema, Dateierhaltung im Fehlerfall,
+Dateiersetzung im Erfolgsfall sowie echte QGIS-3/4-End-to-End-Szenarien mit
+lokaler Vektorebene (keine Netzabhängigkeit). Diese Garantie gilt für normale
+Prozessfehler und Abbrüche; eine Aussage zur Stromausfall-Dauerhaftigkeit
+(Filesystem-Sync) wird damit nicht getroffen.

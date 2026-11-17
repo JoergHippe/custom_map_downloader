@@ -4,13 +4,14 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 
 ## Hohe Priorität
 
-- [ ] QGIS-Importfehler in Integrationstests bei aktivem Strict-Modus als Fehler behandeln (erste Absicherung implementiert; Runtime-Verifikation offen).
+- [x] Fail-closed-Integrationstests mit echter QGIS-3/4-Runtime nachgewiesen.
 - [ ] QGIS 3/4-Kompatibilitätsmatrix auf realen Laufzeiten validieren, Qt6-Fundstellen beheben.
 - [ ] QGIS-Integrationstests nach April-Änderungen erneut durchführen (einschließlich MBTiles und Dialog).
-- [ ] MBTiles-Ausgabe gegen Verlust einer bestehenden Datei bei Fehler/Abbruch absichern.
-- [ ] Speicherkonvertierung von QImage nach NumPy in Qt5/Qt6 robust machen.
+- [x] MBTiles-Ausgabe atomar im Zielverzeichnis bereitstellen; Abbruch- und Ersetzungstests unter QGIS 3/4.
+- [x] QImage-Speicherkonvertierung mit eigenen NumPy-Puffern unter Qt5/Qt6 testen.
+- [ ] MBTiles-Tileplanung für sehr große Ausschnitte ohne hohe Speichervorbelegung begrenzen/streamen.
 - [ ] Komplexe QGIS-Extent-Widget-Heuristik durch öffentliche APIs ersetzen, wo möglich.
-- [ ] CI mit begrenztem Scope reaktivieren und tatsächliche Testausführung nachweisen.
+- [x] CI mit begrenztem Scope reaktiviert und grüne QGIS-3/4-Läufe nachgewiesen.
 
 - Weitere echte QGIS-End-to-End-Netztests für reproduzierbare WMS-/XYZ-Szenarien ergänzen.
 - Export-Diagnostik optional noch stärker in der UI auswertbar machen.

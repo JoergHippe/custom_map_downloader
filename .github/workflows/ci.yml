@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, chore/restart-quality-baseline-20261117]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -43,8 +43,6 @@ jobs:
           VERSION=$(sed -n 's/^version=//p' custom_map_downloader/metadata.txt | head -n 1)
           qgis-plugin-ci package "$VERSION" -c
           python scripts/check_package.py
-
-
 
   qgis-runtime:
     name: QGIS ${{ matrix.major }} imports and raster smoke

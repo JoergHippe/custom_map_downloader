@@ -10,6 +10,23 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### MBTiles-Dateisicherheit und reale Exporttests
+
+**Geprüfter Commit:** `1fd5ff6fb4b4bdb21176f369855b0e1dbe90b5be`  
+**GitHub Actions:** [Workflow-Lauf 44163338920](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44163338920)
+
+| Job | Umfang | Ergebnis |
+| --- | --- | --- |
+| Python quality | Ruff, Black, 84 Tests (12 erwartete Skips ohne QGIS), Packaging | PASS |
+| QGIS 3 | Plugin-Import, 2 QImage-, 4 Raster- und 2 MBTiles-End-to-End-Tests | PASS |
+| QGIS 4 | Plugin-Import, 2 QImage-, 4 Raster- und 2 MBTiles-End-to-End-Tests | PASS |
+
+Die MBTiles-Szenarien prüfen eine vorhandene Zieldatei bei erfolgreichem
+Ersatz und beim Abbruch nach Erstellung der temporären SQLite-Datenbank.
+Sie ersetzen keine vollständige Windows-/Webdienst-Validierung.
+
+### Erste QGIS-3/4-Baseline
+
 **Branch:** `chore/restart-quality-baseline-20261117`  
 **Geprüfter Commit:** `3ccd4e3600d014b896771d29e9edf4eaa3c67688`  
 **GitHub Actions:** [Workflow-Lauf 44160918990](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44160918990)
@@ -22,7 +39,7 @@
 
 **Geltungsbereich:** Diese Ergebnisse belegen ausschließlich die genannten CI-Prüfungen
 für den aufgeführten Branch-Commit. Sie ersetzen **nicht** die vollständige
-Windows-GUI-, Netz-WMS/WMTS-, MBTiles- und Release-Validierung. Der Stand wurde
+Windows-GUI-, Netz-WMS/WMTS- und vollständige Release-Validierung. Der Stand wurde
 noch nicht nach `main` übernommen und QGIS 4.x ist noch nicht offiziell freigegeben.
 
 ## Historischer Validierungsbericht vom 14. März 2026

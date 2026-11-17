@@ -10,9 +10,17 @@ The format follows a pragmatic Keep a Changelog style.
 - MBTiles export with configurable zoom range, tile size, padding, auto zoom and estimates (April 2026)
 - unified output-file selection for raster and MBTiles exports
 
+### Fixed
+- MBTiles exports now stage SQLite data in the destination folder and replace the
+  destination only after a successful commit and closed database connection.
+  Existing outputs are preserved when an export fails or is cancelled.
+- Removed hard-coded PyQt5 resource loading; added Qt5/Qt6 compatible imports
+  and copied QImage buffers to NumPy-owned memory.
+
 ### Changed
+- Restored GitHub Actions checks for QGIS 3/4, unit tests and packaging.
 - canvas extent reset and draw-on-canvas dialog handling (April 2026)
-- GitHub Actions workflows archived in October 2026 (not currently running)
+- Original self-hosted Windows Actions archived in October 2026; new hosted CI enabled in November.
 
 ### Validation
 - The last recorded full QGIS/Windows validation dates from 2026-03-14 and predates these changes.
