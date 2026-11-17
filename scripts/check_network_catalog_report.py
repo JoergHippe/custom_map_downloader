@@ -31,17 +31,27 @@ def main() -> int:
         print("ERROR: invalid report format: rows must be a list", file=sys.stderr)
         return 1
 
-    allowed_statuses = {"ok"} if group_name == "official_webmaps_catalog" else {"ok", "untracked"}
-    bad_rows = [row for row in rows if str(row.get("status", "")) not in allowed_statuses]
+    # A source data update must not fail a valid raster export.
+    # Missing/failed scenarios and nonzero child exit codes still fail closed.
+    if not rows:
+        print("ERROR: network scenario report has no rows", file=sys.stderr)
+        return 1
+    allowed_statuses = {"ok", "drift", "untracked"}
+    bad_rows = [
+        row
+        for row in rows
+        if not isinstance(row, dict)
+        or row.get("status") not in allowed_statuses
+        or row.get("exit_code") != 0
+    ]
     if bad_rows:
         for row in bad_rows:
-            print(
-                f"ERROR: {row.get('status')} scenario={row.get('scenario')} "
-                f"exit={row.get('exit_code')}",
-                file=sys.stderr,
-            )
+            print(f"ERROR: invalid or failed scenario report row: {row!r}", file=sys.stderr)
         return 1
 
+    notices = [row for row in rows if row["status"] in {"drift", "untracked"}]
+    for row in notices:
+        print(f"NOTICE: historical hash {row['status']} for {row.get('scenario')}")
     print(f"Network scenario report OK: {report_path}")
     return 0
 

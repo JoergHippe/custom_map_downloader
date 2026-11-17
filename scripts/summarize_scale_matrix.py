@@ -81,7 +81,9 @@ def compare_against_expected(
     expected: dict[str, dict[str, str]],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for case_name, case in sorted(cases.items()):
+    # Include missing configured cases, not just executed cases.
+    for case_name in sorted(set(cases) | set(expected)):
+        case = cases.get(case_name, {})
         labels = case.get("labels", {})
         expected_case = expected.get(case_name, {})
         if not labels:
@@ -198,14 +200,20 @@ def main() -> int:
             with open(summary_path, "a", encoding="utf-8") as fh:
                 fh.write(markdown)
 
-    drifts = [row for row in rows if row["status"] == "drift"]
+    # Keep scale correctness (sizes, run status, completeness) strict;
+    # changes in hosted source imagery are reference notices only.
+    notices = [row for row in rows if row["status"] in {"drift", "untracked"}]
     errors = [row for row in rows if row["status"] in {"error", "missing"}]
-    if drifts or errors:
-        for row in drifts + errors:
+    for row in notices:
+        print(f"NOTICE {row['status'].upper()}: {row['case']} [{row['label']}]")
+    if errors or not rows:
+        for row in errors:
             print(
-                f"{row['status'].upper()}: {row['case']} [{row['label']}] "
+                f"ERROR {row['status'].upper()}: {row['case']} [{row['label']}] "
                 f"(exit={row['exit_code']})"
             )
+        if not rows:
+            print("ERROR: no scale matrix results available")
         return 1
 
     print(f"Scale matrix report written to {json_path}")

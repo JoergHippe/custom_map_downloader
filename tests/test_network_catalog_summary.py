@@ -31,6 +31,34 @@ class NetworkCatalogSummaryTests(unittest.TestCase):
         self.assertEqual(status_by_name["drift_case"], "error")
         self.assertEqual(status_by_name["missing_case"], "missing")
 
+    def test_successful_export_with_changed_baseline_is_only_notice(self):
+        scenarios = {
+            "changed": {
+                "exit_code": 0,
+                "result": {
+                    "name": "changed",
+                    "result": "ok",
+                    "sha256": "new",
+                    "width_px": 100,
+                    "height_px": 100,
+                },
+            }
+        }
+        rows = summarize_network_catalog.compare_against_expected(
+            scenarios, {"changed": "old"}
+        )
+        self.assertEqual(rows[0]["status"], "drift")
+        self.assertEqual(rows[0]["exit_code"], 0)
+
+    def test_invalid_export_result_is_error_even_with_matching_hash(self):
+        scenarios = {
+            "bad": {"exit_code": 0, "result": {"result": "error", "sha256": "same"}}
+        }
+        rows = summarize_network_catalog.compare_against_expected(
+            scenarios, {"bad": "same"}
+        )
+        self.assertEqual(rows[0]["status"], "error")
+
     def test_collect_scenario_results_reads_network_scenarios_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

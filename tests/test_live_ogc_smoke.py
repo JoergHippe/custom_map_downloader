@@ -6,6 +6,7 @@ from pathlib import Path
 
 from scripts.run_live_ogc_smoke import (
     check_live_report,
+    classify_reference,
     check_raster_diagnostics,
     load_scenario,
 )
@@ -18,6 +19,11 @@ CONFIG = json.loads(
 
 
 class LiveServiceSmokeTests(unittest.TestCase):
+    def test_reference_changes_are_informational(self):
+        self.assertEqual(classify_reference("new", "old"), "drift")
+        self.assertEqual(classify_reference("same", "same"), "match")
+        self.assertEqual(classify_reference("new", None), "untracked")
+
     def test_existing_small_official_scenario(self):
         candidate = load_scenario(CONFIG, "bkg_dgm200_relief_tif", 2_000_000)
         self.assertEqual(candidate["provider"], "wms")

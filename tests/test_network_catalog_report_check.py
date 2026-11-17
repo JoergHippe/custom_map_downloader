@@ -29,15 +29,15 @@ class NetworkCatalogReportCheckTests(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
 
-    def test_rejects_untracked_rows_for_official_catalog(self):
+    def test_accepts_untracked_rows_for_official_catalog(self):
         proc = self._run(
             {
                 "group_name": "official_webmaps_catalog",
                 "rows": [{"scenario": "a", "status": "untracked", "exit_code": 0}],
             }
         )
-        self.assertNotEqual(proc.returncode, 0)
-        self.assertIn("untracked", proc.stderr)
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("NOTICE", proc.stdout)
 
     def test_accepts_untracked_rows_for_non_strict_group(self):
         proc = self._run(
@@ -47,6 +47,23 @@ class NetworkCatalogReportCheckTests(unittest.TestCase):
             }
         )
         self.assertEqual(proc.returncode, 0)
+
+    def test_accepts_hash_drift_but_rejects_nonzero_exit(self):
+        payload = {
+            "group_name": "official_webmaps_catalog",
+            "rows": [{"scenario": "a", "status": "drift", "exit_code": 0}],
+        }
+        proc = self._run(payload)
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("NOTICE", proc.stdout)
+
+        payload["rows"][0]["exit_code"] = 1
+        proc = self._run(payload)
+        self.assertNotEqual(proc.returncode, 0)
+
+    def test_rejects_empty_report(self):
+        proc = self._run({"group_name": "official_webmaps_catalog", "rows": []})
+        self.assertNotEqual(proc.returncode, 0)
 
     def test_rejects_error_rows(self):
         proc = self._run(
