@@ -75,4 +75,5 @@ jobs:
               python3 scripts/check_qgis_runtime.py --major "$MAJOR"
               python3 -m unittest discover -s tests/integration -p test_qimage_memory.py -v
               python3 -m unittest discover -s tests/integration -p test_export_smoke.py -v
+              python3 -m unittest discover -s tests/integration -p test_mbtiles_export.py -v
             '
