@@ -23,8 +23,10 @@ jobs:
         include:
           - major: 3
             version: "3.44.15"
+            channel: conda-forge/label/qgis_ltr
           - major: 4
             version: "4.2.3"
+            channel: conda-forge
     defaults:
       run:
         shell: pwsh
@@ -44,7 +46,7 @@ jobs:
           channel-priority: strict
       - name: Install actual Windows QGIS ${{ matrix.version }} bindings
         run: |
-          conda install -y -n qgis-tests -c conda-forge "qgis=${{ matrix.version }}" "python=3.12"
+          conda install -y -n qgis-tests -c "${{ matrix.channel }}" -c conda-forge "qgis=${{ matrix.version }}" "python=3.12"
       - name: Verify native QGIS and Qt environment
         run: |
           conda run -n qgis-tests python scripts/check_qgis_runtime.py --major ${{ matrix.major }}
