@@ -7,6 +7,9 @@ The format follows a pragmatic Keep a Changelog style.
 ## [0.5.0] - Unreleased (working version)
 
 ### Added
+- Independent GDAL fingerprints for GeoTIFF file bytes, decoded pixel bands,
+  and georeferencing; optional CLI to compare original versus current rasters.
+  Official WMS diagnostics now retain these independent checksums in reports.
 - Explicitly opt-in official WMS smoke workflow with isolated, time-bounded
   service checks and separate export-versus-reference-hash reporting.
 - Automated native Windows QGIS 3/4 CI with real Qt GUI interaction,

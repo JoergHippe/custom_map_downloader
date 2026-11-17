@@ -20,7 +20,8 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 
 - [x] Reproduzierbare WMS-/WMTS-End-to-End-Tests mit lokalen HTTP-OGC-Diensten unter Windows/Linux ergänzt.
 - [x] Drei verschiedene amtliche WMS-Live-Szenarien unter QGIS 3/4 ausgeführt (BKG, basemap.de, NRW).
-- [ ] Zwei Dateihash-Abweichungen (basemap.de, NRW) anhand Bildinhalt/Metadaten untersuchen; alte Baselines beibehalten.
+- [x] Live-TIF-Diagnose für Rasterpixel, Georeferenzierung und TIFF-Metadaten unter QGIS 3/4 eingeführt; basemap.de und NRW aktuell jeweils identisch.
+- [ ] Historische Abweichungen zu basemap.de und NRW endgültig klären, sofern die ursprünglichen GeoTIFF-Referenzdateien noch beschafft werden können. Ohne Alt-Dateien keine sichere Ursachenzuordnung; alte SHA-256-Baselines beibehalten.
 - [ ] Amtliche Maßstabs-/Hash-Matrix vollständig erneut prüfen; amtlichen WMTS-Live-Testfall ergänzen.
 - Export-Diagnostik optional noch stärker in der UI auswertbar machen.
 - Release-Version und Changelog vor der nächsten Veröffentlichung sauber pflegen.

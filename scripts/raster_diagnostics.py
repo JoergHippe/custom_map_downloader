@@ -6,6 +6,7 @@ independent signals. A changed GeoTIFF hash alone cannot establish image drift.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -92,3 +93,45 @@ def inspect_raster(path: str | Path) -> dict[str, object]:
     finally:
         # Explicit close is required for reliable cleanup on Windows.
         dataset = None
+
+
+def compare_fingerprints(reference: dict, current: dict) -> dict[str, object]:
+    """Classify a comparison when BOTH actual raster fingerprints exist."""
+    file_equal = reference["file_sha256"] == current["file_sha256"]
+    pixel_equal = reference["pixel_sha256"] == current["pixel_sha256"]
+    georef_equal = reference["georef_sha256"] == current["georef_sha256"]
+    if file_equal:
+        classification = "identical"
+    elif pixel_equal and georef_equal:
+        classification = "file_encoding_or_metadata_only"
+    elif not pixel_equal:
+        classification = "raster_samples_changed"
+    else:
+        classification = "georeference_changed"
+    return {
+        "file_equal": file_equal,
+        "pixel_equal": pixel_equal,
+        "georef_equal": georef_equal,
+        "classification": classification,
+    }
+
+
+def main() -> None:
+    """Inspect a GeoTIFF or compare a current export with an archived one."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("raster", type=Path, help="Current GeoTIFF")
+    parser.add_argument(
+        "--reference", type=Path, help="Original archived GeoTIFF, if available"
+    )
+    args = parser.parse_args()
+    current = inspect_raster(args.raster)
+    result: dict[str, object] = {"current": current}
+    if args.reference is not None:
+        previous = inspect_raster(args.reference)
+        result["reference"] = previous
+        result["comparison"] = compare_fingerprints(previous, current)
+    print(json.dumps(result, indent=2, sort_keys=True, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

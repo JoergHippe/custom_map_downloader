@@ -8,7 +8,7 @@ from pathlib import Path
 try:
     from osgeo import gdal, osr
 
-    from scripts.raster_diagnostics import inspect_raster
+    from scripts.raster_diagnostics import compare_fingerprints, inspect_raster
 
     HAS_GDAL = True
 except ImportError:
@@ -47,6 +47,17 @@ class RasterDiagnosticsTests(unittest.TestCase):
             self.assertEqual(previous["pixel_sha256"], current["pixel_sha256"])
             self.assertEqual(previous["georef_sha256"], current["georef_sha256"])
             self.assertNotEqual(previous["encoding"]["metadata"], current["encoding"]["metadata"])
+
+    def test_comparison_reports_metadata_only_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a, b = Path(tmp) / "a.tif", Path(tmp) / "b.tif"
+            self._make_tif(a, 42, "old")
+            self._make_tif(b, 42, "new")
+            result = compare_fingerprints(inspect_raster(a), inspect_raster(b))
+            self.assertEqual(result["classification"], "file_encoding_or_metadata_only")
+            self.assertTrue(result["pixel_equal"])
+            self.assertTrue(result["georef_equal"])
+            self.assertFalse(result["file_equal"])
 
     def test_real_pixel_change_is_detected(self):
         with tempfile.TemporaryDirectory() as tmp:

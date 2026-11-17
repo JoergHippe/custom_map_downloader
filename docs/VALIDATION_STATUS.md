@@ -10,6 +10,36 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Raster-Fingerprints: Pixel, Georeferenzierung und TIFF-Datei getrennt
+
+**Neu geprüft am 17.11.2026** gegen die beiden WMS mit historischen
+Dateihash-Abweichungen: QGIS 3.44.15 (GDAL 3.8.4) und
+QGIS 4.2.3 (GDAL 3.12.2).
+
+| Dienst | Aktueller Pixel-Hash | Aktueller Georeferenzierungs-Hash | QGIS 3 vs. 4 |
+| --- | --- | --- | --- |
+| basemap.de Grau | `1f377926b6b35baa…` | `ec3f87c5736669ba…` | Datei/Pixel/Geo identisch |
+| NRW DTK Farbe | `2085515b2c19c855…` | `aabd167b31d8d8fa…` | Datei/Pixel/Geo identisch |
+
+Belege:
+[basemap.de #44187663983](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44187663983),
+[NRW #44187943937](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44187943937).
+
+Beide aktuellen Ausgaben sind je Dienst zwischen QGIS 3 und 4 auf
+allen drei Ebenen identisch, **trotz unterschiedlicher GDAL-Versionen**.
+Die früheren Referenzwerte bleiben abweichend, ihre Ursachen aber
+**nicht abschließend erklärbar**: Es konnten weder frühere GeoTIFF-Dateien
+im Repository noch nutzbare Rasterartefakte in ausgewählten historischen
+Actions-Läufen gefunden werden. Aus einem historischen Datei-Hash lassen
+sich frühere Pixel-/Georeferenzierungs-Hashes nicht ermitteln.
+
+Die neue Diagnose wird künftig für Live-TIF-Szenarien im Bericht
+`raster_diagnostics` gespeichert; sie bewahrt ursprüngliche Hash-Baselines
+unverändert. Weitere Alt-Raster können mit
+`python scripts/raster_diagnostics.py aktuell.tif --reference alt.tif`
+unabhängig auf Pixel-, Georeferenzierungs- und Dateiänderungen
+untersucht werden.
+
 ### Amtliche Live-WMS-Tests, 17.11.2026
 
 Alle drei amtlichen WMS-Szenarien exportierten unter QGIS 3.44.15 und

@@ -216,3 +216,43 @@ Prüfergebnisse. Bei Hash-Abweichungen steht
 automatisch überschrieben. TIFF-Metadaten und Dienständerungen können
 Dateihashes beeinflussen. Die vollständige amtliche Maßstabs-/Hashmatrix
 und ein echter amtlicher WMTS-Live-Test bleiben gesonderte Release-Gates.
+
+## Rasterpixel und GeoTIFF-Metadaten getrennt vergleichen
+
+Für amtliche Live-WMS-Szenarien liefert `raster_diagnostics` ab sofort
+drei unabhängige SHA-256-Fingerprints:
+
+- `file_sha256`: vollständige GeoTIFF-Datei (abhängig von Encoder,
+  Kompression, Tiff-Tags und eventuell Karteninhalt)
+- `pixel_sha256`: tatsächlich durch GDAL dekodierte Rasterbandwerte,
+  einschließlich Bandreihenfolge, Banddatentypen und Rasterdimensionen;
+  blockweise eingelesen ohne vollständige Rasterkopie im Arbeitsspeicher
+- `georef_sha256`: Projektion (WKT), GeoTransform, Dimensionen und GCP-Anzahl
+
+Der Bericht enthält außerdem GDAL-Version, TIFF-Metadaten,
+Bildstruktur und bandbezogene Eigenschaften. Pixel- und
+Georeferenzierungs-Hashes sind **keine** Ersatzwerte für den
+vollständigen Datei-Hash; sie erlauben eine genauere Ursachenanalyse.
+
+Zur lokalen Untersuchung einer vorhandenen GeoTIFF-Datei:
+
+```powershell
+python scripts/raster_diagnostics.py .\export_aktuell.tif
+```
+
+Wenn die ursprünglich geprüfte Referenz-Datei noch vorhanden ist:
+
+```powershell
+python scripts/raster_diagnostics.py .\export_aktuell.tif --reference .\export_alt.tif
+```
+
+Ergebnis: `identical`, `file_encoding_or_metadata_only`,
+`raster_samples_changed` oder `georeference_changed`.
+Bei kombinierten Änderungen (z. B. andere Pixel **und** andere
+Georeferenzierung) sind zusätzlich die einzelnen
+`pixel_equal`-/`georef_equal`-Felder zu beachten.
+Die alte Soll-GeoTIFF-Datei kann nicht aus ihrem bloßen SHA-256
+rekonstruiert werden. Für die im März 2026 gespeicherten Referenzen
+liegen bisher nur **Dateihashes**, keine Pixel-/Georeferenzierungsdaten vor.
+Ohne ein solches Alt-Raster ist eine eindeutige historische
+Ursachenzuordnung nicht möglich.
