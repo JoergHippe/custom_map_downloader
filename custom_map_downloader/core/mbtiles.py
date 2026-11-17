@@ -5,7 +5,11 @@
 from __future__ import annotations
 
 import math
+import os
 import sqlite3
+import tempfile
+from contextlib import contextmanager
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -227,10 +231,29 @@ def build_mbtiles_plan(
     )
 
 
+@contextmanager
+def staged_mbtiles_path(output_path: str | Path) -> Iterator[Path]:
+    """Stage an MBTiles export beside its destination and replace only on success.
+
+    The exporter must close its SQLite connection before leaving this context.
+    os.replace is atomic on the same filesystem and preserves the previous
+    output when rendering, cancellation, or SQLite writing fails.
+    """
+    destination = Path(output_path)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{destination.stem}.", dir=destination.parent
+    ) as temp_dir:
+        staged_path = Path(temp_dir) / destination.name
+        yield staged_path
+        os.replace(staged_path, destination)
+
+
 def create_mbtiles_database(path: str | Path) -> sqlite3.Connection:
     db_path = Path(path)
+    # Never overwrite a pre-existing database here. Use staged_mbtiles_path()
+    # for exporting and replace the destination only after a successful commit.
     if db_path.exists():
-        db_path.unlink()
+        raise FileExistsError(f"MBTiles database already exists: {db_path}")
     conn = sqlite3.connect(str(db_path))
     conn.executescript(
         """

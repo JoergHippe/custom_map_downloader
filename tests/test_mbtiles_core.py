@@ -13,6 +13,7 @@ from custom_map_downloader.core.mbtiles import (  # noqa: E402
     count_tiles,
     create_mbtiles_database,
     insert_tile,
+    staged_mbtiles_path,
     tile_bounds_4326,
     tile_range_for_bounds,
     write_metadata,
@@ -61,6 +62,50 @@ class MbtilesCoreTests(unittest.TestCase):
         rows = {(tile.x, tile.y, tile.tms_y) for tile in plan.tiles}
         self.assertIn((1, 1, 2), rows)
         self.assertIn((2, 2, 1), rows)
+
+    def test_staged_export_preserves_existing_file_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "existing.mbtiles"
+            target.write_bytes(b"prior successful export")
+
+            with self.assertRaisesRegex(RuntimeError, "render failed"):
+                with staged_mbtiles_path(target) as staged:
+                    conn = create_mbtiles_database(staged)
+                    try:
+                        conn.execute("INSERT INTO metadata VALUES (?, ?)", ("key", "val"))
+                        conn.commit()
+                    finally:
+                        conn.close()
+                    raise RuntimeError("render failed")
+
+            self.assertEqual(target.read_bytes(), b"prior successful export")
+            self.assertEqual(sorted(p.name for p in Path(tmp_dir).iterdir()), [target.name])
+
+    def test_staged_export_replaces_destination_after_success(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "existing.mbtiles"
+            target.write_bytes(b"prior successful export")
+
+            with staged_mbtiles_path(target) as staged:
+                conn = create_mbtiles_database(staged)
+                try:
+                    conn.execute("INSERT INTO metadata VALUES (?, ?)", ("name", "new"))
+                    conn.commit()
+                finally:
+                    conn.close()
+                self.assertEqual(target.read_bytes(), b"prior successful export")
+
+            with sqlite3.connect(target) as conn:
+                self.assertEqual(conn.execute("SELECT value FROM metadata").fetchone(), ("new",))
+            self.assertEqual(sorted(p.name for p in Path(tmp_dir).iterdir()), [target.name])
+
+    def test_create_database_rejects_existing_file(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "existing.mbtiles"
+            target.write_bytes(b"do not touch")
+            with self.assertRaises(FileExistsError):
+                create_mbtiles_database(target)
+            self.assertEqual(target.read_bytes(), b"do not touch")
 
     def test_database_schema_metadata_and_tile_insert(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
