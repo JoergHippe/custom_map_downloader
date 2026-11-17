@@ -16,7 +16,7 @@ try:
         QgsProject,
         QgsRectangle,
     )
-    from qgis.gui import QgsMapCanvas
+    from qgis.gui import QgsMapCanvas, QgsMapToolPan
     from qgis.PyQt.QtCore import QCoreApplication, QPoint, Qt
     from qgis.PyQt.QtTest import QTest
     from qgis.PyQt.QtWidgets import QWidget
@@ -147,6 +147,56 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
 
         self.assertEqual(self.dialog.extentGroupBox.outputCrs().authid(), "EPSG:4326")
         self.assert_rect(self.dialog._get_best_output_extent(commit=False), expected)
+
+    def test_repeated_canvas_drawing_updates_extent_each_time(self):
+        self.parent.show()
+        self.canvas.show()
+        self.dialog.show()
+        QCoreApplication.processEvents()
+
+        previous = self.dialog._extent_signature(
+            self.dialog._get_best_output_extent(commit=False), self.crs
+        )
+        viewport = self.canvas.viewport()
+        for start, end in (
+            (QPoint(100, 90), QPoint(350, 245)),
+            (QPoint(190, 130), QPoint(280, 185)),
+        ):
+            self.dialog.extentGroupBox.setOutputExtentFromDrawOnCanvas()
+            QCoreApplication.processEvents()
+            QTest.mousePress(viewport, Qt.MouseButton.LeftButton, pos=start)
+            QTest.mouseMove(viewport, pos=end, delay=10)
+            QTest.mouseRelease(viewport, Qt.MouseButton.LeftButton, pos=end)
+            QCoreApplication.processEvents()
+
+            actual = self.dialog._get_best_output_extent(commit=False)
+            signature = self.dialog._extent_signature(actual, self.crs)
+            self.assertIsNotNone(signature)
+            self.assertNotEqual(signature, previous)
+            self.assertTrue(self.dialog.isVisible())
+            previous = signature
+
+    def test_abandon_canvas_drawing_keeps_previous_extent(self):
+        """Deactivating the draw tool without dragging cancels the selection."""
+        expected = QgsRectangle(1200, 2300, 4600, 5700)
+        self.dialog.extentGroupBox.setOutputExtentFromUser(expected, self.crs)
+        self.parent.show()
+        self.canvas.show()
+        self.dialog.show()
+        QCoreApplication.processEvents()
+
+        self.dialog.extentGroupBox.setOutputExtentFromDrawOnCanvas()
+        QCoreApplication.processEvents()
+        self.assertFalse(self.dialog.isVisible())
+
+        # Switching tools deactivates QgsMapToolExtent without drawing.
+        pan_tool = QgsMapToolPan(self.canvas)
+        self.canvas.setMapTool(pan_tool)
+        QCoreApplication.processEvents()
+
+        self.assertTrue(self.dialog.isVisible())
+        self.assert_rect(self.dialog._get_best_output_extent(commit=False), expected)
+        self.canvas.unsetMapTool(pan_tool)
 
     def test_profile_restoration_uses_saved_extent(self):
         expected = QgsRectangle(1400, 2400, 4300, 5400)
