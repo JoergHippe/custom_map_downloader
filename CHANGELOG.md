@@ -11,6 +11,8 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Saved export profiles now restore the actual selected extent, not only the current canvas extent.
+- Added real QGIS 3/4 extent-dialog regression tests including map-canvas drawing and CRS changes.
 - MBTiles exports now stage SQLite data in the destination folder and replace the
   destination only after a successful commit and closed database connection.
   Existing outputs are preserved when an export fails or is cancelled.

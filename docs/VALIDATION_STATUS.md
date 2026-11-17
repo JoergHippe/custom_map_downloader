@@ -10,6 +10,21 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Ausdehnungsdialog und Profilwiederherstellung
+
+- In QGIS 3.44.15 und QGIS 4.2.3 wurde durch neue echte Dialogtests
+  nachgewiesen, dass `setCurrentExtent()` beim Profil-Reimport das
+  ausgewählte Exportrechteck **nicht** aktualisierte.
+- Der Pfad wurde auf `setOutputExtentFromUser()` umgestellt.
+- Erfolgreich getestet: Canvas-Reset, Benutzer-Ausdehnung,
+  Profilwiederherstellung, CRS-Wechsel, wiederholtes Zeichnen mit
+  Qt-Mausereignissen und Abbruch durch Werkzeugwechsel.
+- Nachweis: [CI-Lauf 44169404947](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44169404947),
+  Commit `e233a1bd1ca96b93ad5ae882e1bf8d4c456e49c4`, alle 3 Jobs bestanden.
+- Der vollständige Windows-GUI- und Locale-Test bleibt ausdrücklich offen;
+  Details und Risiken in [EXTENT_SELECTION.md](EXTENT_SELECTION.md).
+
+
 ### MBTiles-Dateisicherheit und reale Exporttests
 
 **Geprüfter Commit:** `e7604ac3cc88b3ecc8cb1b47d82112b2496037f6`  

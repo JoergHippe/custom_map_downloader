@@ -8,7 +8,7 @@ Stand: 2026-11-17. Dieses Dokument ist die Quelle für geplante QGIS-Kompatibili
 - Metadata-Baseline: QGIS >= 3.34; **QGIS 4.x noch nicht freigegeben**.
 - Der letzte belegte vollständige Windows/QGIS-Bericht stammt vom 2026-03-14 und
   deckt Änderungen aus April 2026 nicht ab.
-- Keine neue Runtime-Ausführung ist durch diese Dokumentation behauptet.
+- Linux-QGIS-3/4-Laufzeittests auf dem Entwicklungsbranch bestanden; der vollumfängliche Windows-/Webdienst-Freigabetest steht weiter aus.
 
 ## Prüfebenen
 
@@ -64,7 +64,8 @@ Der GitHub-Workflow `.github/workflows/ci.yml` nutzt explizite Docker-Tags:
 
 Jeder Job setzt `CMD_REQUIRE_QGIS=1`, prüft QGIS- und Qt-Hauptversionen,
 lädt das vollständige Plugin via `classFactory` und führt anschließend die
-lokalen Raster-Smoke-Tests, QImage-Speichertests sowie MBTiles-Erfolgs- und Abbruchtests aus. Importfehler müssen den Job abbrechen.
+lokalen Raster-Smoke-Tests, QImage-Speichertests, MBTiles-Erfolgs-/Abbruchtests
+und den echten Qt-/QGIS-Dialogtests aus. Details: [EXTENT_SELECTION.md](EXTENT_SELECTION.md). Importfehler müssen den Job abbrechen.
 Ein roter QGIS-4-Job bedeutet bis zur vollständigen Migration eine echte
 Kompatibilitätslücke, **keinen Grund, Tests zu überspringen**.
 Die Docker-Tags sind versionsfest, aber nicht auf Image-Digests fixiert;
@@ -83,3 +84,13 @@ Dateiersetzung im Erfolgsfall sowie echte QGIS-3/4-End-to-End-Szenarien mit
 lokaler Vektorebene (keine Netzabhängigkeit). Diese Garantie gilt für normale
 Prozessfehler und Abbrüche; eine Aussage zur Stromausfall-Dauerhaftigkeit
 (Filesystem-Sync) wird damit nicht getroffen.
+
+## Extent-/Dialog-Regression
+
+Die QGIS-Matrix enthält `test_extent_dialog.py` mit echtem
+`QgsMapCanvas` und synthetischen Qt-Mausereignissen. Abgedeckt sind
+Canvas-Reset, manuelle Ausdehnung über öffentliche API, Profil-Reimport,
+CRS-Wechsel, wiederholtes Zeichnen und Abbruch durch Werkzeugwechsel.
+Das ist kein Beleg für die vollständige Windows-Desktop-Interaktion oder
+für lokalisierte manuelle Texteingabe; beides bleibt Release-Gate.
+Siehe [Architektur und Historie der Ausdehnungsauswahl](EXTENT_SELECTION.md).

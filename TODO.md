@@ -6,11 +6,12 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 
 - [x] Fail-closed-Integrationstests mit echter QGIS-3/4-Runtime nachgewiesen.
 - [ ] QGIS 3/4-Kompatibilitätsmatrix auf realen Laufzeiten validieren, Qt6-Fundstellen beheben.
-- [ ] QGIS-Integrationstests nach April-Änderungen erneut durchführen (einschließlich MBTiles und Dialog).
+- [ ] QGIS-Integrationstests nach April-Änderungen vollständig durchlaufen (MBTiles und grundlegende Dialog-/Canvas-Tests automatisiert bestanden; Windows-GUI und Webdienste offen).
 - [x] MBTiles-Ausgabe atomar im Zielverzeichnis bereitstellen; Abbruch- und Ersetzungstests unter QGIS 3/4.
 - [x] QImage-Speicherkonvertierung mit eigenen NumPy-Puffern unter Qt5/Qt6 testen.
 - [ ] MBTiles-Tileplanung für sehr große Ausschnitte ohne hohe Speichervorbelegung begrenzen/streamen.
-- [ ] Komplexe QGIS-Extent-Widget-Heuristik durch öffentliche APIs ersetzen, wo möglich.
+- [x] QGIS-3/4-Dialogtests für Canvas-Reset, Profil, CRS-Wechsel und wiederholtes Zeichnen/Abbruch ergänzt; Profil-Ausdehnungsfehler behoben.
+- [ ] Interne QGIS-Extent-Feldheuristik nur nach gesondertem Windows-/Locale-GUI-Test risikobewusst vereinfachen; siehe docs/EXTENT_SELECTION.md.
 - [x] CI mit begrenztem Scope reaktiviert und grüne QGIS-3/4-Läufe nachgewiesen.
 
 - Weitere echte QGIS-End-to-End-Netztests für reproduzierbare WMS-/XYZ-Szenarien ergänzen.

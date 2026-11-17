@@ -5,7 +5,7 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 ## What It Does
 
 - exports visible QGIS layers including WMS, WMTS, XYZ, raster and vector sources
-- uses the native QGIS extent widget for extent selection
+- uses the native QGIS extent widget with [documented dialog-state safeguards](docs/EXTENT_SELECTION.md)
 - supports two resolution modes:
   - `Ground resolution (m/px)`
   - `Target scale (1:n)` for scale-dependent WMS portrayal
@@ -30,8 +30,9 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 
 ## Compatibility
 
-> QGIS 4.x compatibility has not yet been validated. Current metadata declares QGIS 3.34+;
-> do not interpret it as a QGIS 4 release claim. See [test strategy](docs/TESTING.md).
+> QGIS 4.2.3 passes basic Linux integration and extent-dialog tests, but full
+> QGIS 4 compatibility (notably Windows GUI and web services) is not yet released.
+> Metadata currently declares QGIS 3.34+. See [test strategy](docs/TESTING.md).
 
 - supported QGIS baseline: `3.34+`
 - developed and repeatedly validated with real Windows/QGIS runtime checks
