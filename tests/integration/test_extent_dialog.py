@@ -85,6 +85,26 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         for method in ("xMinimum", "yMinimum", "xMaximum", "yMaximum"):
             self.assertAlmostEqual(getattr(actual, method)(), getattr(expected, method)(), places=4)
 
+    def test_internal_coordinate_mapping_does_not_alias_fields(self):
+        """Document QGIS child-widget mapping without assuming private names."""
+        self.dialog._cache_extent_line_edits()
+        mapping = self.dialog._extent_line_edits
+        details = {
+            slot: (
+                widget.objectName(),
+                widget.toolTip(),
+                widget.text(),
+            ) if widget is not None else None
+            for slot, widget in mapping.items()
+        }
+        print(f"Extent line-edit resolution: {details}")
+        resolved = [widget for widget in mapping.values() if widget is not None]
+        self.assertEqual(
+            len(set(id(widget) for widget in resolved)),
+            len(resolved),
+            "One private QGIS coordinate field was assigned to multiple axes.",
+        )
+
     def test_canvas_reset_replaces_user_extent(self):
         self.dialog.extentGroupBox.setOutputExtentFromUser(
             QgsRectangle(9000, 10000, 11000, 12000), self.crs
