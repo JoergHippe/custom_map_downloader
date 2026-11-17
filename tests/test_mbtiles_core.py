@@ -114,10 +114,9 @@ class MbtilesCoreTests(unittest.TestCase):
             connection = Mock()
             connection.executescript.side_effect = sqlite3.OperationalError("disk full")
 
-            with patch(
-                "custom_map_downloader.core.mbtiles.sqlite3.connect",
-                return_value=connection,
-            ):
+            # Patch the shared sqlite3 module directly; the unit-test QGIS
+            # stubs do not always attach submodules as package attributes.
+            with patch.object(sqlite3, "connect", return_value=connection):
                 with self.assertRaises(sqlite3.OperationalError):
                     create_mbtiles_database(target)
 
