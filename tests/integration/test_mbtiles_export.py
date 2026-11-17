@@ -4,6 +4,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
@@ -100,7 +101,9 @@ class MbtilesExportIntegrationTest(unittest.TestCase):
         result = GeoTiffExporter().export(self._params())
         self.assertEqual(result, str(self.target))
 
-        with sqlite3.connect(self.target) as conn:
+        # sqlite3.Connection.__exit__ commits but does not close the handle.
+        # On Windows that handle would lock the file during temp-dir cleanup.
+        with closing(sqlite3.connect(self.target)) as conn:
             tiles = conn.execute("SELECT tile_data FROM tiles").fetchall()
             metadata = dict(conn.execute("SELECT name, value FROM metadata"))
         self.assertEqual(len(tiles), 1)

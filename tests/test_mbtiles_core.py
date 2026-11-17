@@ -1,6 +1,7 @@
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from itertools import islice
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -151,7 +152,7 @@ class MbtilesCoreTests(unittest.TestCase):
                     conn.close()
                 self.assertEqual(target.read_bytes(), b"prior successful export")
 
-            with sqlite3.connect(target) as conn:
+            with closing(sqlite3.connect(target)) as conn:
                 self.assertEqual(conn.execute("SELECT value FROM metadata").fetchone(), ("new",))
             self.assertEqual(sorted(p.name for p in Path(tmp_dir).iterdir()), [target.name])
 
