@@ -10,7 +10,7 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 - [x] MBTiles-Ausgabe atomar im Zielverzeichnis bereitstellen; Abbruch- und Ersetzungstests unter QGIS 3/4.
 - [x] QImage-Speicherkonvertierung mit eigenen NumPy-Puffern unter Qt5/Qt6 testen.
 - [x] MBTiles-Tileplanung speicherschonend iterieren und sehr große Pläne ohne Vorbelegung testen.
-- [ ] Nutzergerechte Warnung bzw. explizite Bestätigung bei extrem hohen MBTiles-Kachelzahlen prüfen.
+- [x] MBTiles-Aufwandswarnung und ausdrückliche Bestätigung bei extremen Kachelzahlen oder Dateigrößenschätzungen implementiert und QGIS-3/4-getestet.
 - [x] QGIS-3/4-Dialogtests für Canvas-Reset, Profil, CRS-Wechsel und wiederholtes Zeichnen/Abbruch ergänzt; Profil-Ausdehnungsfehler behoben.
 - [x] Mehrdeutige QGIS-Extent-Feldheuristik durch exakte, fehlertolerante Zuordnung ersetzt; direkte QLineEdit-Schreibzugriffe entfernt.
 - [ ] Verbleibende QGIS-Extent-Fallbacks (`currentExtent()` und Textparsing) sowie Signal-/Polling-Bedarf nach Windows-/Locale-GUI-Tests bewerten; siehe docs/EXTENT_SELECTION.md.

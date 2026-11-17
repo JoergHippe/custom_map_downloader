@@ -123,4 +123,31 @@ Die QGIS-3/4-Matrix prüft weiterhin reale MBTiles-End-to-End-Exporte.
 
 **Grenze:** Streaming begrenzt nur den Speicherbedarf des *Plans*.
 Rechenzeit, Dateigröße und Renderaufwand sehr großer Exporte bleiben hoch;
-ein separater Größen-/Dauergrenzwert ist noch zu bewerten.
+eine harte Größen- oder Zeitbegrenzung ist derzeit nicht vorgesehen.
+
+## MBTiles-Aufwandswarnung und Bestätigung
+
+Vor dem Start der MBTiles-Ausgabe berechnet die GUI die tatsächlichen
+WGS84-Grenzen mit demselben Transformationspfad wie der Exporter. Der
+Kachelplan wird nur gezählt, nicht materialisiert. Für die komprimierte
+PNG-Datenmenge wird ein **grober Durchschnitt von 50 KiB/Kachel** angesetzt.
+
+| Stufe | Kachelzahl oder geschätzte Datenmenge | Verhalten |
+| --- | --- | --- |
+| Normal | unter 10.000 und unter 1 GiB | gewöhnliche Exportbestätigung |
+| Groß | ab 10.000 oder ab 1 GiB | deutlicher Hinweis in der MBTiles-Vorschau |
+| Extrem | ab 100.000 oder ab 10 GiB | zusätzliche ausdrückliche Ja/Nein-Bestätigung |
+
+Die Stufengrenzen sind als Konstanten in `core/mbtiles.py` definiert,
+keine technischen Limits und keine Aussage zur tatsächlich benötigten
+Dauer oder Dateigröße. Bei `extreme` ist **Nein** vorausgewählt.
+Diese Bestätigung lässt sich auch dann nicht überspringen, wenn
+`CustomMapDownloader/confirm_export` für normale Exportdialoge
+deaktiviert ist. Der `Do not ask again`-Schalter wird in diesem Fall
+nicht angeboten. Für normale Exporte bleibt das bisherige Verhalten
+erhalten.
+
+Der Regressionsumfang enthält Unit-Tests an beiden Schwellen und
+QGIS-3/4-Integrationstests für die obligatorische Bestätigung und die
+weiterhin gültige Deaktivierung normaler Bestätigungen.
+Eine große Datenmenge allein verbietet den Export ausdrücklich nicht.

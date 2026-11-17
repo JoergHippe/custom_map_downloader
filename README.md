@@ -68,7 +68,8 @@ Some WMS services change portrayal depending on scale. For those services, `Targ
 - `GeoTIFF`: internal georeferencing plus world file
 - `PNG` / `JPEG`: world file plus `.prj` sidecar
 - `VRT`: tiled GeoTIFF output plus a `.vrt` mosaic
-- `MBTiles`: SQLite tile pyramid with PNG tiles in Web Mercator (`EPSG:3857`)
+- `MBTiles`: SQLite tile pyramid with PNG tiles in Web Mercator
+  - shows estimated tile count/data volume before export; extremely large exports require explicit confirmation (`EPSG:3857`)
 
 ### MBTiles
 

@@ -7,6 +7,9 @@ The format follows a pragmatic Keep a Changelog style.
 ## [0.5.0] - Unreleased (working version)
 
 ### Added
+- MBTiles preflight warnings based on estimated tile count and PNG data size;
+  very large exports require explicit one-time confirmation even when ordinary
+  confirmation prompts are disabled. No hard export size limit is imposed.
 - MBTiles export with configurable zoom range, tile size, padding, auto zoom and estimates (April 2026)
 - unified output-file selection for raster and MBTiles exports
 

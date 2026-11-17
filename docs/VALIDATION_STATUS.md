@@ -10,6 +10,24 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### MBTiles-Aufwandswarnung und ausdrückliche Bestätigung
+
+**Code-Commit:** `f0d1d6fa13ed076ee65b69f7f0ceb691c947443b`  
+**GitHub Actions:** [Lauf 44176074115](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44176074115)
+
+- **3/3 Jobs PASS**: Python-Qualität/Paketprüfung sowie QGIS 3.44.15
+  und QGIS 4.2.3.
+- Neue Unit-Tests zu den Größenstufen und zum Dateivolumen.
+- Neue echte QGIS-Integrationstests: Eine extreme, aber mathematisch
+  gültige Exportplanung erfordert ausdrücklich `Yes` auch bei
+  deaktivierten normalen Bestätigungen; `No` verwirft den Vorgang.
+- Bestätigungsdialog ist standardmäßig auf `No` gesetzt. Die normale
+  Bestätigungsoption bleibt für kleine Exporte abschaltbar.
+- **Keine automatische Größenbeschränkung**: Die Schätzung ist bewusst
+  als Warnwert und nicht als Speicherplatz- oder Zeitgarantie zu verstehen.
+
+
+
 ### Speicherarme MBTiles-Tileplanung
 
 **Geprüfter Commit:** `1dca7393cbe52d98e8f4f369044b3d92e1456a41`  
