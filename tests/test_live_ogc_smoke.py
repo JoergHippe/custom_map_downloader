@@ -18,6 +18,7 @@ class LiveServiceSmokeTests(unittest.TestCase):
         candidate = load_scenario(CONFIG, "bkg_dgm200_relief_tif", 2_000_000)
         self.assertEqual(candidate["provider"], "wms")
         self.assertLessEqual(candidate["width_px"] * candidate["height_px"], 2_000_000)
+        self.assertEqual(len(candidate["reference_sha256"]), 64)
 
     def test_unknown_scenario_is_not_silently_accepted(self):
         with self.assertRaises(ValueError):

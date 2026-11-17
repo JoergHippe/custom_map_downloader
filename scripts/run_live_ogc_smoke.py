@@ -47,7 +47,13 @@ def load_scenario(config: dict, name: str, max_pixels: int) -> dict:
         raise ValueError(f"Requested {width} x {height} pixels exceeds limit {max_pixels}")
     if scenario.get("create_vrt", source.get("create_vrt", False)):
         raise ValueError(f"Use a direct raster scenario for live smoke: {name}")
-    return {"name": name, "width_px": width, "height_px": height, "provider": provider}
+    return {
+        "name": name,
+        "width_px": width,
+        "height_px": height,
+        "provider": provider,
+        "reference_sha256": scenario.get("expected_sha256"),
+    }
 
 
 def check_live_report(rows: object, scenario: str) -> str:
@@ -121,8 +127,24 @@ def main() -> int:
         summary["sha256"] = check_live_report(
             json.loads(report_path.read_text(encoding="utf-8")), args.scenario
         )
+        reference = summary.get("reference_sha256")
+        if not reference:
+            summary["baseline_status"] = "untracked"
+        elif summary["sha256"] == reference:
+            summary["baseline_status"] = "match"
+        else:
+            summary["baseline_status"] = "drift"
+        summary["release_gate"] = (
+            "pass" if summary["baseline_status"] == "match" else "review_required"
+        )
         summary["result"] = "ok"
-        print(f"LIVE WMS PASS: {args.scenario}, sha256={summary['sha256']}")
+        print(f"LIVE WMS EXPORT PASS: {args.scenario}, sha256={summary['sha256']}")
+        print(f"REFERENCE STATUS: {summary['baseline_status']}")
+        if summary["release_gate"] != "pass":
+            print(
+                "RELEASE REVIEW REQUIRED: reference hash does not match or is absent",
+                file=sys.stderr,
+            )
         return 0
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
         summary["error"] = str(exc)
