@@ -15,6 +15,8 @@ from custom_map_downloader.core.mbtiles import (  # noqa: E402
     count_tiles,
     create_mbtiles_database,
     insert_tile,
+    mbtiles_export_risk,
+    estimate_mbtiles_size,
     staged_mbtiles_path,
     tile_bounds_4326,
     tile_range_for_bounds,
@@ -64,6 +66,25 @@ class MbtilesCoreTests(unittest.TestCase):
         rows = {(tile.x, tile.y, tile.tms_y) for tile in plan.tiles}
         self.assertIn((1, 1, 2), rows)
         self.assertIn((2, 2, 1), rows)
+
+    def test_advisory_export_risk_thresholds(self):
+        """Large exports are warnings, not hard errors."""
+        gib = 1024**3
+        cases = (
+            (9_999, 0, "normal"),
+            (10_000, 0, "large"),
+            (100_000, 0, "extreme"),
+            (100, gib, "large"),
+            (100, 10 * gib, "extreme"),
+        )
+        for tiles, bytes_estimate, expected in cases:
+            with self.subTest(tiles=tiles, estimated_bytes=bytes_estimate):
+                self.assertEqual(
+                    mbtiles_export_risk(tiles, bytes_estimate), expected
+                )
+
+    def test_estimated_size_matches_count(self):
+        self.assertEqual(estimate_mbtiles_size(10_000), 10_000 * 50 * 1024)
 
     def test_tile_plan_is_lazy_and_repeatable(self):
         bounds = (-180.0, -85.0, 180.0, 85.0)
