@@ -7,6 +7,10 @@ The format follows a pragmatic Keep a Changelog style.
 ## [0.5.0] - Unreleased (working version)
 
 ### Added
+- Automated native Windows QGIS 3/4 CI with real Qt GUI interaction,
+  raster, MBTiles and local WMS/WMTS end-to-end tests.
+- Reproducible loopback OGC test services for WMS GetCapabilities/GetMap
+  and WMTS GetCapabilities/GetTile; no external service dependency in CI.
 - MBTiles preflight warnings based on estimated tile count and PNG data size
   (including the configurable tile dimensions);
   very large exports require explicit one-time confirmation even when ordinary
@@ -15,6 +19,8 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Explicitly close SQLite reader connections in MBTiles integration tests:
+  Windows otherwise locks the file and prevents temporary-directory cleanup.
 - Fixed coordinate field aliasing in the QgsExtentGroupBox fallback: X maximum
   no longer resolves to the Y maximum editor.
 - Removed guessed, language-sensitive field matching and direct writes into
@@ -37,7 +43,9 @@ The format follows a pragmatic Keep a Changelog style.
 - Original self-hosted Windows Actions archived in October 2026; new hosted CI enabled in November.
 
 ### Validation
-- The last recorded full QGIS/Windows validation dates from 2026-03-14 and predates these changes.
+- Native Windows/QGIS 3.44.15 and 4.2.3 integration tests passed on 2026-11-17.
+- The last **full official public-service and official-installer** release validation
+  dates from 2026-03-14; these newer CI tests do not replace it.
 - This version is NOT marked as freshly release-validated; see docs/VALIDATION_STATUS.md.
 
 ## [0.4.0] - 2026-03-14

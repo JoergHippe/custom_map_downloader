@@ -10,6 +10,29 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Native Windows-QGIS 3/4 und lokale WMS-/WMTS-Server
+
+**Geprüfter Commit:** `711b72a390f4b8086a63bba3517f80f757b6dd84`  
+**Windows Actions:** [Lauf 44181305999](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44181305999)  
+**Linux Actions:** [Lauf 44179443697](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44179443697)
+
+- **Windows: 2/2 Jobs PASS**: QGIS 3.44.15 und QGIS 4.2.3
+  aus conda-forge, jeweils 24 reale Qt-/QGIS-Integrationstests.
+- **Linux: 3/3 Jobs PASS** für den geprüften WMS-/WMTS-Code.
+- WMS 1.3.0: QGIS lädt GetCapabilities und GetMap vom lokalen
+  HTTP-Dienst und exportiert ein geprüftes GeoTIFF.
+- WMTS 1.0.0: QGIS interpretiert den lokalen TileMatrixSet-Katalog,
+  lädt GetTile-Kacheln und exportiert ein geprüftes GeoTIFF.
+- Windows-spezifischer Testfehler behoben: Explizites Schließen
+  von SQLite-Leseverbindungen, damit MBTiles-Dateien ohne
+  Dateisperre gelöscht werden können.
+- Die Tests sind **netzunabhängig** und ersetzen ausdrücklich
+  nicht die amtliche WMS-/WMTS-Hash-/Maßstabsmatrix.
+- Die offizielle Windows-OSGeo4W-/Standalone-Distribution wurde
+  mit diesem neuen CI-Lauf noch nicht gesondert abgenommen.
+
+
+
 ### MBTiles-Aufwandswarnung und ausdrückliche Bestätigung
 
 **Geprüfter Code-Commit:** `985e7dc0be79761ec8790afee1748321c5c9825b`  

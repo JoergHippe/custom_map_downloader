@@ -30,12 +30,14 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 
 ## Compatibility
 
-> QGIS 4.2.3 passes basic Linux integration and extent-dialog tests, but full
-> QGIS 4 compatibility (notably Windows GUI and web services) is not yet released.
-> Metadata currently declares QGIS 3.34+. See [test strategy](docs/TESTING.md).
+> QGIS 3.44.15 and 4.2.3 pass automated native Windows and Linux integration tests,
+> including Qt dialogs, local WMS/WMTS, raster and MBTiles export. Full release
+> acceptance against official OSGeo4W/Desktop installations and public services is
+> still outstanding. Metadata declares QGIS 3.34+ without a QGIS 4 release claim.
+> See [test strategy](docs/TESTING.md).
 
 - supported QGIS baseline: `3.34+`
-- developed and repeatedly validated with real Windows/QGIS runtime checks
+- tested on GitHub-hosted native Windows/QGIS 3 and 4 (conda-forge) and Linux/QGIS 3 and 4 (Docker)
 - public WMS/XYZ services can still change portrayal, availability or response behavior upstream
 - scale-dependent web-layer validation is covered by the maintained Windows/QGIS `scale_matrix`
 - for scale-sensitive exports, prefer a projected CRS with meter units

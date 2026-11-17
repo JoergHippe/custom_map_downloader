@@ -25,6 +25,19 @@ Die lokale Smoke-Suite deckt aktuell ab:
 - kleiner Export mit Reprojektion zwischen Render-CRS und Output-CRS
 - optional derselbe Smoke-Pfad gegen den deployten Plugin-Stand im QGIS-Profil
 
+## Deterministische lokale WMS-/WMTS-Tests (GitHub Actions)
+
+Die Tests `test_local_wms.py` und `test_local_wmts.py` starten
+eigene HTTP-Server auf `127.0.0.1` und validieren reale QGIS-Provider,
+GetCapabilities/GetMap bzw. GetCapabilities/GetTile und GeoTIFF-Export.
+Sie benötigen **keine öffentlichen Webdienste**.
+
+Die Workflows `.github/workflows/ci.yml` (Linux QGIS 3/4)
+und `.github/workflows/windows-qgis.yml` (Windows QGIS 3/4 aus conda-forge)
+führen diese Tests automatisch bei PRs aus. Die archivierte
+Self-Hosted-Windows-CI mit amtlichen Live-Diensten bleibt separat;
+deren historische Ergebnisse ersetzen keine aktuellen Live-Tests.
+
 ## Netzbasierte Szenarien (WMS/XYZ)
 
 - Siehe `tests/integration/config.json` für Quellen (`sources`) und Szenarien (`scenarios`).
@@ -63,12 +76,12 @@ Die lokale Smoke-Suite deckt aktuell ab:
 Der Batch wechselt automatisch ins Repo, wählt nach Möglichkeit `python-qgis.bat`, prüft `qgis.core` vorab und gibt den Rückgabecode der Tests aus. Keine langen Pfade nötig.
 Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e2e` deployt das Plugin zuerst in das gewählte QGIS-Profil und testet anschließend bewusst den deployten Stand.
 
-Für die Windows-Self-Hosted-CI läuft die Scale-Matrix zusätzlich isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
+Im historischen Self-Hosted-Windows-Workflow lief die Scale-Matrix isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
 Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich optionale Reservefälle gezielt manuell ausführen.
 Die aktuelle Pflichtmatrix wurde mehrfach auf echter Windows/QGIS-Runtime mit identischen Hashes verifiziert.
 Für die Feineingrenzung eines einzelnen Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Standardmäßig arbeitet der Probe-Runner gegen `scale_matrix`.
 `expected_hashes` sind für Pflichtfälle verbindlich. In `experimental_scale_matrix` dürfen sie ebenfalls gepflegt werden, um Stil- oder Serveränderungen sichtbar zu machen.
-`scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der Windows-CI-Workflow hängt den Markdown-Report zusätzlich an die Step Summary.
+`scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der archivierte Windows-CI-Workflow hängte den Markdown-Report an die Step Summary.
 `scripts/check_scale_matrix_report.py` prüft den JSON-Report anschließend als kompaktes Gate: für `scale_matrix` ist nur `ok` erlaubt, für optionale Experimental-Reports zusätzlich `untracked`.
 Für isolierte Katalogläufe ohne Maßstabsmatrix gibt es zusätzlich `scripts/run_windows_qgis_scenarios.py`, z. B. `python scripts\\run_windows_qgis_scenarios.py --group official_webmaps_catalog`.
 Für diesen Katalog gibt es außerdem `scripts/summarize_network_catalog.py` und `scripts/check_network_catalog_report.py`, sodass auch der breite amtliche Dienstmix hashbasiert als Report/Gate ausgewertet werden kann.

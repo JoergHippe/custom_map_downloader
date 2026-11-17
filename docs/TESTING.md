@@ -8,7 +8,9 @@ Stand: 2026-11-17. Dieses Dokument ist die Quelle für geplante QGIS-Kompatibili
 - Metadata-Baseline: QGIS >= 3.34; **QGIS 4.x noch nicht freigegeben**.
 - Der letzte belegte vollständige Windows/QGIS-Bericht stammt vom 2026-03-14 und
   deckt Änderungen aus April 2026 nicht ab.
-- Linux-QGIS-3/4-Laufzeittests auf dem Entwicklungsbranch bestanden; der vollumfängliche Windows-/Webdienst-Freigabetest steht weiter aus.
+- QGIS 3.44.15 und 4.2.3: echte Linux- und Windows-CI mit Qt-Dialog und
+  lokalen WMS-/WMTS-Exporten bestanden. Amtliche Live-Dienste und offizielle
+  Windows-Desktop-Distribution bleiben separate Release-Freigabekriterien.
 
 ## Prüfebenen
 
@@ -17,8 +19,10 @@ Stand: 2026-11-17. Dieses Dokument ist die Quelle für geplante QGIS-Kompatibili
 | Statisch | Python 3.12, Ruff, Black | Pflicht bei PR und Push |
 | Unit | Python ohne QGIS, unittest mit Stubs | Pflicht bei PR und Push |
 | Integration | QGIS 3 und 4, echte Python-Bindings, ohne Netz | Pflicht vor 4.x-Freigabe |
-| Windows GUI | Lokale QGIS-Installation, Qt-Dialog/Canvas | Pflicht vor Release |
-| Netzwerk | Reproduzierbare amtliche WMS-Szenarien | Pflicht vor Release, Befund prüfen |
+| Windows CI | GitHub-gehostete QGIS-3/4-conda-Umgebungen mit echten Qt-/QGIS-Tests | Pflicht bei PR |
+| Lokale OGC-Tests | Reproduzierbare WMS- und WMTS-HTTP-Server unter Windows/Linux | Pflicht bei PR |
+| Windows Desktop | Offizielle QGIS-/OSGeo4W-Installation mit sichtbarer GUI | Release-Abnahme |
+| Amtliche Netztests | Öffentliche WMS-/WMTS-Dienste und Maßstabs-/Hashmatrix | Release-Abnahme, Befund prüfen |
 
 ## Fail-closed für echte QGIS-Testläufe
 
@@ -51,9 +55,14 @@ bestehenden `run_integration_tests.bat`-Runner benutzen.
 
 ## CI-Strategie
 
-GitHub-gehostete Linux-Runs für statische Checks, Unit-Tests und Package-Prüfung;
-QGIS-Linux-Matrix mit offiziellen QGIS-Docker-Images für 3.x und 4.x. Die archivierte selbstgehostete Windows-CI bleibt vorerst inaktiv;
-Windows-E2E werden vor Releases lokal ausgeführt. Kein automatischer Release.
+GitHub-gehostete Linux-Runs für Python/Package-Prüfung und eine
+QGIS-3/4-Docker-Matrix. Zusätzlich läuft
+`.github/workflows/windows-qgis.yml` als native Windows-Matrix mit
+QGIS 3.44.15 (`conda-forge/label/qgis_ltr`) und QGIS 4.2.3
+(`conda-forge`) und Python 3.12.
+Die frühere **self-hosted** Windows-CI bleibt archiviert;
+die neue Windows-CI ist unabhängig davon nutzbar.
+Keine automatische Release-Veröffentlichung.
 
 ## Automatische QGIS-Runtime-Matrix
 
@@ -152,3 +161,35 @@ Der Regressionsumfang enthält Unit-Tests an beiden Schwellen und
 QGIS-3/4-Integrationstests für die obligatorische Bestätigung und die
 weiterhin gültige Deaktivierung normaler Bestätigungen.
 Eine große Datenmenge allein verbietet den Export ausdrücklich nicht.
+
+## Automatische Windows-QGIS- und lokale OGC-Diensttests
+
+Nachweis: [Windows Actions #44181305999](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44181305999)
+auf Commit `711b72a390f4b8086a63bba3517f80f757b6dd84`:
+**2/2 Windows-Matrix-Jobs PASS** (QGIS 3.44.15 und QGIS 4.2.3).
+
+Die Windows-Matrix führt pro QGIS-Version 24 echte Integrationstests aus:
+12 Ausdehnungsdialog-Tests mit Qt-Maus- und Tastaturereignissen,
+2 QImage-, 4 Raster-, 2 MBTiles-Export-, 2 MBTiles-Preflight-,
+1 WMS- und 1 WMTS-Test.
+
+`test_local_wms.py` startet einen lokalen HTTP-Server, liefert
+WMS-1.3.0-`GetCapabilities` und `GetMap` und prüft den tatsächlich
+durch den QGIS-WMS-Provider erzeugten GeoTIFF-Inhalt.
+
+`test_local_wmts.py` liefert WMTS-1.0.0-`GetCapabilities` mit
+`TileMatrixSet` und eine REST-`GetTile`-Kachel. Das ist ein
+**echter WMTS-Provider-Test** und kein bloßer XYZ-Ersatz.
+
+Sämtliche Testdienste binden nur an `127.0.0.1`; weder Amtliche
+Webdienste noch API-Schlüssel, DNS oder Internetzugang werden dafür
+benötigt. Für die **release-relevanten echten amtlichen Quellen**
+bleiben die bestehenden `ALLOW_INTEGRATION_NETWORK=1`-Szenarien
+separat und bewusst opt-in.
+
+Ein zuvor nur unter Windows sichtbarer Lock wurde ebenfalls behoben:
+`sqlite3.Connection` wird in den Test-Lesezugriffen explizit
+geschlossen; der Context-Manager allein schließt die Verbindung nicht.
+Ein grüner CI-Test bedeutet native Windows-QGIS-Funktionsfähigkeit,
+aber nicht automatisch Abnahme der offiziellen OSGeo4W-/Standalone-
+Desktop-Installation mit sichtbarer Benutzerinteraktion.
