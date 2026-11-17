@@ -53,9 +53,19 @@ def inspect_raster(path: str | Path) -> dict[str, object]:
                 if raw is None:
                     raise RuntimeError(f"Unable to read band {index}, row {y}")
                 digest.update(raw)
+            # Decode actual samples for min/max/mean/stddev as well. Alpha
+            # statistics expose fully transparent exports that otherwise have
+            # perfectly valid GeoTIFF headers and nonzero RGB bytes.
+            statistics = band.GetStatistics(False, True)
             band_details.append(
                 {
                     "index": index,
+                    "statistics": {
+                        "min": statistics[0],
+                        "max": statistics[1],
+                        "mean": statistics[2],
+                        "stddev": statistics[3],
+                    },
                     "data_type": data_type,
                     "color_interpretation": gdal.GetColorInterpretationName(
                         band.GetColorInterpretation()
