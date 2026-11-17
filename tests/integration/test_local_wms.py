@@ -18,7 +18,7 @@ from tests.integration.qgis_test_support import ensure_plugin_import_path, init_
 try:
     from osgeo import gdal
     from qgis.core import QgsCoordinateReferenceSystem, QgsProject, QgsRasterLayer
-    from qgis.PyQt.QtCore import QByteArray, QBuffer, QIODevice
+    from qgis.PyQt.QtCore import QBuffer, QByteArray, QIODevice
     from qgis.PyQt.QtGui import QColor, QImage
 
     ensure_plugin_import_path()
