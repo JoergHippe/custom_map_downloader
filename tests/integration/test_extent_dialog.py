@@ -10,7 +10,12 @@ import unittest
 from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
 try:
-    from qgis.core import QgsCoordinateReferenceSystem, QgsProject, QgsRectangle
+    from qgis.core import (
+        QgsCoordinateReferenceSystem,
+        QgsCoordinateTransform,
+        QgsProject,
+        QgsRectangle,
+    )
     from qgis.gui import QgsMapCanvas
     from qgis.PyQt.QtCore import QCoreApplication, QPoint, Qt
     from qgis.PyQt.QtTest import QTest
@@ -84,11 +89,9 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         self.dialog.extentGroupBox.setOutputExtentFromUser(
             QgsRectangle(9000, 10000, 11000, 12000), self.crs
         )
+        expected = QgsRectangle(self.canvas.extent())
         self.dialog.reset_extent_to_canvas()
-        self.assert_rect(
-            self.dialog._get_best_output_extent(commit=False),
-            self.dialog.extentGroupBox.outputExtent(),
-        )
+        self.assert_rect(self.dialog._get_best_output_extent(commit=False), expected)
 
     def test_manually_selected_extent_is_used_for_profile(self):
         expected = QgsRectangle(1200, 2300, 4600, 5700)
@@ -130,6 +133,20 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             "Drawing on the map must replace the previously selected extent.",
         )
         self.assertTrue(self.dialog.isVisible())
+
+    def test_output_crs_change_transforms_selected_extent(self):
+        original = QgsRectangle(1200, 2300, 4600, 5700)
+        self.dialog.extentGroupBox.setOutputExtentFromUser(original, self.crs)
+
+        geographic = QgsCoordinateReferenceSystem("EPSG:4326")
+        expected = QgsCoordinateTransform(
+            self.crs, geographic, self.project
+        ).transformBoundingBox(original)
+        self.dialog.mQgsProjectionSelectionWidget.setCrs(geographic)
+        QCoreApplication.processEvents()
+
+        self.assertEqual(self.dialog.extentGroupBox.outputCrs().authid(), "EPSG:4326")
+        self.assert_rect(self.dialog._get_best_output_extent(commit=False), expected)
 
     def test_profile_restoration_uses_saved_extent(self):
         expected = QgsRectangle(1400, 2400, 4300, 5400)
