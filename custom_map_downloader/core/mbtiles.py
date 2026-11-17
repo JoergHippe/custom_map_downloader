@@ -8,8 +8,8 @@ import math
 import os
 import sqlite3
 import tempfile
-from contextlib import contextmanager
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
