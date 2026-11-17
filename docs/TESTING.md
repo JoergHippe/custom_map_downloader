@@ -193,3 +193,26 @@ geschlossen; der Context-Manager allein schließt die Verbindung nicht.
 Ein grüner CI-Test bedeutet native Windows-QGIS-Funktionsfähigkeit,
 aber nicht automatisch Abnahme der offiziellen OSGeo4W-/Standalone-
 Desktop-Installation mit sichtbarer Benutzerinteraktion.
+
+## Amtliche Live-WMS-Smoke-Tests (opt-in)
+
+Der getrennte Workflow `.github/workflows/live-ogc.yml` kontaktiert
+nur nach ausdrücklicher Aktivierung einen öffentlichen WMS-Dienst.
+Über `workflow_dispatch` stehen `bkg_dgm200_relief_tif`,
+`basemap_gray_tif` und `nrw_dtk_color_tif` zur Auswahl.
+Vor einem Merge kann ein expliziter PR-Body-Marker wie
+`[run-live-wms:basemap_gray_tif]` den Test einmalig auslösen.
+Ohne Marker starten keine externen Dienste auf PR-Änderungen.
+
+`scripts/run_live_ogc_smoke.py` führt exakt einen vorhandenen WMS-Test
+in einem QGIS-Unterprozess aus, mit maximal 2 Mio. Pixeln und
+240 Sekunden Laufzeit. Ein ungültiger/übersprungener Dienst,
+fehlender Ergebnisbericht oder Exportfehler führt zu einem Fehlschlag.
+
+**Wichtig:** Technischer Export (`result=ok`) und Freigabe-Baseline
+(`baseline_status=match|drift|untracked`) sind zwei verschiedene
+Prüfergebnisse. Bei Hash-Abweichungen steht
+`release_gate=review_required`; Referenzwerte werden niemals
+automatisch überschrieben. TIFF-Metadaten und Dienständerungen können
+Dateihashes beeinflussen. Die vollständige amtliche Maßstabs-/Hashmatrix
+und ein echter amtlicher WMTS-Live-Test bleiben gesonderte Release-Gates.

@@ -7,6 +7,8 @@ The format follows a pragmatic Keep a Changelog style.
 ## [0.5.0] - Unreleased (working version)
 
 ### Added
+- Explicitly opt-in official WMS smoke workflow with isolated, time-bounded
+  service checks and separate export-versus-reference-hash reporting.
 - Automated native Windows QGIS 3/4 CI with real Qt GUI interaction,
   raster, MBTiles and local WMS/WMTS end-to-end tests.
 - Reproducible loopback OGC test services for WMS GetCapabilities/GetMap

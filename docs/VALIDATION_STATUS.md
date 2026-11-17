@@ -10,6 +10,33 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Amtliche Live-WMS-Tests, 17.11.2026
+
+Alle drei amtlichen WMS-Szenarien exportierten unter QGIS 3.44.15 und
+QGIS 4.2.3 erfolgreich. Je Dienst stimmen die **neuen** Dateihashes
+zwischen beiden Versionen exakt überein.
+
+| Dienst | Ausgabepixel | Alter Hash (Präfix) | Neuer Hash (Präfix) | Status |
+| --- | ---: | --- | --- | --- |
+| BKG DGM200 Relief | 200 × 200 | `a03d06bd` | `a03d06bd` | Referenz bestätigt |
+| basemap.de Grau | 1000 × 1000 | `60f9f19c` | `6b6214a5` | Review erforderlich |
+| NRW DTK Farbe | 1000 × 1000 | `aac68ebe` | `8cfe2e93` | Review erforderlich |
+
+Nachweise: [BKG #44183991013](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44183991013),
+[basemap.de #44184326655](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44184326655),
+[NRW #44184619733](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44184619733).
+
+**Keine Baselines aktualisiert.** Eine Hash-Differenz kann durch
+GeoTIFF-/GDAL-Metadaten oder geänderte Karteninhalte entstehen.
+Sie beweist für sich genommen keinen Pluginfehler, ist aber ein offenes
+Release-Gate. Die komplette amtliche Maßstabsmatrix und amtliche WMTS
+sind durch diese drei WMS-Smokes nicht abgedeckt.
+
+Der neue Runner trennt technischen Exportstatus von Referenzstatus
+und dokumentiert `release_gate=review_required` bei Abweichungen.
+
+
+
 ### Native Windows-QGIS 3/4 und lokale WMS-/WMTS-Server
 
 **Geprüfter Commit:** `711b72a390f4b8086a63bba3517f80f757b6dd84`  

@@ -19,7 +19,9 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 - [x] CI mit begrenztem Scope reaktiviert und grüne QGIS-3/4-Läufe nachgewiesen.
 
 - [x] Reproduzierbare WMS-/WMTS-End-to-End-Tests mit lokalen HTTP-OGC-Diensten unter Windows/Linux ergänzt.
-- [ ] Getrennte opt-in Prüfung der realen amtlichen WMS-/WMTS-Dienste und Hash-/Maßstabsbaselines.
+- [x] Drei verschiedene amtliche WMS-Live-Szenarien unter QGIS 3/4 ausgeführt (BKG, basemap.de, NRW).
+- [ ] Zwei Dateihash-Abweichungen (basemap.de, NRW) anhand Bildinhalt/Metadaten untersuchen; alte Baselines beibehalten.
+- [ ] Amtliche Maßstabs-/Hash-Matrix vollständig erneut prüfen; amtlichen WMTS-Live-Testfall ergänzen.
 - Export-Diagnostik optional noch stärker in der UI auswertbar machen.
 - Release-Version und Changelog vor der nächsten Veröffentlichung sauber pflegen.
 
