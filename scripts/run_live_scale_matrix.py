@@ -67,8 +67,10 @@ def check_case_report(case: dict, payload: object) -> dict:
         if (item.get("width_px"), item.get("height_px")) != case["dimensions"][label]:
             raise ValueError(f"{case['name']} [{label}]: raster dimensions incorrect")
         digest = item.get("sha256")
-        if not isinstance(digest, str) or len(digest) != 64 or any(
-            char not in "0123456789abcdef" for char in digest.lower()
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(char not in "0123456789abcdef" for char in digest.lower())
         ):
             raise ValueError(f"{case['name']} [{label}]: invalid SHA-256")
         labels[label] = item
@@ -84,7 +86,9 @@ def run_matrix(matrix_key: str, report_dir: Path, timeout: int, max_pixels: int)
     try:
         if timeout <= 0:
             raise ValueError("timeout must be positive")
-        cases = validate_matrix(json.loads(CONFIG.read_text(encoding="utf-8")), matrix_key, max_pixels)
+        cases = validate_matrix(
+            json.loads(CONFIG.read_text(encoding="utf-8")), matrix_key, max_pixels
+        )
         results = {}
         for case in cases:
             name = case["name"]
@@ -99,7 +103,10 @@ def run_matrix(matrix_key: str, report_dir: Path, timeout: int, max_pixels: int)
                 CMD_SCALE_MATRIX_KEY=matrix_key,
             )
             cmd = [
-                sys.executable, "-m", "unittest", "-v",
+                sys.executable,
+                "-m",
+                "unittest",
+                "-v",
                 "tests.integration.test_export_network.QgisNetworkIntegrationTest.test_scale_dependent_scenarios",
             ]
             try:
@@ -125,7 +132,9 @@ def run_matrix(matrix_key: str, report_dir: Path, timeout: int, max_pixels: int)
                     flush=True,
                 )
         rows = compare_against_expected(results, expected_hashes_by_case(matrix_key))
-        if len(rows) != len(cases) * 2 or any(row["status"] in {"missing", "error"} for row in rows):
+        if len(rows) != len(cases) * 2 or any(
+            row["status"] in {"missing", "error"} for row in rows
+        ):
             raise ValueError("Some required scale results are missing or invalid")
         summary["rows"] = rows
         summary["result"] = "ok"
