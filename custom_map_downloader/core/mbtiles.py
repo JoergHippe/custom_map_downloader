@@ -22,6 +22,12 @@ MIN_WEB_MERCATOR_LAT = -85.05112878
 MAX_WEB_MERCATOR_LAT = 85.05112878
 MAX_ZOOM = 22
 DEFAULT_AVG_TILE_BYTES = 50 * 1024
+# Advisory thresholds, not hard export limits. The size estimate assumes the
+# default average PNG tile size; actual content can compress very differently.
+MBTILES_LARGE_TILE_COUNT = 10_000
+MBTILES_EXTREME_TILE_COUNT = 100_000
+MBTILES_LARGE_ESTIMATED_BYTES = 1 * 1024**3
+MBTILES_EXTREME_ESTIMATED_BYTES = 10 * 1024**3
 
 
 @dataclass(frozen=True)
@@ -185,6 +191,25 @@ def count_tiles(
 
 def estimate_mbtiles_size(tile_count: int, *, avg_tile_bytes: int = DEFAULT_AVG_TILE_BYTES) -> int:
     return max(0, int(tile_count)) * max(0, int(avg_tile_bytes))
+
+
+def mbtiles_export_risk(tile_count: int, estimated_bytes: int) -> str:
+    """Return the advisory risk tier: normal, large or extreme.
+
+    These are usability triggers, not export restrictions. A tile count and a
+    compressed-size estimate address two independent sources of excessive work.
+    """
+    if (
+        tile_count >= MBTILES_EXTREME_TILE_COUNT
+        or estimated_bytes >= MBTILES_EXTREME_ESTIMATED_BYTES
+    ):
+        return "extreme"
+    if (
+        tile_count >= MBTILES_LARGE_TILE_COUNT
+        or estimated_bytes >= MBTILES_LARGE_ESTIMATED_BYTES
+    ):
+        return "large"
+    return "normal"
 
 
 def auto_detect_min_zoom(
