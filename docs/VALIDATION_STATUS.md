@@ -12,12 +12,15 @@
 
 ### MBTiles-Aufwandswarnung und ausdrückliche Bestätigung
 
-**Code-Commit:** `f0d1d6fa13ed076ee65b69f7f0ceb691c947443b`  
-**GitHub Actions:** [Lauf 44176074115](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44176074115)
+**Geprüfter Code-Commit:** `985e7dc0be79761ec8790afee1748321c5c9825b`  
+**GitHub Actions:** [Lauf 44176616387](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44176616387)
 
 - **3/3 Jobs PASS**: Python-Qualität/Paketprüfung sowie QGIS 3.44.15
   und QGIS 4.2.3.
-- Neue Unit-Tests zu den Größenstufen und zum Dateivolumen.
+- Neue Unit-Tests zu den Größenstufen und zum Dateivolumen. Die Schätzung berücksichtigt jetzt die
+  Kachelgröße relativ zur Referenz von 256 px (quadratische Skalierung).
+- Python-Job: 103 Tests (26 erwartete Skips ohne QGIS), Ruff, Black,
+  Governance und Packaging bestanden.
 - Neue echte QGIS-Integrationstests: Eine extreme, aber mathematisch
   gültige Exportplanung erfordert ausdrücklich `Yes` auch bei
   deaktivierten normalen Bestätigungen; `No` verwirft den Vorgang.
