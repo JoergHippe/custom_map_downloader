@@ -679,7 +679,7 @@ class GeoTiffExporter:
         self._check_cancel(cancel_token)
         self._report(progress_cb, 8, "STEP_PREPARE", {"step": 2, "total": 6})
 
-        bounds_4326 = self._mbtiles_bounds_4326(params)
+        bounds_4326 = self.mbtiles_bounds_4326(params)
         plan = build_mbtiles_plan(
             bounds_4326,
             zoom_min=params.mbtiles_zoom_min,
@@ -747,7 +747,8 @@ class GeoTiffExporter:
         self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return params.output_path
 
-    def _mbtiles_bounds_4326(self, params: ExportParams) -> tuple[float, float, float, float]:
+    def mbtiles_bounds_4326(self, params: ExportParams) -> tuple[float, float, float, float]:
+        """Resolve the exact WGS84 export bounds for preflight and rendering."""
         ext = params.extent
         if ext is None:
             raise ValidationError("ERR_VALIDATION_EXTENT_INVALID", "Invalid MBTiles extent.")
