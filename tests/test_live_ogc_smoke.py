@@ -30,6 +30,18 @@ class LiveServiceSmokeTests(unittest.TestCase):
         self.assertLessEqual(candidate["width_px"] * candidate["height_px"], 2_000_000)
         self.assertEqual(len(candidate["reference_sha256"]), 64)
 
+    def test_official_wmts_requires_real_capabilities_and_matrix_set(self):
+        scenario = load_scenario(CONFIG, "basemap_wmts_gray_tif", 2_000_000)
+        self.assertEqual(scenario["service_type"], "wmts")
+        self.assertEqual(scenario["provider"], "wms")
+        self.assertEqual(scenario["width_px"], 500)
+        modified = json.loads(json.dumps(CONFIG))
+        for source in modified["sources"]:
+            if source["name"] == "basemap_wmts_gray":
+                source["uri"] = "url=https://example.invalid/wmts"
+        with self.assertRaises(ValueError):
+            load_scenario(modified, "basemap_wmts_gray_tif", 2_000_000)
+
     def test_unknown_scenario_is_not_silently_accepted(self):
         with self.assertRaises(ValueError):
             load_scenario(CONFIG, "unknown_service", 2_000_000)

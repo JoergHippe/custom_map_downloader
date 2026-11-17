@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run one official WMS scenario with a strict result gate and a hard timeout.
+"""Run one official OGC WMS/WMTS scenario with strict results and a hard timeout.
 
 This script is opt-in only: it contacts an external public map service.
 A skipped/invalid source must never be interpreted as a successful live test.
@@ -30,8 +30,17 @@ def load_scenario(config: dict, name: str, max_pixels: int) -> dict:
     if source is None:
         raise ValueError(f"Unknown source for scenario {name}")
     provider = scenario.get("provider") or source.get("provider", "wms")
+    # WMTS is implemented by QGIS's WMS provider and identified separately
+    # through the configured OGC service type.
     if provider != "wms":
-        raise ValueError(f"Live smoke requires a WMS provider: {name}")
+        raise ValueError(f"Live smoke requires a QGIS WMS/WMTS provider: {name}")
+    service_type = str(scenario.get("service_type", "wms")).lower()
+    if service_type not in {"wms", "wmts"}:
+        raise ValueError(f"Unsupported service type: {service_type}")
+    if service_type == "wmts" and (
+        "tileMatrixSet=" not in uri or "WMTSCapabilities.xml" not in uri
+    ):
+        raise ValueError(f"WMTS source must specify actual capabilities and tile matrix: {name}")
     uri = scenario.get("uri") or source.get("uri", "")
     if "url=https://" not in uri:
         raise ValueError(f"Live smoke requires an HTTPS WMS URL: {name}")
@@ -52,6 +61,7 @@ def load_scenario(config: dict, name: str, max_pixels: int) -> dict:
         "width_px": width,
         "height_px": height,
         "provider": provider,
+        "service_type": service_type,
         "reference_sha256": scenario.get("expected_sha256"),
     }
 
@@ -164,7 +174,10 @@ def main() -> int:
         summary["release_gate"] = "not_assessed"
         summary["result"] = "ok"
         diagnostics = summary["raster_diagnostics"]
-        print(f"LIVE WMS EXPORT PASS: {args.scenario}, sha256={summary['sha256']}")
+        print(
+            f"LIVE {summary['service_type'].upper()} EXPORT PASS: "
+            f"{args.scenario}, sha256={summary['sha256']}"
+        )
         print(f"PIXEL SHA256: {diagnostics['pixel_sha256']}")
         print(f"GEOREF SHA256: {diagnostics['georef_sha256']}")
         print(f"GDAL: {diagnostics['encoding']['gdal_version']}")
@@ -177,7 +190,7 @@ def main() -> int:
         return 0
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
         summary["error"] = str(exc)
-        print(f"LIVE WMS FAIL: {args.scenario}: {exc}", file=sys.stderr)
+        print(f"LIVE OGC FAIL: {args.scenario}: {exc}", file=sys.stderr)
         return 1
     finally:
         (report_dir / "live_smoke_summary.json").write_text(
