@@ -1,4 +1,5 @@
 import sqlite3
+from itertools import islice
 import tempfile
 import unittest
 from pathlib import Path
@@ -63,6 +64,39 @@ class MbtilesCoreTests(unittest.TestCase):
         rows = {(tile.x, tile.y, tile.tms_y) for tile in plan.tiles}
         self.assertIn((1, 1, 2), rows)
         self.assertIn((2, 2, 1), rows)
+
+    def test_tile_plan_is_lazy_and_repeatable(self):
+        bounds = (-180.0, -85.0, 180.0, 85.0)
+        plan = build_mbtiles_plan(
+            bounds, zoom_min=0, zoom_max=22, tile_size=256, padding=0
+        )
+        # The full world through z22 represents trillions of tiles. The
+        # plan must remain cheap; only the first few objects get created.
+        self.assertGreater(plan.tile_count, 1_000_000_000)
+        first = list(islice(plan.tiles, 3))
+        self.assertEqual([(tile.zoom, tile.x, tile.y) for tile in first],
+                         [(0, 0, 0), (1, 0, 0), (1, 1, 0)])
+        self.assertEqual(
+            [(tile.zoom, tile.x, tile.y) for tile in islice(plan.tiles, 3)],
+            [(tile.zoom, tile.x, tile.y) for tile in first],
+        )
+        self.assertNotIsInstance(plan.tiles, (tuple, list))
+
+    def test_tile_progress_has_stable_final_percent(self):
+        plan = build_mbtiles_plan(
+            (-1.0, -1.0, 1.0, 1.0),
+            zoom_min=0,
+            zoom_max=3,
+            tile_size=256,
+            padding=1,
+            base_percent=15,
+            span_percent=80,
+        )
+        tiles = list(plan.tiles)
+        self.assertEqual(len(tiles), plan.tile_count)
+        percents = [tile.percent for tile in tiles]
+        self.assertEqual(percents[-1], 95)
+        self.assertEqual(percents, sorted(percents))
 
     def test_staged_export_preserves_existing_file_on_failure(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -142,7 +176,7 @@ class MbtilesCoreTests(unittest.TestCase):
                     zoom_min=plan.zoom_min,
                     zoom_max=plan.zoom_max,
                 )
-                insert_tile(conn, plan.tiles[0], b"png")
+                insert_tile(conn, next(iter(plan.tiles)), b"png")
                 conn.commit()
             finally:
                 conn.close()

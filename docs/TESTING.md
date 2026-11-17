@@ -105,3 +105,22 @@ durch die öffentliche QGIS-API und beide gemischten Zahlformate
 Die gesamte Feldanalyse ist in [EXTENT_SELECTION.md](EXTENT_SELECTION.md)
 dokumentiert. Interaktive Tastatureingabe mit aktivierter deutscher
 Windows-Locale bleibt Teil der noch offenen Desktop-Abnahme.
+
+## Speicherarme MBTiles-Tileplanung
+
+`build_mbtiles_plan()` ermittelt die Anzahl der Kacheln über
+Integer-Arithmetik, ohne Kacheln vorab zu instanziieren. `MbtilesPlan.tiles`
+liefert bei jedem Zugriff einen neuen Iterator, der `MbtilesTile` und
+`QgsRectangle` nur für die aktuell verarbeitete Kachel erstellt.
+Die frühere Tupel-/Index-Schnittstelle wird damit bewusst durch Iteration
+ersetzt; der Exporter verarbeitet diese Daten bereits sequenziell.
+Abbruchprüfungen erfolgen im Exportpfad vor jedem Rendervorgang.
+
+Die Unit-Regression prüft einen weltumspannenden Plan bis Zoom 22
+(trillionenfacher Kachelbestand), ohne die Iteration auszuschöpfen,
+außerdem deterministische Wiederholung, Reihenfolge und Fortschritt.
+Die QGIS-3/4-Matrix prüft weiterhin reale MBTiles-End-to-End-Exporte.
+
+**Grenze:** Streaming begrenzt nur den Speicherbedarf des *Plans*.
+Rechenzeit, Dateigröße und Renderaufwand sehr großer Exporte bleiben hoch;
+ein separater Größen-/Dauergrenzwert ist noch zu bewerten.

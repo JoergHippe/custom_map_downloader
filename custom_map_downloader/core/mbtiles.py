@@ -38,18 +38,40 @@ class MbtilesTile:
 
 @dataclass(frozen=True)
 class MbtilesPlan:
-    """Complete MBTiles export plan."""
+    """MBTiles export parameters with on-demand, repeatable tile iteration."""
 
     bounds_4326: tuple[float, float, float, float]
     zoom_min: int
     zoom_max: int
     tile_size: int
     padding: int
-    tiles: tuple[MbtilesTile, ...]
+    tile_count: int
+    base_percent: int = 15
+    span_percent: int = 80
 
     @property
-    def tile_count(self) -> int:
-        return len(self.tiles)
+    def tiles(self) -> Iterator[MbtilesTile]:
+        """Return a fresh generator; never hold all tile extents in memory."""
+        return self._iter_tiles()
+
+    def _iter_tiles(self) -> Iterator[MbtilesTile]:
+        done = 0
+        for z in range(self.zoom_min, self.zoom_max + 1):
+            x_min, x_max, y_min, y_max = tile_range_for_bounds(
+                self.bounds_4326, z, padding=self.padding
+            )
+            for y in range(y_min, y_max + 1):
+                for x in range(x_min, x_max + 1):
+                    done += 1
+                    percent = self.base_percent + (done * self.span_percent) // self.tile_count
+                    yield MbtilesTile(
+                        zoom=z,
+                        x=x,
+                        y=y,
+                        tms_y=(1 << z) - 1 - y,
+                        extent_3857=tile_bounds_3857(x, y, z),
+                        percent=percent,
+                    )
 
     @property
     def estimated_bytes(self) -> int:
@@ -199,35 +221,18 @@ def build_mbtiles_plan(
         raise ValueError("Invalid MBTiles tile size.")
 
     pad = max(0, min(5, int(padding)))
+    # Count with integer arithmetic only; a world-sized high-zoom plan
+    # must not allocate tiles or lose precision in progress calculations.
     total = count_tiles(bounds, z_min, z_max, padding=pad)
-    done = 0
-    tiles: list[MbtilesTile] = []
-
-    for z in range(z_min, z_max + 1):
-        x_min, x_max, y_min, y_max = tile_range_for_bounds(bounds, z, padding=pad)
-        for y in range(y_min, y_max + 1):
-            for x in range(x_min, x_max + 1):
-                done += 1
-                percent = base_percent + int((done / float(total)) * span_percent)
-                tms_y = (1 << z) - 1 - y
-                tiles.append(
-                    MbtilesTile(
-                        zoom=z,
-                        x=x,
-                        y=y,
-                        tms_y=tms_y,
-                        extent_3857=tile_bounds_3857(x, y, z),
-                        percent=percent,
-                    )
-                )
-
     return MbtilesPlan(
         bounds_4326=bounds,
         zoom_min=z_min,
         zoom_max=z_max,
         tile_size=size,
         padding=pad,
-        tiles=tuple(tiles),
+        tile_count=total,
+        base_percent=int(base_percent),
+        span_percent=int(span_percent),
     )
 
 
