@@ -10,6 +10,24 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Speicherarme MBTiles-Tileplanung
+
+**Geprüfter Commit:** `1dca7393cbe52d98e8f4f369044b3d92e1456a41`  
+**GitHub Actions:** [Lauf 44173639820](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44173639820)
+
+- **3/3 CI-Jobs erfolgreich:** Python-Unit-/Formatierungs-/Packaging-Checks,
+  QGIS 3.44.15 und QGIS 4.2.3.
+- Der Kachelplan enthält keine vorab erzeugten `QgsRectangle`-/Tile-Objekte
+  mehr. Ein Generator liefert sie unmittelbar vor der Verarbeitung.
+- Neue Unit-Tests erzeugen eine weltumspannende Planung bis Zoom 22,
+  ohne die Kacheln zu materialisieren. Geprüft: Anzahl, wiederholbare
+  Iteration, Kachelreihenfolge und Abschluss der Fortschrittsanzeige.
+- Bestehende reale QGIS-3/4-MBTiles-End-to-End-Tests auf beiden
+  Laufzeiten bestanden.
+- Keine Aussage über *praktikable* Dateigrößen oder Laufzeiten gigantischer
+  Exporte: Nutzerwarnung/Begrenzung bleibt offen.
+
+
 ### Korrektur der Koordinatenfeld-Zuordnung und lokalisierter Zahlenwerte
 
 **Commit:** `35628339511b1934af104e6a62c1cdd3c88d79f3`  

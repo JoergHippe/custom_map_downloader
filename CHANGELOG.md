@@ -25,6 +25,9 @@ The format follows a pragmatic Keep a Changelog style.
   and copied QImage buffers to NumPy-owned memory.
 
 ### Changed
+- MBTiles tile plans now compute exact tile counts up front and generate tile
+  extents lazily during export instead of allocating a tuple of all tiles.
+  `MbtilesPlan.tiles` is now an iterable generator; index access is no longer supported.
 - Restored GitHub Actions checks for QGIS 3/4, unit tests and packaging.
 - canvas extent reset and draw-on-canvas dialog handling (April 2026)
 - Original self-hosted Windows Actions archived in October 2026; new hosted CI enabled in November.
