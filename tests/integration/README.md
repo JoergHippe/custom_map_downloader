@@ -45,7 +45,9 @@ prüft genau einen vorhandenen amtlichen WMS-Fall mit eigenem Prozess,
 Timeout und streng geprüften Ergebnissen.
 Der optionale GitHub-Workflow `.github/workflows/live-ogc.yml` führt
 dies unter QGIS 3 und 4 aus; die normale PR-CI bleibt offline.
-Referenzabweichungen gelten als offener Release-Prüfpunkt.
+Historische Referenzabweichungen werden als Hinweise ausgegeben, nicht
+als automatische Exportfehler. Die verbindliche Trennung ist in
+[OGC_TEST_POLICY.md](../../docs/OGC_TEST_POLICY.md) beschrieben.
 Details: [TESTING.md](../../docs/TESTING.md).
 
 ## Netzbasierte Szenarien (WMS/XYZ)

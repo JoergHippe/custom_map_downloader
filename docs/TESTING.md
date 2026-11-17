@@ -49,7 +49,7 @@ bestehenden `run_integration_tests.bat`-Runner benutzen.
 3. Ausdehnungswahl: Canvas, manuelle Koordinaten, Zeichnen und CRS-Wechsel.
 4. Reprojektion und Maßstabstreue bei WMS, einschließlich Geo-Referenzierung.
 5. Tatsächliche QGIS 3/4 GUI- und Exportprüfung, bevor metadata.txt 4.x zusagt.
-6. Keine ungeklärte Abweichung in Pflicht-Reports; Webdienst-Hash-Drift
+6. Keine technischen Fehler oder fehlenden Ergebnisse in Pflicht-Reports; Webdienst-Hash-Drift
    anhand von Bildinhalt, Geometrie, CRS und externen Änderungen bewerten.
 7. Validierte Versionen und Datum der erfolgreichen Laufzeitprüfung dokumentieren.
 
@@ -209,13 +209,16 @@ in einem QGIS-Unterprozess aus, mit maximal 2 Mio. Pixeln und
 240 Sekunden Laufzeit. Ein ungültiger/übersprungener Dienst,
 fehlender Ergebnisbericht oder Exportfehler führt zu einem Fehlschlag.
 
-**Wichtig:** Technischer Export (`result=ok`) und Freigabe-Baseline
-(`baseline_status=match|drift|untracked`) sind zwei verschiedene
-Prüfergebnisse. Bei Hash-Abweichungen steht
-`release_gate=review_required`; Referenzwerte werden niemals
-automatisch überschrieben. TIFF-Metadaten und Dienständerungen können
-Dateihashes beeinflussen. Die vollständige amtliche Maßstabs-/Hashmatrix
-und ein echter amtlicher WMTS-Live-Test bleiben gesonderte Release-Gates.
+**Wichtig:** Technischer Export (`result=ok`, `technical_gate=pass`)
+und historischer Dateivergleich
+(`baseline_status=match|drift|untracked`) sind unabhängige
+Prüfergebnisse. Hashabweichungen bei technisch erfolgreichem Export
+sind **Hinweise**, keine automatischen Pluginfehler. Der Live-Smoke
+setzt `release_gate=not_assessed`: Eine Releasefreigabe ist damit
+ausdrücklich nicht erteilt. Referenzwerte werden niemals automatisch
+überschrieben. Die vollständige Maßstabsmatrix und ein echter
+amtlicher WMTS-Live-Test bleiben gesondert zu prüfen.
+Siehe [Prüfstrategie für dynamische OGC-Daten](OGC_TEST_POLICY.md).
 
 ## Rasterpixel und GeoTIFF-Metadaten getrennt vergleichen
 

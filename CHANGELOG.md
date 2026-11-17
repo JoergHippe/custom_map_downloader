@@ -40,6 +40,10 @@ The format follows a pragmatic Keep a Changelog style.
   and copied QImage buffers to NumPy-owned memory.
 
 ### Changed
+- Historical SHA-256 differences from regularly updated public WMS data are
+  advisory, not failures of technically successful exports. Catalog and
+  scale-matrix validators still reject missing/failed reports, while the
+  live smoke explicitly does not grant a release approval.
 - MBTiles tile plans now compute exact tile counts up front and generate tile
   extents lazily during export instead of allocating a tuple of all tiles.
   `MbtilesPlan.tiles` is now an iterable generator; index access is no longer supported.

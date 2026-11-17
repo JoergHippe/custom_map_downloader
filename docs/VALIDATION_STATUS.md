@@ -6,7 +6,12 @@
 > die durch diesen Bericht nicht abgedeckt sind. Die früheren GitHub Actions wurden im
 > Oktober 2026 deaktiviert; die neue CI läuft seit November auf dem Entwicklungsbranch. Aussagen wie „produktionsreif“ und „releasefähig“
 > sind daher **keine aktuelle Freigabe** für `main` oder QGIS 4.x.
-> Für aktuelle Freigabekriterien siehe [TESTING.md](TESTING.md).
+> Für aktuelle Freigabekriterien siehe [TESTING.md](TESTING.md) und
+> die [OGC-Teststrategie](OGC_TEST_POLICY.md). Seit November 2026 sind
+> historische Hashabweichungen bei korrekt abgeschlossenem Export
+> **Hinweise, keine automatischen technischen Testfehler**. Spätere
+> Abschnitte zu streng hash-gesteuerten Freigaben beschreiben den
+> damaligen historischen Prüfstand.
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
@@ -58,12 +63,15 @@ Nachweise: [BKG #44183991013](https://github.com/JoergHippe/custom_map_downloade
 
 **Keine Baselines aktualisiert.** Eine Hash-Differenz kann durch
 GeoTIFF-/GDAL-Metadaten oder geänderte Karteninhalte entstehen.
-Sie beweist für sich genommen keinen Pluginfehler, ist aber ein offenes
-Release-Gate. Die komplette amtliche Maßstabsmatrix und amtliche WMTS
-sind durch diese drei WMS-Smokes nicht abgedeckt.
+Sie beweist für sich genommen keinen Pluginfehler. Die Abweichung
+bleibt als **historischer Referenzhinweis** dokumentiert, führt aber
+bei technisch korrektem Export nicht mehr zum Scheitern des Tests.
+Die vollständige Maßstabsmatrix und ein amtlicher WMTS-Live-Fall sind
+durch diese drei WMS-Smokes weiterhin nicht abgedeckt.
 
-Der neue Runner trennt technischen Exportstatus von Referenzstatus
-und dokumentiert `release_gate=review_required` bei Abweichungen.
+Der Live-Runner unterscheidet `technical_gate=pass` von
+`baseline_status=match|drift|untracked` und setzt
+`release_gate=not_assessed`, da ein Live-Smoke keine Releasefreigabe ist.
 
 
 
