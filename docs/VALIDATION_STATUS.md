@@ -12,12 +12,12 @@
 
 ### MBTiles-Dateisicherheit und reale Exporttests
 
-**Geprüfter Commit:** `1fd5ff6fb4b4bdb21176f369855b0e1dbe90b5be`  
-**GitHub Actions:** [Workflow-Lauf 44163338920](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44163338920)
+**Geprüfter Commit:** `e7604ac3cc88b3ecc8cb1b47d82112b2496037f6`  
+**GitHub Actions:** [Workflow-Lauf 44164135334](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44164135334)
 
 | Job | Umfang | Ergebnis |
 | --- | --- | --- |
-| Python quality | Ruff, Black, 84 Tests (12 erwartete Skips ohne QGIS), Packaging | PASS |
+| Python quality | Ruff, Black, 85 Tests (12 erwartete Skips ohne QGIS), Packaging | PASS |
 | QGIS 3 | Plugin-Import, 2 QImage-, 4 Raster- und 2 MBTiles-End-to-End-Tests | PASS |
 | QGIS 4 | Plugin-Import, 2 QImage-, 4 Raster- und 2 MBTiles-End-to-End-Tests | PASS |
 
