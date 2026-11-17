@@ -46,9 +46,7 @@ class RasterDiagnosticsTests(unittest.TestCase):
             self.assertNotEqual(previous["file_sha256"], current["file_sha256"])
             self.assertEqual(previous["pixel_sha256"], current["pixel_sha256"])
             self.assertEqual(previous["georef_sha256"], current["georef_sha256"])
-            self.assertNotEqual(
-                previous["encoding"]["metadata"], current["encoding"]["metadata"]
-            )
+            self.assertNotEqual(previous["encoding"]["metadata"], current["encoding"]["metadata"])
 
     def test_real_pixel_change_is_detected(self):
         with tempfile.TemporaryDirectory() as tmp:

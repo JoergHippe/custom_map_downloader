@@ -75,6 +75,25 @@ def check_live_report(rows: object, scenario: str) -> str:
     return digest
 
 
+def check_raster_diagnostics(value: object, file_hash: str) -> dict[str, object]:
+    """Require complete decoded-pixel and spatial fingerprints for GeoTIFFs."""
+    if not isinstance(value, dict):
+        raise ValueError("Missing GDAL raster diagnostics in live export report")
+    for key in ("file_sha256", "pixel_sha256", "georef_sha256"):
+        digest = value.get(key)
+        if not isinstance(digest, str) or len(digest) != 64:
+            raise ValueError(f"Missing or malformed {key} in live export report")
+        if not all(c in "0123456789abcdef" for c in digest.lower()):
+            raise ValueError(f"Invalid characters in {key} from GDAL report")
+    if value["file_sha256"] != file_hash:
+        raise ValueError("GDAL and export report disagree on output file hash")
+    if not isinstance(value.get("georeference"), dict):
+        raise ValueError("Missing georeference metadata in live export report")
+    if not isinstance(value.get("encoding"), dict):
+        raise ValueError("Missing GeoTIFF encoding metadata in live export report")
+    return value
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenario", required=True)
@@ -124,8 +143,10 @@ def main() -> int:
         report_path = report_dir / "network_scenarios.json"
         if not report_path.exists():
             raise ValueError("QGIS did not produce the expected network report")
-        summary["sha256"] = check_live_report(
-            json.loads(report_path.read_text(encoding="utf-8")), args.scenario
+        rows = json.loads(report_path.read_text(encoding="utf-8"))
+        summary["sha256"] = check_live_report(rows, args.scenario)
+        summary["raster_diagnostics"] = check_raster_diagnostics(
+            rows[0].get("raster_diagnostics"), summary["sha256"]
         )
         reference = summary.get("reference_sha256")
         if not reference:
@@ -138,7 +159,11 @@ def main() -> int:
             "pass" if summary["baseline_status"] == "match" else "review_required"
         )
         summary["result"] = "ok"
+        diagnostics = summary["raster_diagnostics"]
         print(f"LIVE WMS EXPORT PASS: {args.scenario}, sha256={summary['sha256']}")
+        print(f"PIXEL SHA256: {diagnostics['pixel_sha256']}")
+        print(f"GEOREF SHA256: {diagnostics['georef_sha256']}")
+        print(f"GDAL: {diagnostics['encoding']['gdal_version']}")
         print(f"REFERENCE STATUS: {summary['baseline_status']}")
         if summary["release_gate"] != "pass":
             print(

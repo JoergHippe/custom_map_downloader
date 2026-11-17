@@ -290,10 +290,15 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                 if not Path(result_path).exists():
                     raise RuntimeError("Export fehlgeschlagen, Datei fehlt.")
                 digest = sha256(Path(result_path).read_bytes()).hexdigest()
-                raster_diagnostics = inspect_raster(result_path) if out_ext.lower() in {
-                    ".tif",
-                    ".tiff",
-                } else None
+                raster_diagnostics = (
+                    inspect_raster(result_path)
+                    if out_ext.lower()
+                    in {
+                        ".tif",
+                        ".tiff",
+                    }
+                    else None
+                )
                 print(f"[OK]   {name}")
                 ok_count += 1
                 report_entries.append(

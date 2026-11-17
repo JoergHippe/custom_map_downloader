@@ -4,7 +4,11 @@ import json
 import unittest
 from pathlib import Path
 
-from scripts.run_live_ogc_smoke import check_live_report, load_scenario
+from scripts.run_live_ogc_smoke import (
+    check_live_report,
+    check_raster_diagnostics,
+    load_scenario,
+)
 
 CONFIG = json.loads(
     (Path(__file__).resolve().parents[1] / "tests" / "integration" / "config.json").read_text(
@@ -27,6 +31,26 @@ class LiveServiceSmokeTests(unittest.TestCase):
     def test_oversized_raster_is_rejected_before_network(self):
         with self.assertRaises(ValueError):
             load_scenario(CONFIG, "geosn_ortho_color", 100)
+
+    def test_live_geotiff_report_requires_separate_fingerprints(self):
+        file_hash = "a" * 64
+        diagnostics = {
+            "file_sha256": file_hash,
+            "pixel_sha256": "b" * 64,
+            "georef_sha256": "c" * 64,
+            "georeference": {"width": 100, "height": 100},
+            "encoding": {"gdal_version": "3.10"},
+        }
+        self.assertEqual(check_raster_diagnostics(diagnostics, file_hash), diagnostics)
+        for invalid in (
+            None,
+            dict(diagnostics, pixel_sha256="invalid"),
+            dict(diagnostics, georef_sha256="x" * 64),
+            dict(diagnostics, file_sha256="d" * 64),
+            dict(diagnostics, georeference=None),
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                check_raster_diagnostics(invalid, file_hash)
 
     def test_network_result_must_be_present_and_successful(self):
         good = {
