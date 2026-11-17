@@ -43,7 +43,7 @@ from .core.constants import (
     GSD_MIN,
     GSD_STEP,
 )
-from .core.mbtiles import auto_detect_min_zoom, count_tiles, estimate_mbtiles_size
+from .core.mbtiles import auto_detect_min_zoom, count_tiles, estimate_mbtiles_size, mbtiles_export_risk
 from .core.profile_io import read_profile, write_profile
 from .core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 from .core.validation import pixel_limit_status
@@ -1833,13 +1833,25 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.label_mbtilesInfo.setStyleSheet("color: #a00000;")
             return
 
-        estimated = self._format_bytes(estimate_mbtiles_size(tiles))
-        self.label_mbtilesInfo.setStyleSheet("")
+        estimated_bytes = estimate_mbtiles_size(tiles)
+        estimated = self._format_bytes(estimated_bytes)
+        risk = mbtiles_export_risk(tiles, estimated_bytes)
+        # These limits are advisory. Never reject an export merely for size.
+        if risk == "extreme":
+            suffix = self.tr(" — very large; explicit confirmation required")
+            style = "color: #a00000; font-weight: 600;"
+        elif risk == "large":
+            suffix = self.tr(" — large export; check time and disk space")
+            style = "color: #8a5900;"
+        else:
+            suffix = ""
+            style = ""
+        self.label_mbtilesInfo.setStyleSheet(style)
         self.label_mbtilesInfo.setText(
-            self.tr("MBTiles: {tiles} tile(s), estimated {size}").format(
+            self.tr("MBTiles: {tiles} tile(s), estimated {size} (approx.)").format(
                 tiles=f"{tiles:,}",
                 size=estimated,
-            )
+            ) + suffix
         )
 
     def _on_mbtiles_auto_zoom_clicked(self) -> None:
