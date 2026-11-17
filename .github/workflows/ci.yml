@@ -74,6 +74,7 @@ jobs:
               python3 -m unittest discover -s tests/integration -p test_qimage_memory.py -v
               python3 -m unittest discover -s tests/integration -p test_export_smoke.py -v
               python3 -m unittest discover -s tests/integration -p test_local_wms.py -v
+              python3 -m unittest discover -s tests/integration -p test_local_wmts.py -v
               python3 -m unittest discover -s tests/integration -p test_mbtiles_export.py -v
               python3 -m unittest discover -s tests/integration -p test_mbtiles_preflight.py -v
               python3 -m unittest discover -s tests/integration -p test_extent_dialog.py -v
