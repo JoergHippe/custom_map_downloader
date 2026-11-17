@@ -1838,7 +1838,12 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.label_mbtilesInfo.setStyleSheet("color: #a00000;")
             return
 
-        estimated_bytes = estimate_mbtiles_size(tiles)
+        tile_size = (
+            int(self.spinBox_mbtilesTileSize.value())
+            if hasattr(self, "spinBox_mbtilesTileSize")
+            else 256
+        )
+        estimated_bytes = estimate_mbtiles_size(tiles, tile_size=tile_size)
         estimated = self._format_bytes(estimated_bytes)
         risk = mbtiles_export_risk(tiles, estimated_bytes)
         # These limits are advisory. Never reject an export merely for size.

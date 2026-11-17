@@ -82,7 +82,10 @@ class MbtilesCoreTests(unittest.TestCase):
                 self.assertEqual(mbtiles_export_risk(tiles, bytes_estimate), expected)
 
     def test_estimated_size_matches_count(self):
-        self.assertEqual(estimate_mbtiles_size(10_000), 10_000 * 50 * 1024)
+        reference = 10_000 * 50 * 1024
+        self.assertEqual(estimate_mbtiles_size(10_000), reference)
+        self.assertEqual(estimate_mbtiles_size(10_000, tile_size=512), 4 * reference)
+        self.assertEqual(estimate_mbtiles_size(10_000, tile_size=128), reference // 4)
 
     def test_tile_plan_is_lazy_and_repeatable(self):
         bounds = (-180.0, -85.0, 180.0, 85.0)

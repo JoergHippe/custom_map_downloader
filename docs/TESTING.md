@@ -130,7 +130,7 @@ eine harte Größen- oder Zeitbegrenzung ist derzeit nicht vorgesehen.
 Vor dem Start der MBTiles-Ausgabe berechnet die GUI die tatsächlichen
 WGS84-Grenzen mit demselben Transformationspfad wie der Exporter. Der
 Kachelplan wird nur gezählt, nicht materialisiert. Für die komprimierte
-PNG-Datenmenge wird ein **grober Durchschnitt von 50 KiB/Kachel** angesetzt.
+PNG-Datenmenge wird ein **grober Referenzwert von 50 KiB je 256×256-Kachel** angesetzt.
 
 | Stufe | Kachelzahl oder geschätzte Datenmenge | Verhalten |
 | --- | --- | --- |
@@ -138,6 +138,7 @@ PNG-Datenmenge wird ein **grober Durchschnitt von 50 KiB/Kachel** angesetzt.
 | Groß | ab 10.000 oder ab 1 GiB | deutlicher Hinweis in der MBTiles-Vorschau |
 | Extrem | ab 100.000 oder ab 10 GiB | zusätzliche ausdrückliche Ja/Nein-Bestätigung |
 
+Die Schätzung skaliert den Referenzwert quadratisch mit der konfigurierten Kachelgröße.
 Die Stufengrenzen sind als Konstanten in `core/mbtiles.py` definiert,
 keine technischen Limits und keine Aussage zur tatsächlich benötigten
 Dauer oder Dateigröße. Bei `extreme` ist **Nein** vorausgewählt.

@@ -81,7 +81,7 @@ class MbtilesPlan:
 
     @property
     def estimated_bytes(self) -> int:
-        return estimate_mbtiles_size(self.tile_count)
+        return estimate_mbtiles_size(self.tile_count, tile_size=self.tile_size)
 
 
 def clamp_lat(lat: float) -> float:
@@ -189,8 +189,17 @@ def count_tiles(
     return total
 
 
-def estimate_mbtiles_size(tile_count: int, *, avg_tile_bytes: int = DEFAULT_AVG_TILE_BYTES) -> int:
-    return max(0, int(tile_count)) * max(0, int(avg_tile_bytes))
+def estimate_mbtiles_size(
+    tile_count: int, *, tile_size: int = 256, avg_tile_bytes: int = DEFAULT_AVG_TILE_BYTES
+) -> int:
+    """Rough PNG-data estimate scaled from the 256-pixel reference tile.
+
+    The pixel-area factor captures the main impact of configurable tile
+    dimensions, but PNG compressibility remains content-dependent.
+    """
+    count = max(0, int(tile_count))
+    size = max(0, int(tile_size))
+    return count * max(0, int(avg_tile_bytes)) * size * size // (256 * 256)
 
 
 def mbtiles_export_risk(tile_count: int, estimated_bytes: int) -> str:
