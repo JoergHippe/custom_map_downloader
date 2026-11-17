@@ -49,22 +49,58 @@ Das Deaktivieren des Zeichenwerkzeugs ohne Auswahl wird als Abbruch geprüft.
 Die Tests laufen ohne Webdienste mit `QT_QPA_PLATFORM=offscreen` unter
 QGIS 3.44.15 (Qt5) und QGIS 4.2.3 (Qt6).
 
+## Nachgewiesene Korrekturen der internen Koordinatenfelder
+
+Die gezielte QGIS-3/4-Regression zeigte, dass der alte Keyword-Resolver
+`xmax` und `ymax` **auf dasselbe interne Feld** `mYMaxLineEdit` abbildete.
+Ursache waren einbuchstabige, nicht eindeutige Teilstring-Treffer.
+Damit konnte die letzte Fallback-Stufe falsche Koordinaten liefern.
+
+Die bisherige Heuristik mit übersetzten Labels, Tooltips und
+positionsbasiertem Raten wurde entfernt. Die vier internen Felder werden
+nur noch über ihre **exakten** Qt-Objektnamen aufgelöst:
+`mXMinLineEdit`, `mXMaxLineEdit`, `mYMinLineEdit`, `mYMaxLineEdit`.
+Sind diese unbekannt, bleibt das betreffende Feld ausdrücklich
+unaufgelöst. Die primäre Datenquelle bleibt die öffentliche QGIS-API
+`outputExtent()`.
+
+Ein separater Test zeigt, dass die Eingabe in `xmax` die X-Grenze
+ändert, ohne `ymax` zu überschreiben. Ein weiterer Test simuliert
+umbenannte interne Felder und verhindert stilles Zurückfallen auf
+Widget-Reihenfolgen.
+
+Außerdem wurde das direkte Schreiben in die internen `QLineEdit`-Felder
+per `setText()` beim Canvas-Reset entfernt. Die QGIS-3/4-Tests zeigen,
+dass `setOutputExtentFromUser()` die vier sichtbaren Werte bereits
+korrekt aktualisiert.
+
+Der localeabhängige Fallback-Parser wurde für gemischte Dezimal- und
+Gruppierungszeichen korrigiert (z. B. `1.234,50` bzw. `1,234.50`).
+Bei Zahlen mit **nur einem** Komma oder Punkt bleibt eine grundsätzlich
+mögliche Mehrdeutigkeit (z. B. `1,234`) bestehen. Der öffentliche
+QGIS-Zustand hat daher weiterhin Vorrang vor Textparsing.
+
+**Nachweis:** [GitHub Actions #44172109704](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44172109704)
+unter QGIS 3.44.15 und QGIS 4.2.3.
+
 ## Bewusst noch nicht entfernt
 
 - Polling von Änderungen nach `Draw on canvas`.
 - Zugriff auf `QgsExtentWidget` für die Steuerung der Dialogsichtbarkeit.
-- Fallbacks auf interne `QLineEdit`-Felder und `currentExtent()`.
+- Optionaler, auf exakte Objektnamen begrenzter Fallback auf interne `QLineEdit`-Felder und `currentExtent()`.
 - Eigene Behandlung des Signals `toggleDialogVisibility`.
 
-**Risiken:** Die Feldidentifikation über mehrdeutige Zeichen
-(z. B. `w`, `e`), positionsabhängige Zuordnung, manuelles
-`setText()` und der mögliche Rückfall auf eine falsche Karten-Ausdehnung
-sind ausdrücklich nicht als stabile QGIS-API anzusehen.
+**Verbleibende Risiken:** Die exakten Feldnamen sind weiterhin private
+Implementierungsdetails der QGIS-Oberfläche und können sich ändern.
+`currentExtent()` repräsentiert nicht zwingend die ausgewählte
+Exportausdehnung. Der Fallback auf Feldtexte und die Unterstützung
+mehrdeutiger Einzel-Trennzeichen dürfen deshalb nicht als stabile
+öffentliche Schnittstellen betrachtet werden.
 
-Vor ihrer Entfernung oder Veränderung sind gesonderte GUI-Tests
-der manuellen Koordinateneingabe (einschließlich deutscher Zahlformate),
-des Zeichnens und Abbrechens auf Windows sowie der tatsächlich
-unterstützten QGIS-Versionen notwendig. Ein bestandener Linux-Offscreen-
+Vor weiteren Änderungen an Polling, `currentExtent()`-Fallback
+oder Sichtbarkeitssteuerung sind gesonderte Windows-QGIS-GUI-Tests
+für manuelle Eingabe (einschließlich deutscher Systemeinstellung)
+und Zeichnen/Abbrechen notwendig. Ein bestandener Linux-Offscreen-
 Test ersetzt nicht die Bedienprüfung im vollständigen Windows-QGIS.
 
 **Keine** Änderung der QGIS-4-Kompatibilitätsmetadaten durch diese Entscheidung.

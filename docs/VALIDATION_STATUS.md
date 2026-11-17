@@ -10,6 +10,22 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Korrektur der Koordinatenfeld-Zuordnung und lokalisierter Zahlenwerte
+
+**Commit:** `35628339511b1934af104e6a62c1cdd3c88d79f3`  
+**Nachweis:** [Actions #44172109704](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44172109704)
+
+Unter QGIS 3.44.15 und 4.2.3 wurden doppelte Feldreferenzen im
+internen QGIS-Widget nachgewiesen: `xmax` verwies fälschlich auf
+`mYMaxLineEdit`. Die Zuordnung erfolgt nun ausschließlich über exakte
+Objektnamen ohne positionsabhängiges Raten. Tests für manuelle
+X-Koordinateneingabe, API-seitige Aktualisierung sichtbarer Werte,
+unbekannte Feldnamen und Deutsch-/Englisch-Gruppierungsformate
+bestehen unter beiden QGIS-Versionen.
+
+Die QGIS-interne Komponente bleibt bewusst integriert.
+Vollständige Windows-/Locale-Freigabe weiterhin offen.
+
 ### Ausdehnungsdialog und Profilwiederherstellung
 
 - In QGIS 3.44.15 und QGIS 4.2.3 wurde durch neue echte Dialogtests

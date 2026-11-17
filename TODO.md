@@ -11,7 +11,8 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 - [x] QImage-Speicherkonvertierung mit eigenen NumPy-Puffern unter Qt5/Qt6 testen.
 - [ ] MBTiles-Tileplanung für sehr große Ausschnitte ohne hohe Speichervorbelegung begrenzen/streamen.
 - [x] QGIS-3/4-Dialogtests für Canvas-Reset, Profil, CRS-Wechsel und wiederholtes Zeichnen/Abbruch ergänzt; Profil-Ausdehnungsfehler behoben.
-- [ ] Interne QGIS-Extent-Feldheuristik nur nach gesondertem Windows-/Locale-GUI-Test risikobewusst vereinfachen; siehe docs/EXTENT_SELECTION.md.
+- [x] Mehrdeutige QGIS-Extent-Feldheuristik durch exakte, fehlertolerante Zuordnung ersetzt; direkte QLineEdit-Schreibzugriffe entfernt.
+- [ ] Verbleibende QGIS-Extent-Fallbacks (`currentExtent()` und Textparsing) sowie Signal-/Polling-Bedarf nach Windows-/Locale-GUI-Tests bewerten; siehe docs/EXTENT_SELECTION.md.
 - [x] CI mit begrenztem Scope reaktiviert und grüne QGIS-3/4-Läufe nachgewiesen.
 
 - Weitere echte QGIS-End-to-End-Netztests für reproduzierbare WMS-/XYZ-Szenarien ergänzen.

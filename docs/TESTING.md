@@ -94,3 +94,14 @@ CRS-Wechsel, wiederholtes Zeichnen und Abbruch durch Werkzeugwechsel.
 Das ist kein Beleg für die vollständige Windows-Desktop-Interaktion oder
 für lokalisierte manuelle Texteingabe; beides bleibt Release-Gate.
 Siehe [Architektur und Historie der Ausdehnungsauswahl](EXTENT_SELECTION.md).
+
+## Private Koordinatenfelder und Zahlenformate
+
+Die Dialog-Matrix prüft zusätzlich die eindeutige Zuordnung der vier
+QGIS-internen `QLineEdit`-Objekte, echte X-Koordinateneingabe,
+fehlende/umbenannte Objektnamen, die selbständige Anzeigeaktualisierung
+durch die öffentliche QGIS-API und beide gemischten Zahlformate
+(`1.234,50` und `1,234.50`).
+Die gesamte Feldanalyse ist in [EXTENT_SELECTION.md](EXTENT_SELECTION.md)
+dokumentiert. Interaktive Tastatureingabe mit aktivierter deutscher
+Windows-Locale bleibt Teil der noch offenen Desktop-Abnahme.

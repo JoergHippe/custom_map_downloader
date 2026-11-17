@@ -11,6 +11,11 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Fixed coordinate field aliasing in the QgsExtentGroupBox fallback: X maximum
+  no longer resolves to the Y maximum editor.
+- Removed guessed, language-sensitive field matching and direct writes into
+  private QGIS coordinate editors; exact-name fallback now fails closed.
+- Corrected locale-independent parsing of mixed German/English grouped decimals.
 - Saved export profiles now restore the actual selected extent, not only the current canvas extent.
 - Added real QGIS 3/4 extent-dialog regression tests including map-canvas drawing and CRS changes.
 - MBTiles exports now stage SQLite data in the destination folder and replace the
