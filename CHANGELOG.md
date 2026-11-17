@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 The format follows a pragmatic Keep a Changelog style.
 
+## [0.5.0] - Unreleased (working version)
+
+### Added
+- MBTiles export with configurable zoom range, tile size, padding, auto zoom and estimates (April 2026)
+- unified output-file selection for raster and MBTiles exports
+
+### Changed
+- canvas extent reset and draw-on-canvas dialog handling (April 2026)
+- GitHub Actions workflows archived in October 2026 (not currently running)
+
+### Validation
+- The last recorded full QGIS/Windows validation dates from 2026-03-14 and predates these changes.
+- This version is NOT marked as freshly release-validated; see docs/VALIDATION_STATUS.md.
+
 ## [0.4.0] - 2026-03-14
 
 ### Added

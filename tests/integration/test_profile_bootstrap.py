@@ -1,3 +1,4 @@
+import os
 import unittest
 from pathlib import Path
 
@@ -8,6 +9,9 @@ try:
 
     HAS_QGIS = True
 except Exception:
+    # CI must not confuse missing/broken QGIS bindings with successful skipped tests.
+    if os.environ.get("CMD_REQUIRE_QGIS") == "1":
+        raise
     HAS_QGIS = False
 
 

@@ -1,5 +1,13 @@
 # Validierungsstand
 
+> **Historischer Validierungsbericht (2026-03-14).** Die nachstehenden Ergebnisse
+> beziehen sich auf den damals getesteten Stand. Der aktuelle Repository-Stand
+> `0.5.0` enthält spätere Änderungen vom April (u. a. MBTiles und Dialogablauf),
+> die durch diesen Bericht nicht abgedeckt sind. GitHub Actions sind seit
+> Oktober 2026 deaktiviert. Aussagen wie „produktionsreif“ und „releasefähig“
+> sind daher **keine aktuelle Freigabe** für `main` oder QGIS 4.x.
+> Für aktuelle Freigabekriterien siehe [TESTING.md](TESTING.md).
+
 Dieses Dokument beschreibt den aktuell verifizierten Qualitäts- und Laufzeitstand des Plugins auf Basis von:
 
 - lokalen Repository-Checks

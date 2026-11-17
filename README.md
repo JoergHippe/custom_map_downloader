@@ -30,6 +30,9 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 
 ## Compatibility
 
+> QGIS 4.x compatibility has not yet been validated. Current metadata declares QGIS 3.34+;
+> do not interpret it as a QGIS 4 release claim. See [test strategy](docs/TESTING.md).
+
 - supported QGIS baseline: `3.34+`
 - developed and repeatedly validated with real Windows/QGIS runtime checks
 - public WMS/XYZ services can still change portrayal, availability or response behavior upstream
@@ -108,7 +111,8 @@ Translations are maintained via the standard Qt Linguist workflow under `custom_
 ## Documentation
 
 - user operations and support: `docs/TROUBLESHOOTING.md`
-- validation status and verified service coverage: `docs/VALIDATION_STATUS.md`
+- validation status (historical March 2026 evidence): `docs/VALIDATION_STATUS.md`
+- current test strategy and release criteria: `docs/TESTING.md`
 - development workflow: `docs/DEVELOPING.md`
 - release process: `docs/RELEASING.md`
 - integration test details: `tests/integration/README.md`
