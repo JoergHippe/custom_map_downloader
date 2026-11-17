@@ -91,8 +91,8 @@ def compare_against_expected(
                 {
                     "case": case_name,
                     "label": "-",
-                    "exit_code": int(case["exit_code"]),
-                    "status": "error" if int(case["exit_code"]) != 0 else "missing",
+                    "exit_code": int(case.get("exit_code", 1)),
+                    "status": "missing" if case_name not in cases or int(case.get("exit_code", 0)) == 0 else "error",
                     "expected_hash": "",
                     "actual_hash": "",
                     "width_px": "",
