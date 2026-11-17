@@ -12,7 +12,8 @@ from tests.integration.qgis_test_support import ensure_plugin_import_path, init_
 try:
     from qgis.core import QgsCoordinateReferenceSystem, QgsProject, QgsRectangle
     from qgis.gui import QgsMapCanvas
-    from qgis.PyQt.QtCore import QCoreApplication
+    from qgis.PyQt.QtCore import QCoreApplication, QPoint, Qt
+    from qgis.PyQt.QtTest import QTest
     from qgis.PyQt.QtWidgets import QWidget
 
     ensure_plugin_import_path()
@@ -99,6 +100,36 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             state["extent"],
             {"west": 1200.0, "south": 2300.0, "east": 4600.0, "north": 5700.0},
         )
+
+    def test_draw_on_canvas_changes_selected_extent(self):
+        """Exercise the real QGIS map tool with synthetic GUI mouse events."""
+        self.parent.show()
+        self.canvas.show()
+        self.dialog.show()
+        QCoreApplication.processEvents()
+
+        previous = QgsRectangle(self.dialog.extentGroupBox.outputExtent())
+        self.dialog.extentGroupBox.setOutputExtentFromDrawOnCanvas()
+        QCoreApplication.processEvents()
+
+        # QGIS installs its own QgsMapToolExtent on the canvas. Send Qt
+        # mouse input to the canvas viewport, not directly to a fake signal.
+        viewport = self.canvas.viewport()
+        start = QPoint(100, 90)
+        end = QPoint(350, 245)
+        QTest.mousePress(viewport, Qt.MouseButton.LeftButton, pos=start)
+        QTest.mouseMove(viewport, pos=end, delay=10)
+        QTest.mouseRelease(viewport, Qt.MouseButton.LeftButton, pos=end)
+        QCoreApplication.processEvents()
+
+        actual = self.dialog._get_best_output_extent(commit=False)
+        self.assertIsNotNone(actual)
+        self.assertNotEqual(
+            self.dialog._extent_signature(actual, self.crs),
+            self.dialog._extent_signature(previous, self.crs),
+            "Drawing on the map must replace the previously selected extent.",
+        )
+        self.assertTrue(self.dialog.isVisible())
 
     def test_profile_restoration_uses_saved_extent(self):
         expected = QgsRectangle(1400, 2400, 4300, 5400)
