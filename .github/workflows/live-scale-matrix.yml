@@ -36,7 +36,7 @@ jobs:
             "qgis/qgis:$IMAGE" -lc '
               set -euo pipefail
               python3 scripts/check_qgis_runtime.py --major "$MAJOR"
-              python3 scripts/run_live_scale_matrix.py \
+              python3 -m scripts.run_live_scale_matrix \
                 --matrix-key scale_matrix --timeout 240 \
                 --max-pixels 8000000 \
                 --report-dir "artifacts/live-scale-qgis-$MAJOR"
