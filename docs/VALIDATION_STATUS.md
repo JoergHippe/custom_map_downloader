@@ -3,12 +3,31 @@
 > **Historischer Validierungsbericht (2026-03-14).** Die nachstehenden Ergebnisse
 > beziehen sich auf den damals getesteten Stand. Der aktuelle Repository-Stand
 > `0.5.0` enthält spätere Änderungen vom April (u. a. MBTiles und Dialogablauf),
-> die durch diesen Bericht nicht abgedeckt sind. GitHub Actions sind seit
-> Oktober 2026 deaktiviert. Aussagen wie „produktionsreif“ und „releasefähig“
+> die durch diesen Bericht nicht abgedeckt sind. Die früheren GitHub Actions wurden im
+> Oktober 2026 deaktiviert; die neue CI läuft seit November auf dem Entwicklungsbranch. Aussagen wie „produktionsreif“ und „releasefähig“
 > sind daher **keine aktuelle Freigabe** für `main` oder QGIS 4.x.
 > Für aktuelle Freigabekriterien siehe [TESTING.md](TESTING.md).
 
-Dieses Dokument beschreibt den aktuell verifizierten Qualitäts- und Laufzeitstand des Plugins auf Basis von:
+## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
+
+**Branch:** `chore/restart-quality-baseline-20261117`  
+**Geprüfter Commit:** `3ccd4e3600d014b896771d29e9edf4eaa3c67688`  
+**GitHub Actions:** [Workflow-Lauf 44160918990](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44160918990)
+
+| CI-Job | Laufzeit/Prüfumfang | Ergebnis |
+| --- | --- | --- |
+| Python quality | Ruff, Black, 79 Tests (10 Skip ohne QGIS), Übersetzungen, Release-Governance, Paketprüfung | PASS |
+| QGIS 3 | QGIS 3.44.15, Qt 5.15.13; Plugin-Import, 2 QImage- und 4 Export-Smoke-Tests | PASS |
+| QGIS 4 | QGIS 4.2.3, Qt 6.10.2; Plugin-Import, 2 QImage- und 4 Export-Smoke-Tests | PASS |
+
+**Geltungsbereich:** Diese Ergebnisse belegen ausschließlich die genannten CI-Prüfungen
+für den aufgeführten Branch-Commit. Sie ersetzen **nicht** die vollständige
+Windows-GUI-, Netz-WMS/WMTS-, MBTiles- und Release-Validierung. Der Stand wurde
+noch nicht nach `main` übernommen und QGIS 4.x ist noch nicht offiziell freigegeben.
+
+## Historischer Validierungsbericht vom 14. März 2026
+
+Dieses Dokument beschreibt den im März 2026 verifizierten Qualitäts- und Laufzeitstand des Plugins auf Basis von:
 
 - lokalen Repository-Checks
 - echten Windows/QGIS-Läufen
@@ -18,9 +37,9 @@ Stand dieses Dokuments:
 
 - Datum der letzten Abschlussvalidierung: `2026-03-14`
 
-## Kurzurteil
+## Kurzurteil (Stand 2026-03-14, nicht auf 0.5.0 übertragbar)
 
-Aktueller Stand:
+Damals dokumentierter Stand:
 
 - releasefähig
 - technisch professionell umgesetzt
@@ -29,7 +48,7 @@ Aktueller Stand:
 
 Praktische Einordnung:
 
-- Das Plugin ist aktuell in einem seriösen Sinn produktionsreif.
+- Das Plugin wurde damals als produktionsreif bewertet; diese Aussage ist keine aktuelle Freigabe.
 - Das bedeutet nicht, dass nie wieder ein Problem auftreten kann.
 - Die wichtigsten verbleibenden Risiken liegen bei öffentlichen WMS-Diensten, deren Darstellung, Verfügbarkeit oder Backend sich ändern kann.
 
