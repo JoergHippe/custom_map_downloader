@@ -61,17 +61,13 @@ class MbtilesExportIntegrationTest(unittest.TestCase):
         self.assertTrue(self.layer.isValid())
         feature = QgsFeature()
         feature.setGeometry(
-            QgsGeometry.fromRect(
-                QgsRectangle(-15000000, -15000000, 15000000, 15000000)
-            )
+            QgsGeometry.fromRect(QgsRectangle(-15000000, -15000000, 15000000, 15000000))
         )
         added, _ = self.layer.dataProvider().addFeatures([feature])
         self.assertTrue(added)
         self.layer.updateExtents()
         self.layer.renderer().setSymbol(
-            QgsFillSymbol.createSimple(
-                {"color": "20,100,180,255", "outline_style": "no"}
-            )
+            QgsFillSymbol.createSimple({"color": "20,100,180,255", "outline_style": "no"})
         )
         self.project.addMapLayer(self.layer)
         self.addCleanup(self.project.removeMapLayer, self.layer.id())
@@ -110,9 +106,7 @@ class MbtilesExportIntegrationTest(unittest.TestCase):
         self.assertEqual(len(tiles), 1)
         self.assertTrue(tiles[0][0].startswith(b"\x89PNG\r\n\x1a\n"))
         self.assertEqual(metadata["format"], "png")
-        self.assertEqual(
-            sorted(p.name for p in self.target.parent.iterdir()), [self.target.name]
-        )
+        self.assertEqual(sorted(p.name for p in self.target.parent.iterdir()), [self.target.name])
 
     def test_cancel_mid_export_preserves_existing_mbtiles(self):
         original = b"prior export"
@@ -131,9 +125,7 @@ class MbtilesExportIntegrationTest(unittest.TestCase):
                 cancel_token=token,
             )
         self.assertEqual(self.target.read_bytes(), original)
-        self.assertEqual(
-            sorted(p.name for p in self.target.parent.iterdir()), [self.target.name]
-        )
+        self.assertEqual(sorted(p.name for p in self.target.parent.iterdir()), [self.target.name])
 
 
 if __name__ == "__main__":
