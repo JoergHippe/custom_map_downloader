@@ -1,7 +1,7 @@
 import sqlite3
-from itertools import islice
 import tempfile
 import unittest
+from itertools import islice
 from pathlib import Path
 from unittest.mock import Mock, patch
 
