@@ -389,8 +389,8 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
 
             layer = QgsRasterLayer(uri, f"{name}_scale_probe", provider)
             if not layer.isValid():
-                print(f"[SKIP] {name}: layer invalid for scale probe")
-                continue
+                # Mandatory live scale cases must not silently disappear.
+                self.fail(f"{name}: layer invalid for scale probe (provider={provider})")
 
             self.project.addMapLayer(layer)
             rect = QgsRectangle(
@@ -462,6 +462,9 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                             "width_px": width_px,
                             "height_px": height_px,
                             "sha256": digest,
+                            "historical_sha256": str(
+                                (case.get("expected_hashes", {}) or {}).get(suffix, "") or ""
+                            ),
                             "output_path": str(out_path),
                         }
                     )
@@ -473,16 +476,15 @@ class QgisNetworkIntegrationTest(unittest.TestCase):
                     self.assertNotEqual(
                         hashes[0], hashes[1], f"{name}: expected different raster content"
                     )
-                    expected_hashes = case.get("expected_hashes", {}) or {}
-                    expected_small = str(expected_hashes.get("small", "") or "")
-                    expected_large = str(expected_hashes.get("large", "") or "")
-                    if expected_small:
-                        self.assertEqual(
-                            hashes[0], expected_small, f"{name}: unexpected hash for small scale"
-                        )
-                    if expected_large:
-                        self.assertEqual(
-                            hashes[1], expected_large, f"{name}: unexpected hash for large scale"
+                    # An official service can update its map content without a
+                    # change in the plugin. Keep historical hashes for reports,
+                    # but do not make them a technical assertion.
+                    for item in case_entry["results"]:
+                        historical = item["historical_sha256"]
+                        item["baseline_status"] = (
+                            "untracked"
+                            if not historical
+                            else "match" if item["sha256"] == historical else "drift"
                         )
                 report_entries.append(case_entry)
             finally:
