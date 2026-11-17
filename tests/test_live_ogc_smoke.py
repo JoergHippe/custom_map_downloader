@@ -6,8 +6,8 @@ from pathlib import Path
 
 from scripts.run_live_ogc_smoke import (
     check_live_report,
-    classify_reference,
     check_raster_diagnostics,
+    classify_reference,
     load_scenario,
 )
 

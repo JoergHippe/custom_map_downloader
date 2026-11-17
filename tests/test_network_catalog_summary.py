@@ -13,7 +13,7 @@ class NetworkCatalogSummaryTests(unittest.TestCase):
                 "scenario": "ok_case",
                 "exit_code": 0,
                 "report_dir": "x",
-                "result": {"sha256": "aaa", "width_px": 10, "height_px": 10},
+                "result": {"result": "ok", "sha256": "aaa", "width_px": 10, "height_px": 10},
             },
             "missing_case": {
                 "scenario": "missing_case",

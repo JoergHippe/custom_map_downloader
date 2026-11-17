@@ -52,7 +52,7 @@ def main() -> int:
     notices = [row for row in rows if row["status"] in {"drift", "untracked"}]
     for row in notices:
         print(f"NOTICE: historical hash {row['status']} for {row.get('scenario')}")
-    print(f"Network scenario report OK: {report_path}")
+    print(f"Network scenario report OK: {group_name}: {report_path}")
     return 0
 
 
