@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from tests.test_exporter_validation import install_qgis_stubs
 
@@ -106,6 +107,21 @@ class MbtilesCoreTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 create_mbtiles_database(target)
             self.assertEqual(target.read_bytes(), b"do not touch")
+
+    def test_schema_creation_failure_closes_sqlite_connection(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "new.mbtiles"
+            connection = Mock()
+            connection.executescript.side_effect = sqlite3.OperationalError("disk full")
+
+            with patch(
+                "custom_map_downloader.core.mbtiles.sqlite3.connect",
+                return_value=connection,
+            ):
+                with self.assertRaises(sqlite3.OperationalError):
+                    create_mbtiles_database(target)
+
+            connection.close.assert_called_once_with()
 
     def test_database_schema_metadata_and_tile_insert(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
