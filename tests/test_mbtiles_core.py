@@ -79,9 +79,7 @@ class MbtilesCoreTests(unittest.TestCase):
         )
         for tiles, bytes_estimate, expected in cases:
             with self.subTest(tiles=tiles, estimated_bytes=bytes_estimate):
-                self.assertEqual(
-                    mbtiles_export_risk(tiles, bytes_estimate), expected
-                )
+                self.assertEqual(mbtiles_export_risk(tiles, bytes_estimate), expected)
 
     def test_estimated_size_matches_count(self):
         self.assertEqual(estimate_mbtiles_size(10_000), 10_000 * 50 * 1024)

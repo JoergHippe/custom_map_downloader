@@ -761,9 +761,7 @@ class CustomMapDownloader:
             )
             lines.extend(
                 [
-                    self.tr("Tile count: {tiles}").format(
-                        tiles=f"{mbtiles_plan.tile_count:,}"
-                    ),
+                    self.tr("Tile count: {tiles}").format(tiles=f"{mbtiles_plan.tile_count:,}"),
                     self.tr("Estimated PNG data: {gib:.2f} GiB (rough estimate)").format(
                         gib=mbtiles_plan.estimated_bytes / 1024**3
                     ),

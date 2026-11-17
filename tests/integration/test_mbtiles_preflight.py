@@ -89,9 +89,7 @@ class MbtilesPreflightIntegrationTests(unittest.TestCase):
             height_px=256,
             gsd_m_per_px=1.0,
             center=CenterSpec(northing=0, easting=0, crs=self.crs),
-            extent=ExtentSpec(
-                west=-180, south=-80, east=180, north=80, crs=self.crs
-            ),
+            extent=ExtentSpec(west=-180, south=-80, east=180, north=80, crs=self.crs),
             output_path="never_written.mbtiles",
             load_as_layer=False,
             mbtiles_zoom_min=0,
@@ -107,9 +105,7 @@ class MbtilesPreflightIntegrationTests(unittest.TestCase):
             patch.object(module, "QMessageBox", _MessageBox),
         ):
             self.assertFalse(
-                self.plugin._confirm_export(
-                    {"layer": self.layer, "output_crs": self.crs}, params
-                )
+                self.plugin._confirm_export({"layer": self.layer, "output_crs": self.crs}, params)
             )
             self.assertEqual(len(_MessageBox.created), 1)
             prompt = _MessageBox.created[0]
@@ -120,9 +116,7 @@ class MbtilesPreflightIntegrationTests(unittest.TestCase):
 
             _MessageBox.response = _MessageBox.Yes
             self.assertTrue(
-                self.plugin._confirm_export(
-                    {"layer": self.layer, "output_crs": self.crs}, params
-                )
+                self.plugin._confirm_export({"layer": self.layer, "output_crs": self.crs}, params)
             )
         self.assertEqual(self.settings.writes, [])
 

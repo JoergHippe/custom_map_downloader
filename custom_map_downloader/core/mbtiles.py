@@ -204,10 +204,7 @@ def mbtiles_export_risk(tile_count: int, estimated_bytes: int) -> str:
         or estimated_bytes >= MBTILES_EXTREME_ESTIMATED_BYTES
     ):
         return "extreme"
-    if (
-        tile_count >= MBTILES_LARGE_TILE_COUNT
-        or estimated_bytes >= MBTILES_LARGE_ESTIMATED_BYTES
-    ):
+    if tile_count >= MBTILES_LARGE_TILE_COUNT or estimated_bytes >= MBTILES_LARGE_ESTIMATED_BYTES:
         return "large"
     return "normal"
 

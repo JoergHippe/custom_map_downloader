@@ -1856,7 +1856,8 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.tr("MBTiles: {tiles} tile(s), estimated {size} (approx.)").format(
                 tiles=f"{tiles:,}",
                 size=estimated,
-            ) + suffix
+            )
+            + suffix
         )
 
     def _on_mbtiles_auto_zoom_clicked(self) -> None:
