@@ -81,7 +81,9 @@ def _capabilities(url):
    </Layer>
   </Layer>
  </Capability>
-</WMS_Capabilities>""".encode("utf-8")
+</WMS_Capabilities>""".encode(
+        "utf-8"
+    )
 
 
 class _WmsHandler(BaseHTTPRequestHandler):
@@ -119,9 +121,7 @@ class LocalWmsExportTests(unittest.TestCase):
         cls.app, cls.app_created = init_qgis_app()
         cls.project = QgsProject.instance()
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _WmsHandler)
-        cls.server.service_url = (
-            f"http://127.0.0.1:{cls.server.server_address[1]}/wms"
-        )
+        cls.server.service_url = f"http://127.0.0.1:{cls.server.server_address[1]}/wms"
         cls.server.capabilities_count = 0
         cls.server.getmap_count = 0
         cls.server.getmap_queries = []
@@ -153,9 +153,7 @@ class LocalWmsExportTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "local_wms.tif"
-            extent = ExtentSpec(
-                west=-4000, south=-4000, east=4000, north=4000, crs=crs
-            )
+            extent = ExtentSpec(west=-4000, south=-4000, east=4000, north=4000, crs=crs)
             params = ExportParams(
                 layer=layer,
                 width_px=128,
