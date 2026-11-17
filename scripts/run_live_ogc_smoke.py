@@ -37,11 +37,11 @@ def load_scenario(config: dict, name: str, max_pixels: int) -> dict:
     service_type = str(scenario.get("service_type", "wms")).lower()
     if service_type not in {"wms", "wmts"}:
         raise ValueError(f"Unsupported service type: {service_type}")
+    uri = scenario.get("uri") or source.get("uri", "")
     if service_type == "wmts" and (
         "tileMatrixSet=" not in uri or "WMTSCapabilities.xml" not in uri
     ):
         raise ValueError(f"WMTS source must specify actual capabilities and tile matrix: {name}")
-    uri = scenario.get("uri") or source.get("uri", "")
     if "url=https://" not in uri:
         raise ValueError(f"Live smoke requires an HTTPS WMS URL: {name}")
 
