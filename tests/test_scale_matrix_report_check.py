@@ -67,16 +67,12 @@ class ScaleMatrixReportCheckTests(unittest.TestCase):
         self.assertIn("NOTICE", proc.stdout)
         payload = {
             "matrix_key": "scale_matrix",
-            "rows": [
-                {"case": "a", "label": "small", "status": "drift", "exit_code": 3}
-            ],
+            "rows": [{"case": "a", "label": "small", "status": "drift", "exit_code": 3}],
         }
         self.assertNotEqual(self._run(payload).returncode, 0)
 
     def test_rejects_empty_matrix(self):
-        self.assertNotEqual(
-            self._run({"matrix_key": "scale_matrix", "rows": []}).returncode, 0
-        )
+        self.assertNotEqual(self._run({"matrix_key": "scale_matrix", "rows": []}).returncode, 0)
 
 
 if __name__ == "__main__":

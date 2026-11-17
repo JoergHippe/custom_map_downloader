@@ -49,7 +49,9 @@ def main() -> int:
 
     for row in rows:
         if row["status"] in {"drift", "untracked"}:
-            print(f"NOTICE: historical hash {row['status']} for {row.get('case')} [{row.get('label')}]")
+            print(
+                f"NOTICE: historical hash {row['status']} for {row.get('case')} [{row.get('label')}]"
+            )
     print(f"Scale matrix report OK: {matrix_key}: {report_path}")
     return 0
 

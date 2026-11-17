@@ -44,19 +44,13 @@ class NetworkCatalogSummaryTests(unittest.TestCase):
                 },
             }
         }
-        rows = summarize_network_catalog.compare_against_expected(
-            scenarios, {"changed": "old"}
-        )
+        rows = summarize_network_catalog.compare_against_expected(scenarios, {"changed": "old"})
         self.assertEqual(rows[0]["status"], "drift")
         self.assertEqual(rows[0]["exit_code"], 0)
 
     def test_invalid_export_result_is_error_even_with_matching_hash(self):
-        scenarios = {
-            "bad": {"exit_code": 0, "result": {"result": "error", "sha256": "same"}}
-        }
-        rows = summarize_network_catalog.compare_against_expected(
-            scenarios, {"bad": "same"}
-        )
+        scenarios = {"bad": {"exit_code": 0, "result": {"result": "error", "sha256": "same"}}}
+        rows = summarize_network_catalog.compare_against_expected(scenarios, {"bad": "same"})
         self.assertEqual(rows[0]["status"], "error")
 
     def test_collect_scenario_results_reads_network_scenarios_json(self):
