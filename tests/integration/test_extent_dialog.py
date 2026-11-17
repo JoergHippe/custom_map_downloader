@@ -162,9 +162,7 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             with self.subTest(axis=axis):
                 edit = self.dialog._extent_line_edits[axis]
                 self.assertIsNotNone(edit)
-                self.assertAlmostEqual(
-                    self.dialog._try_parse_float(edit.text()), value, places=3
-                )
+                self.assertAlmostEqual(self.dialog._try_parse_float(edit.text()), value, places=3)
 
     def test_unknown_private_field_names_are_not_guessed(self):
         """Never infer coordinate axes from order or translated UI labels."""
@@ -177,9 +175,7 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             widget.setObjectName("unknown_coordinate_widget")
             self.dialog._cache_extent_line_edits()
             self.assertIsNone(self.dialog._extent_line_edits["xmax"])
-            self.assert_rect(
-                self.dialog._get_best_output_extent(commit=False), rect
-            )
+            self.assert_rect(self.dialog._get_best_output_extent(commit=False), rect)
         finally:
             widget.setObjectName(original_name)
             self.dialog._cache_extent_line_edits()
