@@ -1,6 +1,10 @@
 name: Official WMS live smoke (manual only)
 
+# A PR-body marker enables a one-off live probe before this workflow reaches
+# the default branch. Ordinary PR pushes never contact public services.
 on:
+  pull_request:
+    types: [edited]
   workflow_dispatch:
     inputs:
       scenario:
@@ -17,6 +21,7 @@ permissions:
 
 jobs:
   live-wms:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.body, '[run-live-wms]')
     name: Public WMS / QGIS ${{ matrix.major }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -34,7 +39,7 @@ jobs:
         env:
           IMAGE: ${{ matrix.image }}
           MAJOR: ${{ matrix.major }}
-          SCENARIO: ${{ inputs.scenario }}
+          SCENARIO: ${{ github.event_name == 'workflow_dispatch' && inputs.scenario || 'bkg_dgm200_relief_tif' }}
         run: |
           mkdir -p "artifacts/live-wms-qgis-${MAJOR}"
           docker run --rm --entrypoint /bin/bash \
