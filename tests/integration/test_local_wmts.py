@@ -45,10 +45,7 @@ def _wmts_capabilities(url):
         )
     matrix_xml = "".join(matrices)
     # The REST URL tests QGIS's actual WMTS tile path, not an XYZ shortcut.
-    tile_url = (
-        url + "/local_wmts/default/local_mercator/"
-        "{TileMatrix}/{TileRow}/{TileCol}.png"
-    )
+    tile_url = url + "/local_wmts/default/local_mercator/" "{TileMatrix}/{TileRow}/{TileCol}.png"
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Capabilities xmlns="http://www.opengis.net/wmts/1.0"
  xmlns:ows="http://www.opengis.net/ows/1.1"
@@ -93,7 +90,9 @@ def _wmts_capabilities(url):
    {matrix_xml}
   </TileMatrixSet>
  </Contents>
-</Capabilities>""".encode("utf-8")
+</Capabilities>""".encode(
+        "utf-8"
+    )
 
 
 class _WmtsHandler(BaseHTTPRequestHandler):
