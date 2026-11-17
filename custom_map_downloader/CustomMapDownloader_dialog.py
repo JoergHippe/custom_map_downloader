@@ -1109,7 +1109,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                     float(extent["east"]),
                     float(extent["north"]),
                 )
-                self.extentGroupBox.setCurrentExtent(rect, crs)
+                # The saved rectangle is an explicit user selection. Updating
+                # currentExtent() alone does NOT update outputExtent(), so the
+                # exporter would silently use the previous map extent.
+                self.extentGroupBox.setOutputExtentFromUser(rect, crs)
             except Exception:
                 warnings.append(self.tr("Stored extent could not be restored."))
 
