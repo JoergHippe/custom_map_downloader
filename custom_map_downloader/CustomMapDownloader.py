@@ -29,8 +29,14 @@ from qgis.core import (
     QgsUnitTypes,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QEventLoop, QSettings, Qt, QTimer, QTranslator
-from qgis.PyQt.QtGui import QAction, QIcon
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QCheckBox, QMessageBox, QProgressDialog
+
+# QAction moved from QtWidgets (Qt5) to QtGui (Qt6).
+try:
+    from qgis.PyQt.QtGui import QAction
+except ImportError:
+    from qgis.PyQt.QtWidgets import QAction
 
 from .core.errors import CancelledError, ExportError, ValidationError
 from .core.exporter import GeoTiffExporter
