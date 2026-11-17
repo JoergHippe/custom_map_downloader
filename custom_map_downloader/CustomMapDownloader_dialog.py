@@ -1513,9 +1513,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             "ymax": "mYMaxLineEdit",
         }
         for axis, name in object_names.items():
-            self._extent_line_edits[axis] = self.extentGroupBox.findChild(
-                QtWidgets.QLineEdit, name
-            )
+            self._extent_line_edits[axis] = self.extentGroupBox.findChild(QtWidgets.QLineEdit, name)
 
     def _on_extent_toggle_dialog_visibility(self, visible: bool) -> None:
         """Hide/show dialog during 'Draw on canvas' to match QGIS behavior."""

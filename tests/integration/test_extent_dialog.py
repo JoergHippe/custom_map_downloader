@@ -110,6 +110,27 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             "One private QGIS coordinate field was assigned to multiple axes.",
         )
 
+    def test_editing_xmax_in_widget_updates_only_xmax(self):
+        """QTest key input must update the selected extent, not a different axis."""
+        initial = QgsRectangle(1200, 2300, 4600, 5700)
+        self.dialog.extentGroupBox.setOutputExtentFromUser(initial, self.crs)
+        self.dialog._cache_extent_line_edits()
+        xedit = self.dialog._extent_line_edits["xmax"]
+        self.assertIsNotNone(xedit)
+        self.dialog.show()
+        QCoreApplication.processEvents()
+
+        xedit.setFocus()
+        xedit.selectAll()
+        QTest.keyClicks(xedit, "4900")
+        QTest.keyPress(xedit, Qt.Key.Key_Tab)
+        QCoreApplication.processEvents()
+
+        actual = self.dialog.extentGroupBox.outputExtent()
+        self.assertAlmostEqual(actual.xMaximum(), 4900.0, places=3)
+        self.assertAlmostEqual(actual.yMaximum(), 5700.0, places=3)
+        self.assertAlmostEqual(actual.xMinimum(), 1200.0, places=3)
+
     def test_canvas_reset_replaces_user_extent(self):
         self.dialog.extentGroupBox.setOutputExtentFromUser(
             QgsRectangle(9000, 10000, 11000, 12000), self.crs
