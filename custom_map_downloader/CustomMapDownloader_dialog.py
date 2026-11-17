@@ -678,7 +678,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         except Exception:
             pass
         self._cache_extent_line_edits()
-        self._write_extent_line_edits(output_rect)
         self._update_extent_info()
         self._update_vrt_info()
         self._update_mbtiles_info()
@@ -1585,23 +1584,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return None
 
         return rect
-
-    def _write_extent_line_edits(self, rect: QgsRectangle) -> None:
-        """Update visible extent fields if QgsExtentGroupBox did not repaint them."""
-        if not hasattr(self, "_extent_line_edits") or not isinstance(self._extent_line_edits, dict):
-            self._cache_extent_line_edits()
-
-        values = {
-            "xmin": rect.xMinimum(),
-            "xmax": rect.xMaximum(),
-            "ymin": rect.yMinimum(),
-            "ymax": rect.yMaximum(),
-        }
-        locale = QLocale.system()
-        for key, value in values.items():
-            edit = self._extent_line_edits.get(key)
-            if edit is not None:
-                edit.setText(locale.toString(float(value), "f", 4))
 
     def _get_best_output_extent(self, *, commit: bool) -> Optional[QgsRectangle]:
         """Return the most reliable extent."""

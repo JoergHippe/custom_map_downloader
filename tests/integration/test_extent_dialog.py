@@ -144,6 +144,46 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             with self.subTest(raw=raw):
                 self.assertAlmostEqual(self.dialog._try_parse_float(raw), expected, places=5)
 
+    def test_reset_populates_visible_fields_via_public_qgis_api(self):
+        """No direct setText on private editors should be needed for reset."""
+        self.dialog.extentGroupBox.setOutputExtentFromUser(
+            QgsRectangle(9000, 10000, 11000, 12000), self.crs
+        )
+        self.dialog.reset_extent_to_canvas()
+        self.dialog._cache_extent_line_edits()
+        rect = self.dialog.extentGroupBox.outputExtent()
+        expected = {
+            "xmin": rect.xMinimum(),
+            "xmax": rect.xMaximum(),
+            "ymin": rect.yMinimum(),
+            "ymax": rect.yMaximum(),
+        }
+        for axis, value in expected.items():
+            with self.subTest(axis=axis):
+                edit = self.dialog._extent_line_edits[axis]
+                self.assertIsNotNone(edit)
+                self.assertAlmostEqual(
+                    self.dialog._try_parse_float(edit.text()), value, places=3
+                )
+
+    def test_unknown_private_field_names_are_not_guessed(self):
+        """Never infer coordinate axes from order or translated UI labels."""
+        rect = QgsRectangle(self.dialog.extentGroupBox.outputExtent())
+        mapping = self.dialog._extent_line_edits
+        widget = mapping["xmax"]
+        self.assertIsNotNone(widget)
+        original_name = widget.objectName()
+        try:
+            widget.setObjectName("unknown_coordinate_widget")
+            self.dialog._cache_extent_line_edits()
+            self.assertIsNone(self.dialog._extent_line_edits["xmax"])
+            self.assert_rect(
+                self.dialog._get_best_output_extent(commit=False), rect
+            )
+        finally:
+            widget.setObjectName(original_name)
+            self.dialog._cache_extent_line_edits()
+
     def test_canvas_reset_replaces_user_extent(self):
         self.dialog.extentGroupBox.setOutputExtentFromUser(
             QgsRectangle(9000, 10000, 11000, 12000), self.crs
