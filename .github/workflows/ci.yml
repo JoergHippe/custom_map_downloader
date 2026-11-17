@@ -31,7 +31,7 @@ jobs:
       - name: Ruff
         run: python -m ruff check .
       - name: Black
-        run: python -m black --check custom_map_downloader scripts tests
+        run: python -m black --check --diff custom_map_downloader scripts tests
       - name: Unit tests (without QGIS)
         run: python -m unittest discover -s tests -v
       - name: Translation status
