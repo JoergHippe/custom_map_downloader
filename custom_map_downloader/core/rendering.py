@@ -102,9 +102,8 @@ def render_tile_rgba(
     byte_count = img.sizeInBytes()
     row_bytes = img.bytesPerLine()
     buf = np.frombuffer(ptr.asstring(byte_count), dtype=np.uint8)
-    return buf.reshape(height_px, row_bytes)[:, : width_px * 4].reshape(
-        height_px, width_px, 4
-    ).copy()
+    pixels = buf.reshape(height_px, row_bytes)[:, : width_px * 4]
+    return np.array(pixels.reshape(height_px, width_px, 4), copy=True)
 
 
 def render_tile_with_retry(

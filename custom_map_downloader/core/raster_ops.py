@@ -24,9 +24,8 @@ def qimage_to_rgba_array(rendered_image: QImage, *, width: int, height: int) -> 
     byte_count = rendered_image.sizeInBytes()
     row_bytes = rendered_image.bytesPerLine()
     rgba = np.frombuffer(ptr.asstring(byte_count), dtype=np.uint8)
-    return rgba.reshape(height, row_bytes)[:, : width * 4].reshape(
-        height, width, 4
-    ).copy()
+    pixels = rgba.reshape(height, row_bytes)[:, : width * 4]
+    return np.array(pixels.reshape(height, width, 4), copy=True)
 
 
 def ensure_not_fully_transparent(arr_rgba: np.ndarray, *, height: int, width: int) -> None:
