@@ -1465,7 +1465,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         # Remove common thousands separators
         s = s.replace(" ", "").replace("'", "").replace("_", "")
 
-        # Try system locale first (e.g. de_DE uses comma decimal)
+        # Both separator types present: the rightmost one is the decimal
+        # separator; the other is grouping. QLocale.system() alone cannot
+        # recognize de_DE text on an en_US host (or vice versa).
+        if "," in s and "." in s:
+            decimal = "," if s.rfind(",") > s.rfind(".") else "."
+            grouping = "." if decimal == "," else ","
+            return float(s.replace(grouping, "").replace(decimal, "."))
+
+        # With a single separator, retain the historical locale-first
+        # behavior (e.g. an ambiguous "1,234" depends on the host locale).
         val, ok = QLocale.system().toDouble(s)
         if ok:
             return float(val)

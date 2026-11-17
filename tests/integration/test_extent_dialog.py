@@ -142,9 +142,7 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         )
         for raw, expected in cases:
             with self.subTest(raw=raw):
-                self.assertAlmostEqual(
-                    self.dialog._try_parse_float(raw), expected, places=5
-                )
+                self.assertAlmostEqual(self.dialog._try_parse_float(raw), expected, places=5)
 
     def test_canvas_reset_replaces_user_extent(self):
         self.dialog.extentGroupBox.setOutputExtentFromUser(
