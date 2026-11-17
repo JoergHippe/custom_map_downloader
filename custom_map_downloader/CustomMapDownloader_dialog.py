@@ -1489,76 +1489,33 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return None
 
     def _cache_extent_line_edits(self) -> None:
-        """Cache the 4 coordinate line edits inside QgsExtentGroupBox.
+        """Resolve QGIS's private coordinate editors only by exact object name.
 
-        Notes:
-            This is intentionally cached once to avoid repeated heuristic scans.
-            The internal object names / tooltips may vary, so we keep a small
-            keyword-based resolver but store the result.
+        This fallback is intentionally *not* the source of truth: prefer the
+        public outputExtent() API. An unsupported QGIS widget layout must leave
+        fields unresolved instead of guessing axes from labels or tab order.
         """
-        self._extent_line_edits = {"xmin": None, "xmax": None, "ymin": None, "ymax": None}
-
+        self._extent_line_edits = {
+            "xmin": None,
+            "xmax": None,
+            "ymin": None,
+            "ymax": None,
+        }
         if not hasattr(self, "extentGroupBox"):
             return
 
-        try:
-            edits = self.extentGroupBox.findChildren(QtWidgets.QLineEdit)
-        except Exception:
-            return
-
-        def bag(e: QtWidgets.QLineEdit) -> str:
-            parts = [
-                (e.objectName() or ""),
-                (e.accessibleName() or ""),
-                (e.toolTip() or ""),
-                (e.placeholderText() or ""),
-                (e.statusTip() or ""),
-            ]
-            return " ".join(p.lower() for p in parts if p)
-
-        # English + German keyword sets (QGIS UI can be localized)
-        keys = {
-            "xmin": ("xmin", "x min", "min x", "minimum x", "west", "w", "links", "linke"),
-            "xmax": ("xmax", "x max", "max x", "maximum x", "east", "e", "rechts", "rechte"),
-            "ymin": ("ymin", "y min", "min y", "minimum y", "south", "s", "unten", "untere"),
-            "ymax": ("ymax", "y max", "max y", "maximum y", "north", "n", "oben", "obere"),
+        # Current QGIS 3/4 widget internals. Explicitly private and optional:
+        # if upstream renames a control, no potentially wrong values are used.
+        object_names = {
+            "xmin": "mXMinLineEdit",
+            "xmax": "mXMaxLineEdit",
+            "ymin": "mYMinLineEdit",
+            "ymax": "mYMaxLineEdit",
         }
-
-        # First pass: prefer strong matches in objectName
-        for e in edits:
-            name = (e.objectName() or "").lower()
-            for k, kws in keys.items():
-                if any(kw.replace(" ", "") in name.replace("_", "") for kw in kws):
-                    if self._extent_line_edits[k] is None:
-                        self._extent_line_edits[k] = e
-
-        # Second pass: use the full metadata bag
-        for e in edits:
-            meta = bag(e)
-            for k, kws in keys.items():
-                if self._extent_line_edits[k] is not None:
-                    continue
-                if any(kw in meta for kw in kws):
-                    self._extent_line_edits[k] = e
-
-        # If still incomplete: try positional fallback (4 numeric edits)
-        if any(v is None for v in self._extent_line_edits.values()):
-            numeric_edits = []
-            for e in edits:
-                t = (e.text() or "").strip()
-                if not t:
-                    # empty is still fine; check validator / input mask
-                    pass
-                numeric_edits.append(e)
-
-            # Keep only unique, stable order from Qt
-            if len(numeric_edits) >= 4:
-                # Best guess: the internal widget usually stores as xmin,xmax,ymin,ymax.
-                # We only fill missing slots to avoid breaking already matched ones.
-                fallback_order = ["xmin", "xmax", "ymin", "ymax"]
-                for slot, e in zip(fallback_order, numeric_edits[:4], strict=False):
-                    if self._extent_line_edits[slot] is None:
-                        self._extent_line_edits[slot] = e
+        for axis, name in object_names.items():
+            self._extent_line_edits[axis] = self.extentGroupBox.findChild(
+                QtWidgets.QLineEdit, name
+            )
 
     def _on_extent_toggle_dialog_visibility(self, visible: bool) -> None:
         """Hide/show dialog during 'Draw on canvas' to match QGIS behavior."""

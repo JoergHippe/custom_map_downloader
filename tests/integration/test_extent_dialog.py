@@ -91,14 +91,19 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         mapping = self.dialog._extent_line_edits
         details = {
             slot: (
-                widget.objectName(),
-                widget.toolTip(),
-                widget.text(),
-            ) if widget is not None else None
+                (
+                    widget.objectName(),
+                    widget.toolTip(),
+                    widget.text(),
+                )
+                if widget is not None
+                else None
+            )
             for slot, widget in mapping.items()
         }
         print(f"Extent line-edit resolution: {details}")
         resolved = [widget for widget in mapping.values() if widget is not None]
+        self.assertEqual(len(resolved), 4, details)
         self.assertEqual(
             len(set(id(widget) for widget in resolved)),
             len(resolved),
