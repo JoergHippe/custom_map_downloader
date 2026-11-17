@@ -255,20 +255,26 @@ def create_mbtiles_database(path: str | Path) -> sqlite3.Connection:
     if db_path.exists():
         raise FileExistsError(f"MBTiles database already exists: {db_path}")
     conn = sqlite3.connect(str(db_path))
-    conn.executescript(
-        """
-        CREATE TABLE metadata (name TEXT, value TEXT);
-        CREATE TABLE tiles (
-            zoom_level INTEGER NOT NULL,
-            tile_column INTEGER NOT NULL,
-            tile_row INTEGER NOT NULL,
-            tile_data BLOB NOT NULL,
-            PRIMARY KEY (zoom_level, tile_column, tile_row)
-        );
-        CREATE UNIQUE INDEX tile_index
-            ON tiles (zoom_level, tile_column, tile_row);
-        """
-    )
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE metadata (name TEXT, value TEXT);
+            CREATE TABLE tiles (
+                zoom_level INTEGER NOT NULL,
+                tile_column INTEGER NOT NULL,
+                tile_row INTEGER NOT NULL,
+                tile_data BLOB NOT NULL,
+                PRIMARY KEY (zoom_level, tile_column, tile_row)
+            );
+            CREATE UNIQUE INDEX tile_index
+                ON tiles (zoom_level, tile_column, tile_row);
+            """
+        )
+    except Exception:
+        # Particularly important on Windows: a leaked connection can prevent
+        # the staged SQLite database from being removed on export failure.
+        conn.close()
+        raise
     return conn
 
 
