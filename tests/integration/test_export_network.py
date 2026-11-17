@@ -48,12 +48,11 @@ try:
         ExportParams,
         ExtentSpec,
     )
-    from scripts.raster_diagnostics import inspect_raster
-
     from custom_map_downloader.core.scale import (  # type: ignore
         OGC_STANDARD_DPI,
         scale_to_gsd_m_per_px,
     )
+    from scripts.raster_diagnostics import inspect_raster
 
     HAS_QGIS = True
 except Exception:
