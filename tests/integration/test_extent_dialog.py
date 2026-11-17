@@ -139,9 +139,9 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         self.dialog.extentGroupBox.setOutputExtentFromUser(original, self.crs)
 
         geographic = QgsCoordinateReferenceSystem("EPSG:4326")
-        expected = QgsCoordinateTransform(
-            self.crs, geographic, self.project
-        ).transformBoundingBox(original)
+        expected = QgsCoordinateTransform(self.crs, geographic, self.project).transformBoundingBox(
+            original
+        )
         self.dialog.mQgsProjectionSelectionWidget.setCrs(geographic)
         QCoreApplication.processEvents()
 
