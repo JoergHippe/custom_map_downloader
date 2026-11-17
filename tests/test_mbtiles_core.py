@@ -67,15 +67,14 @@ class MbtilesCoreTests(unittest.TestCase):
 
     def test_tile_plan_is_lazy_and_repeatable(self):
         bounds = (-180.0, -85.0, 180.0, 85.0)
-        plan = build_mbtiles_plan(
-            bounds, zoom_min=0, zoom_max=22, tile_size=256, padding=0
-        )
+        plan = build_mbtiles_plan(bounds, zoom_min=0, zoom_max=22, tile_size=256, padding=0)
         # The full world through z22 represents trillions of tiles. The
         # plan must remain cheap; only the first few objects get created.
         self.assertGreater(plan.tile_count, 1_000_000_000)
         first = list(islice(plan.tiles, 3))
-        self.assertEqual([(tile.zoom, tile.x, tile.y) for tile in first],
-                         [(0, 0, 0), (1, 0, 0), (1, 1, 0)])
+        self.assertEqual(
+            [(tile.zoom, tile.x, tile.y) for tile in first], [(0, 0, 0), (1, 0, 0), (1, 1, 0)]
+        )
         self.assertEqual(
             [(tile.zoom, tile.x, tile.y) for tile in islice(plan.tiles, 3)],
             [(tile.zoom, tile.x, tile.y) for tile in first],
