@@ -8,7 +8,7 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 - [x] QGIS 3.44/4.2 unter Linux und Windows mit echten Bindings und automatisierten Qt-Tests geprüft.
 - [ ] Weitere offiziell unterstützte Versionen und die finale OSGeo4W-/Desktop-Distribution vor Freigabe prüfen.
 - [x] QGIS-Integration für MBTiles, Qt-Canvas, Raster, lokales WMS und WMTS unter Windows/Linux automatisiert bestanden.
-- [ ] Amtliche WMS-/WMTS-Dienste und Maßstabsfälle erneut vollständig prüfen; Windows-Desktop-Bedienung der offiziellen Distribution gesondert bewerten.
+- [ ] Den breiten amtlichen WMS-Katalog vollständig erneut prüfen; Windows-Desktop-Bedienung der offiziellen Distribution gesondert bewerten.
 - [x] MBTiles-Ausgabe atomar im Zielverzeichnis bereitstellen; Abbruch- und Ersetzungstests unter QGIS 3/4.
 - [x] QImage-Speicherkonvertierung mit eigenen NumPy-Puffern unter Qt5/Qt6 testen.
 - [x] MBTiles-Tileplanung speicherschonend iterieren und sehr große Pläne ohne Vorbelegung testen.
@@ -23,7 +23,9 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 - [x] Live-TIF-Diagnose für Rasterpixel, Georeferenzierung und TIFF-Metadaten unter QGIS 3/4 eingeführt; basemap.de und NRW aktuell jeweils identisch.
 - [x] Historische Hashabweichungen als Referenzhinweise statt automatischer Exportfehler behandeln; alte SHA-256-Baselines bleiben erhalten.
 - [ ] Falls originale März-2026-GeoTIFF-Dateien wieder verfügbar sind, deren Pixel/Georeferenzierung/Metadaten optional vergleichen; kein Release-Blocker allein aufgrund alter Dateihashes.
-- [ ] Amtliche Maßstabs-/Hash-Matrix vollständig erneut prüfen; amtlichen WMTS-Live-Testfall ergänzen.
+- [x] Konfigurierte amtliche WMS-Pflichtmaßstabsmatrix (3 Fälle × 2 Maßstäbe) unter QGIS 3/4: alle zwölf Exporte erfolgreich.
+- [x] Echter amtlicher basemap.de-WMTS-Live-Test mit GeoTIFF unter QGIS 3/4 ausgeführt.
+- [ ] WMTS: Ursache wechselnder Pixel-/Dateihashes zwischen Live-Läufen prüfen; die Georeferenzierung ist identisch und die Ausgaben enthalten gültige Bilddaten.
 - Export-Diagnostik optional noch stärker in der UI auswertbar machen.
 - Release-Version und Changelog vor der nächsten Veröffentlichung sauber pflegen.
 

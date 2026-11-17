@@ -38,7 +38,7 @@ führen diese Tests automatisch bei PRs aus. Die archivierte
 Self-Hosted-Windows-CI mit amtlichen Live-Diensten bleibt separat;
 deren historische Ergebnisse ersetzen keine aktuellen Live-Tests.
 
-## Amtlicher Live-Smoke (opt-in)
+## Amtlicher Live-Smoke und Maßstabsmatrix (opt-in)
 
 `scripts/run_live_ogc_smoke.py --scenario bkg_dgm200_relief_tif`
 prüft genau einen vorhandenen amtlichen WMS-Fall mit eigenem Prozess,
@@ -48,6 +48,11 @@ dies unter QGIS 3 und 4 aus; die normale PR-CI bleibt offline.
 Historische Referenzabweichungen werden als Hinweise ausgegeben, nicht
 als automatische Exportfehler. Die verbindliche Trennung ist in
 [OGC_TEST_POLICY.md](../../docs/OGC_TEST_POLICY.md) beschrieben.
+Die Maßstabsmatrix läuft separat über `.github/workflows/live-scale-matrix.yml`
+(alle Pflichtfälle, optionaler Marker `[run-live-scale]`). Ein echter
+amtlicher WMTS-Fall (`basemap_wmts_gray_tif`) wird über
+`[run-live-wmts]` getestet. Ergebnisse und WMTS-Wiederholbarkeitsbefund:
+[VALIDATION_STATUS.md](../../docs/VALIDATION_STATUS.md).
 Details: [TESTING.md](../../docs/TESTING.md).
 
 ## Netzbasierte Szenarien (WMS/XYZ)

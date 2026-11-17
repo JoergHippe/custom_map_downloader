@@ -7,6 +7,11 @@ The format follows a pragmatic Keep a Changelog style.
 ## [0.5.0] - Unreleased (working version)
 
 ### Added
+- Full opt-in official WMS scale matrix: 12 successful QGIS 3/4
+  exports, strict output dimensions, advisory historical hash changes.
+- Real basemap.de WMTS live scenario with WMTS Capabilities and the
+  DE_EPSG_25833_ADV tile matrix; GDAL band statistics expose valid
+  opaque imagery but variable file/pixel hashes between live runs.
 - Independent GDAL fingerprints for GeoTIFF file bytes, decoded pixel bands,
   and georeferencing; optional CLI to compare original versus current rasters.
   Official WMS diagnostics now retain these independent checksums in reports.

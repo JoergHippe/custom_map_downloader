@@ -62,9 +62,11 @@ wenn ihre Entwicklung nachvollziehbar bleiben soll.
 
 ## Was trotzdem vor einer Veröffentlichung offen bleibt
 
-Die vollständige amtliche Maßstabsmatrix und ein realer WMTS-Live-Fall
-sowie eine Abnahme der offiziellen Windows-QGIS-Distribution sind
-eigenständige Release-Kriterien. Ein grüner Live-Smoke allein genügt
+Die konfigurierte WMS-Pflichtmaßstabsmatrix und ein echter
+WMTS-Live-Fall sind unter QGIS 3/4 inzwischen technisch
+erfolgreich geprüft. Offen bleiben die pixelgenaue
+WMTS-Reproduzierbarkeit, der breite amtliche WMS-Katalog
+und die Abnahme der offiziellen Windows-QGIS-Distribution. Ein grüner Live-Smoke allein genügt
 nicht. Für reproduzierbare Code-Regressionen bleiben die lokalen
 WMS-/WMTS-HTTP-Testserver in der regulären CI maßgeblich.
 

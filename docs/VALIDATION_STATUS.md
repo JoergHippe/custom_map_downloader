@@ -15,6 +15,44 @@
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
+### Amtliche WMS-Pflichtmaßstabsmatrix und WMTS-Live-Prüfung
+
+**WMS:** [Actions #44196241970](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44196241970).
+Alle drei in `scale_matrix` konfigurierten Pflichtfälle (GeoSN-Orthofoto
+Grau, basemap.de Grau, basemap.de Farbe) mit jeweils zwei Maßstäben
+unter **QGIS 3.44.15 und 4.2.3 erfolgreich**: 12 GeoTIFF-Exporte,
+2/2 CI-Jobs PASS. Die Rasterabmessungen und Maßstabsdifferenzen stimmen.
+Die aktuellen Dateihashes sind für jeden Fall zwischen QGIS 3/4 identisch.
+
+| Dienst | Maßstäbe | Rastergröße (klein / groß) | Historische Referenz |
+| --- | --- | --- | --- |
+| GeoSN Orthofoto Grau | 1:1.500 / 1:6.000 | 2381×2381 / 595×595 | 2× übereinstimmend |
+| basemap.de Grau | 1:5.000 / 1:25.000 | 1429×1429 / 286×286 | 2× abweichend |
+| basemap.de Farbe | 1:4.000 / 1:20.000 | 1429×1429 / 286×286 | 2× abweichend |
+
+Die alten Hashwerte bleiben unverändert; Abweichungen sind Hinweise
+und keine technischen Exportfehler. Der zusätzliche, breite Katalog
+`official_webmaps_catalog` wurde hierbei **noch nicht vollständig** geprüft.
+
+**Echter amtlicher WMTS:** basemap.de Web Raster Grau mit
+`GetCapabilities`, TileMatrixSet `DE_EPSG_25833_ADV`, Ausgabe
+500×500 Pixel in EPSG:25833.
+- [WMTS-Lauf #44196603830](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44196603830): QGIS 3/4 2/2 PASS.
+- [WMTS-Wiederholung #44197047298](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44197047298): erneut 2/2 PASS.
+  RGB-Kanalwerte 51–255, Alpha durchgehend 255; kein leeres oder
+  transparentes Bild. Georeferenzierung zwischen QGIS-Versionen gleich.
+- Die **Datei- und Pixel-Hashes wechseln zwischen Live-Läufen**.
+  Ein QGIS-3-Dateihash aus dem ersten Lauf entspricht exakt dem
+  QGIS-4-Dateihash aus dem zweiten. Eine systematische
+  QGIS-versionsbedingte Abweichung ist nicht belegt; stabile
+  Pixel-Reproduzierbarkeit ebenfalls nicht. Die Ursache ist offen.
+- WMTS hat deshalb `technical_gate=pass`,
+  `baseline_status=untracked`, `release_gate=not_assessed`.
+  Die technische Funktionsfähigkeit ist nachgewiesen, **nicht**
+  die pixelgenaue Wiederholbarkeit oder eine allgemeine Freigabe.
+
+
+
 ### Raster-Fingerprints: Pixel, Georeferenzierung und TIFF-Datei getrennt
 
 **Neu geprüft am 17.11.2026** gegen die beiden WMS mit historischen

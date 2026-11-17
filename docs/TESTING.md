@@ -259,3 +259,23 @@ rekonstruiert werden. Für die im März 2026 gespeicherten Referenzen
 liegen bisher nur **Dateihashes**, keine Pixel-/Georeferenzierungsdaten vor.
 Ohne ein solches Alt-Raster ist eine eindeutige historische
 Ursachenzuordnung nicht möglich.
+
+## Amtliche Live-Maßstabsmatrix und WMTS
+
+`.github/workflows/live-scale-matrix.yml` startet nur nach explizitem
+PR-Marker `[run-live-scale]` oder manuell. Die **drei Pflichtfälle**
+werden unter QGIS 3/4 in eigenen Unterprozessen mit zwei Maßstäben
+je Quelle geprüft (max. 240 Sekunden je Fall; 8 Mio. Pixel je Ausgabe).
+Fehlende Ergebnisse, falsche Rasterdimensionen und echte Exportfehler
+lassen den Lauf scheitern; alte Dateihash-Abweichungen werden gemeldet.
+[Erfolgreicher Lauf #44196241970](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44196241970).
+
+Der echte basemap.de-WMTS wird über `.github/workflows/live-ogc.yml`
+und `[run-live-wmts]` oder manuell als
+`basemap_wmts_gray_tif` getestet. QGIS verwendet intern den
+Rasterprovider `wms` auch für WMTS. Der Dienst benutzt tatsächlich
+`WMTSCapabilities.xml` und `DE_EPSG_25833_ADV`, keinen XYZ-Ersatz.
+Zwei Live-Läufe unter beiden QGIS-Versionen bestanden, allerdings
+mit wechselnden Pixel-/Dateihashes bei identischer Georeferenzierung.
+Dies bleibt als Diagnosepunkt offen; siehe
+[VALIDATION_STATUS.md](VALIDATION_STATUS.md).
