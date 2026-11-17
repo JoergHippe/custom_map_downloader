@@ -10,6 +10,7 @@ import unittest
 
 try:
     from qgis.PyQt.QtGui import QColor, QImage
+
     from custom_map_downloader.core.raster_ops import qimage_to_rgba_array
 except ImportError:
     if os.environ.get("CMD_REQUIRE_QGIS") == "1":
