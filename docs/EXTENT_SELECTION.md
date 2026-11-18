@@ -127,6 +127,37 @@ Polling-Intervalle oder QGIS-private Feld-Fallbacks**.
 Eine interaktive Abnahme auf der offiziellen Windows-QGIS-
 Installation bleibt vor einer Änderung dieser Mechanismen erforderlich.
 
+## Auflösungsmodus und Vorschauberechnung (18.11.2026)
+
+Bei GSD (`m/px`) und Zielmaßstab (`1:n`) ist **nur der aktive
+Auflösungsmodus maßgeblich**. Das jeweils andere Spinbox-Feld wird
+aus diesem Wert abgeleitet. Beim Laden von Profilen und `QSettings`
+wird zunächst der Modus gesetzt und danach das Wertepaar kontrolliert
+wiederhergestellt. Dadurch kann ein gespeicherter, abgeleiteter
+Nebenwert den eigentlichen Auflösungswert nicht mehr überschreiben.
+
+Die `valueChanged`-Signale der beiden Spinboxen laufen jetzt nur
+noch durch ihre jeweiligen Synchronisations-Slots. Eine vorhandene
+Synchronisationssperre verhindert rekursive Aktualisierungen;
+die Vorschauberechnungen werden je Änderung einmal ausgeführt.
+Die MBTiles-Kachelanzahl hängt von Geometrie, Zoom und Kachel-
+parametern ab, **nicht** von der Raster-GSD; sie wird deshalb
+beim GSD-/Maßstabswechsel nicht unnötig neu ermittelt.
+
+Beim VRT-Preset werden die beiden Kachelgrößen mit Qt
+`QSignalBlocker` gemeinsam gesetzt. Anschließend wird die
+Kachelraster-Vorschau genau einmal berechnet. Die Vorschau der
+Rasterabmessungen verwendet eine bereits ermittelte metrische
+Ausdehnung erneut und vermeidet dadurch eine doppelte CRS-
+Transformation innerhalb desselben Aktualisierungswegs.
+
+Die Berechnungsvorschriften für GSD, Zielmaßstab, Pixelanzahl,
+VRT-Raster und MBTiles-Kachelabdeckung sind unverändert.
+Reale QGIS-3/4-Dialogtests prüfen den aktiven Modus,
+VRT-Presets und die Zahl der ausgelösten Aktualisierungen.
+Der separate Windows-Desktop-Test bleibt Teil der
+Releaseabnahme gemäß [TESTING.md](TESTING.md).
+
 ## Bewusst noch nicht entfernt
 
 - Polling von Änderungen nach `Draw on canvas`.
