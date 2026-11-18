@@ -167,9 +167,9 @@ class QgisExportIntegrationTest(unittest.TestCase):
                     tile.write_bytes(b"existing-tile")
                     loaded_vrt = root / "already_loaded.vrt"
                     loaded_vrt.write_text(
-                        '<VRTDataset><SimpleSource>'
+                        "<VRTDataset><SimpleSource>"
                         f'<SourceFilename relativeToVRT="1">{tile.name}</SourceFilename>'
-                        '</SimpleSource></VRTDataset>',
+                        "</SimpleSource></VRTDataset>",
                         encoding="utf-8",
                     )
                     project = SimpleNamespace(
