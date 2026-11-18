@@ -42,7 +42,6 @@ try:
 
     ensure_plugin_import_path()
 
-    from custom_map_downloader.CustomMapDownloader import CustomMapDownloader  # type: ignore
     from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
     from custom_map_downloader.core.models import (  # type: ignore
         CenterSpec,
@@ -53,6 +52,8 @@ try:
         OGC_STANDARD_DPI,
         gsd_to_scale_denominator,
     )
+
+    from custom_map_downloader.CustomMapDownloader import CustomMapDownloader  # type: ignore
 
     HAS_QGIS = True
 except Exception:
@@ -173,9 +174,9 @@ class QgisExportIntegrationTest(unittest.TestCase):
                         encoding="utf-8",
                     )
                     project = SimpleNamespace(
-                        mapLayers=lambda: {"test": FakeLoadedRaster(str(loaded_vrt))}
+                        mapLayers=lambda source=str(loaded_vrt): {"test": FakeLoadedRaster(source)}
                     )
-                    plugin = SimpleNamespace(_project=lambda: project)
+                    plugin = SimpleNamespace(_project=lambda project=project: project)
                     with patch(
                         "custom_map_downloader.CustomMapDownloader.QgsRasterLayer",
                         FakeLoadedRaster,
