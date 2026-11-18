@@ -54,6 +54,10 @@ already been replaced.
 
 - `ERR_EXPORT_STAGE_INCOMPLETE`: Staging did not produce a complete
   primary output. The previous target was not replaced.
+- `ERR_EXPORT_TRANSFER_FAILED`: Copying or moving the completed export
+  into target-side staging failed. Existing output was not replaced.
+  Inspect disk space, destination permissions, SMB availability and
+  the detailed error before retrying.
 - `ERR_EXPORT_PUBLISH_ROLLED_BACK`: Publishing failed, but the prior
   target files were restored and newly published files were removed.
 - `ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED`: Publishing and rollback both
@@ -195,6 +199,17 @@ Actions:
 1. Open the saved path manually in QGIS.
 2. Check whether the raster file exists and has sidecars where expected.
 3. Review the QGIS message log for the saved path and warnings.
+
+## Understanding Export Dialog Details
+
+The main message summarizes what happened without repeating raw technical
+details. Expand **Show Details** for the stable error code, original error
+message and export parameters (output path, CRS, pixel dimensions, GSD and
+optional scale). The same errors can be inspected in the
+`CustomMapDownloader` QGIS message log.
+
+A large-export warning may remain visible in the completion dialog even
+after successful publication. It is a resource-use warning, not a failure.
 
 ## Where to Look for Diagnostics
 
