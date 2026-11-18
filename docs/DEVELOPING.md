@@ -112,32 +112,18 @@ Recommended local loop:
 4. restart QGIS or use an explicit plugin reloader if you choose to work that way
 5. smoke-check the plugin
 
-## Integration Test Coverage
+## Integrationstests und Zuständigkeiten
 
-### Current smoke coverage
+- **Teststrategie/Freigabekriterien:** [TESTING.md](TESTING.md)
+- **Ausführung, Testmodi, Umgebungsvariablen und Quellenkatalog:**
+  [tests/integration/README.md](../tests/integration/README.md)
+- **Dynamische WMS-/WMTS-Inhalte und Hashvergleich:**
+  [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md)
+- **Konkrete datierte Ergebnisse:** [VALIDATION_STATUS.md](VALIDATION_STATUS.md)
 
-`tests/integration/test_export_smoke.py` covers these QGIS-backed paths:
-
-- small direct GeoTIFF export
-- small export with target scale mode
-- small VRT export with tile creation
-- small export with render/output CRS reprojection
-
-Fast unit tests cover MBTiles tile math, padding, TMS row flipping, metadata and SQLite schema
-without requiring QGIS runtime. QGIS-backed MBTiles smoke coverage should be kept small and
-network-gated when public web services are involved.
-
-### Current network coverage
-
-`tests/integration/test_export_network.py` covers:
-
-- configurable WMS / XYZ export scenarios
-- explicit scale-dependent WMS probes via `scale_matrix`
-- scenario filtering via `SCENARIOS=name1,name2`
-- opt-in execution via `ALLOW_INTEGRATION_NETWORK=1`
-
-The scenario source of truth is `tests/integration/config.json`.
-If `CMD_INTEGRATION_REPORT_DIR` is set, the network suite writes JSON reports for scenario runs and the scale matrix.
+Der reproduzierbare Entwicklungsloop nutzt kleine lokale Raster- sowie
+WMS-/WMTS-HTTP-Testfälle. Amtliche Live-Dienste sind ausdrücklich
+opt-in und werden nicht als normale PR-CI gestartet.
 
 ## Translations
 
