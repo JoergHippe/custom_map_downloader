@@ -29,6 +29,9 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Reject output-to-project and geographic-to-metric extent transformations that fail;
+  avoid treating unchanged coordinates as if they were in the destination CRS.
+- Make extent integration tests independent of persistent CRS settings.
 - Explicitly close SQLite reader connections in MBTiles integration tests:
   Windows otherwise locks the file and prevents temporary-directory cleanup.
 - Fixed coordinate field aliasing in the QgsExtentGroupBox fallback: X maximum
