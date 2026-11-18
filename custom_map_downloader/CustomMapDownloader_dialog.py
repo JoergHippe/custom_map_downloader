@@ -1721,15 +1721,20 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         return w_m, h_m, True
 
-    def _compute_pixel_dimensions(self) -> Tuple[int, int]:
-        """Compute pixel width/height from extent and GSD."""
+    def _compute_pixel_dimensions(
+        self, extent_size_m: Optional[Tuple[float, float]] = None
+    ) -> Tuple[int, int]:
+        """Compute pixels, reusing an already validated extent size when available."""
         gsd = self._current_gsd()
         if gsd <= 0.0:
             return 0, 0
 
-        w_m, h_m, ok = self._get_extent_in_meters()
-        if not ok:
-            return 0, 0
+        if extent_size_m is None:
+            w_m, h_m, ok = self._get_extent_in_meters()
+            if not ok:
+                return 0, 0
+        else:
+            w_m, h_m = extent_size_m
 
         width_px = int(round(w_m / gsd))
         height_px = int(round(h_m / gsd))
@@ -1749,7 +1754,8 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self._clear_extent_info()
             return
 
-        width_px, height_px = self._compute_pixel_dimensions()
+        # Avoid a second CRS transformation just to derive pixel dimensions.
+        width_px, height_px = self._compute_pixel_dimensions((w_m, h_m))
         if width_px <= 0 or height_px <= 0:
             self._clear_extent_info()
             return
