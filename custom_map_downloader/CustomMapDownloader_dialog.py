@@ -1235,7 +1235,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 tr_proj = QgsCoordinateTransform(output_crs, project_crs, self._project())
                 rect_proj = tr_proj.transformBoundingBox(rect_out)
             except Exception:
-                rect_proj = QgsRectangle(rect_out)
+                # Coordinates still belong to output_crs: never relabel them
+                # as project_crs after a failed transformation.
+                return None
 
         west = float(rect_proj.xMinimum())
         east = float(rect_proj.xMaximum())
@@ -1661,7 +1663,9 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             else:
                 rect_m = rect
         except Exception:
-            rect_m = rect
+            # A degree-sized extent is not a metric width/height estimate.
+            # Refuse to compute pixel dimensions from wrong CRS units.
+            return 0.0, 0.0, False
 
         w_m = float(rect_m.width())
         h_m = float(rect_m.height())
