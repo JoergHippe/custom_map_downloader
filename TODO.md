@@ -28,19 +28,22 @@ dokumentiert. Diese Liste begründet keine Release-Freigabe.
   Wartbarkeitsprobleme prüfen; nur begründet und testgesichert modularisieren.
 - [ ] Stärkere optionale Anzeige der Export-Diagnostik in der UI bewerten.
 
-## Geplante Performanceverbesserung: Netzlaufwerk-Exporte
+## Geplante Verbesserung: temporäre Exportoperationen
 
-- [ ] **Hybrides Export-Staging** gemäß
-  [EXPORT_STAGING.md](docs/EXPORT_STAGING.md) vorsehen:
-  bei erkannten Netzwerk-/UNC-Zielen zunächst im lokalen Benutzer-Temp
-  rendern, fertige Dateien in Ziel-Staging kopieren und erst dann sicher
-  veröffentlichen; lokale Ziele unverändert auf dem Zielmedium stagen.
-- [ ] Laufwerkerkennung, ausreichenden lokalen/Ziel-Speicher,
-  konservativen Fallback, Abbruch/Kopierfehler, Windows-Dateisperren und
-  VRT-Dateisatz-Rollback gezielt testen.
-- [ ] Gesamtdauer (Rendering **plus** Kopieren und Veröffentlichen)
-  gegen bisherige Strategie auf lokalen und SMB-Zielen messen.
-  MBTiles zunächst unverändert lassen.
+- [ ] **Lokales Benutzer-Temp als bevorzugten Arbeitsbereich für alle
+  temporären, rechenintensiven Exportoperationen** vorsehen, unabhängig
+  vom Zielmedium. Siehe [EXPORT_STAGING.md](docs/EXPORT_STAGING.md).
+- [ ] Fertige Ausgaben kontrolliert im **Ziel-Staging** bereitstellen
+  und dort sicher veröffentlichen. Bei tatsächlich gleichem Dateisystem
+  unnötiges Kopieren vermeiden; bei unterschiedlichen Dateisystemen
+  vollständig und überprüfbar übertragen.
+- [ ] Temp-Ort, Laufwerkseigenschaften, lokalen und Ziel-Speicherbedarf,
+  sicheren Fallback, Abbruch, Windows-Dateisperren und VRT-Rollback prüfen.
+- [ ] Performance als **Gesamtdauer** einschließlich Transfer und
+  Veröffentlichung auf SSD-/SMB-Zielen messen.
+- [ ] MBTiles-Erzeugung später gesondert prüfen; vorhandene atomare
+  Veröffentlichungslogik zunächst erhalten. Keine unmittelbare
+  Implementierung dieser Planung.
 
 ## Optionale Erweiterungen
 
