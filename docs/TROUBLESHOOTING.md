@@ -102,41 +102,51 @@ Actions:
 
 Symptoms:
 
-- a previously stable topographic map, orthophoto or relief export suddenly looks different
-- Windows/QGIS scale matrix starts reporting hash drift
-- export still succeeds, but visual portrayal changed
+- a previously stable map or orthophoto looks different
+- a live-service report indicates historical hash `drift`
+- the export itself may still have succeeded
 
-Typical causes:
-
-- upstream provider changed symbology or cartographic rules
-- service backend or cache was updated
-- the public service now serves different source data
+Possible causes include changed source data, portrayal, service backend,
+cache state, or differences in raster encoding.
 
 Actions:
 
-1. Check the latest `scale_matrix_report.md` or `scale_matrix_report.json`.
-2. Re-run the affected case in real Windows/QGIS runtime.
-3. Distinguish between expected upstream change and plugin regression.
-4. Only update `expected_hashes` after repeated confirmation on the maintained runtime.
+1. Check the current live WMS/WMTS or scale-matrix report and distinguish
+   technical export status from historical hash comparison.
+2. Verify raster validity, nonempty pixels, expected extent/CRS and dimensions.
+3. Where relevant, compare independent pixel, georeference and file hashes
+   with `scripts/raster_diagnostics.py`.
+4. Keep prior reference hashes as dated evidence. Never replace them
+   silently merely to make a diagnostic report green.
 
-## Windows/QGIS Validation Workflow Failed
+Historical hash changes alone are **not** an automatic test or release
+failure. See [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md).
+
+## QGIS CI or Optional Public-Service Validation Failed
 
 Symptoms:
 
-- scheduled or manual Windows/QGIS workflow fails
-- CI artifacts contain `scale_matrix_summary.json` but the gate is red
-- one or more required matrix rows show `drift`, `missing` or `error`
+- active Linux/Windows QGIS CI is red
+- an opt-in official WMS/WMTS or scale-matrix run fails
+- a required test is missing, skipped unexpectedly, or has a nonzero exit code
 
 Actions:
 
-1. Inspect uploaded artifacts, especially:
-   - `scale_matrix_summary.json`
-   - `scale_matrix_report.json`
-   - `scale_matrix_report.md`
-   - per-case `stdout.log` / `stderr.log`
-2. Re-run the failing case with `scripts/probe_windows_scale_case.py`.
-3. If the issue is provider-side drift, keep the release blocked until the baseline decision is explicit.
-4. If the issue is a plugin regression, fix the exporter or service handling before promoting a new baseline.
+1. Identify which test actually failed: deterministic QGIS/Qt/OGC
+   integration or external public-service validation.
+2. Check job logs and any saved result artifacts. For local isolated
+   network cases, inspect `scale_matrix_report.json`,
+   `scenario_catalog_report.json`, `stdout.log`, and `stderr.log`
+   when generated.
+3. Reproduce technical failures with the matching QGIS environment
+   and a minimal case. Public-service availability failures may need
+   a separate run to distinguish a service outage from a plugin defect.
+4. Investigate incorrect content, extent, CRS, dimensions and child
+   process failures before approving a release. A hash-only difference
+   with a valid export is advisory, not an automatic blocker.
+
+The old scheduled self-hosted Windows workflow is no longer active.
+See [TESTING.md](TESTING.md) for maintained CI and release requirements.
 
 ## Export Works But Layer Does Not Reload
 
