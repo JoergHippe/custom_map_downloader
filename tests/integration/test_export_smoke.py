@@ -2,6 +2,8 @@ import os
 import tempfile
 import unittest
 import warnings
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -40,6 +42,7 @@ try:
 
     ensure_plugin_import_path()
 
+    from custom_map_downloader.CustomMapDownloader import CustomMapDownloader  # type: ignore
     from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
     from custom_map_downloader.core.models import (  # type: ignore
         CenterSpec,
@@ -141,6 +144,48 @@ class QgisExportIntegrationTest(unittest.TestCase):
                 self.project.removeMapLayer(layer.id())
             except Exception:
                 pass
+
+    def test_loaded_vrt_tile_conflicts_cover_raster_formats(self):
+        """An existing loaded VRT must block replacement of any referenced tile format."""
+
+        class FakeLoadedRaster:
+            def __init__(self, source):
+                self._source = source
+
+            def source(self):
+                return self._source
+
+            def name(self):
+                return "Loaded VRT"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "tiles.vrt"
+            for ext in (".tif", ".tiff", ".png", ".jpg", ".jpeg"):
+                with self.subTest(extension=ext):
+                    tile = root / f"tiles__tile_r000_c000{ext}"
+                    tile.write_bytes(b"existing-tile")
+                    loaded_vrt = root / "already_loaded.vrt"
+                    loaded_vrt.write_text(
+                        '<VRTDataset><SimpleSource>'
+                        f'<SourceFilename relativeToVRT="1">{tile.name}</SourceFilename>'
+                        '</SimpleSource></VRTDataset>',
+                        encoding="utf-8",
+                    )
+                    project = SimpleNamespace(
+                        mapLayers=lambda: {"test": FakeLoadedRaster(str(loaded_vrt))}
+                    )
+                    plugin = SimpleNamespace(_project=lambda: project)
+                    with patch(
+                        "custom_map_downloader.CustomMapDownloader.QgsRasterLayer",
+                        FakeLoadedRaster,
+                    ):
+                        conflicts = CustomMapDownloader._find_loaded_layer_conflicts(
+                            plugin, str(output), create_vrt=True
+                        )
+                    self.assertEqual(len(conflicts), 1)
+                    self.assertEqual(conflicts[0][2], "vrt-references-targets")
+                    tile.unlink()
 
     def test_export_small_raster(self):
         output_path = Path(self._export_test_raster("cmd_integration_export", target_scale=False))
