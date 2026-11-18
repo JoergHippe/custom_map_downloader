@@ -126,6 +126,35 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         self.dialog.populate_layers()
         self.assertEqual(self.dialog.comboBox_layer.currentData().id(), first.id())
 
+    def test_profile_restores_vrt_when_previous_format_was_mbtiles(self):
+        """Qt signal ordering must not silently rewrite a VRT profile to MBTiles."""
+        self.dialog._restore_output_path(str(Path(tempfile.gettempdir()) / "previous.mbtiles"))
+        self.assertEqual(self.dialog._selected_output_extension(), ".mbtiles")
+        profile = self.dialog._collect_profile_state()
+        expected = str(Path(tempfile.gettempdir()) / "restored.vrt")
+        profile.update({"output_path": expected, "create_vrt": True, "extent": None})
+
+        self.dialog._apply_profile_state(profile)
+
+        self.assertEqual(self.dialog.lineEdit_outputDirectory.text(), expected)
+        self.assertTrue(self.dialog.checkBox_createVrt.isChecked())
+        self.assertEqual(self.dialog._selected_output_extension(), ".tif")
+
+    def test_last_output_setting_restores_vrt_checkbox(self):
+        """A saved .vrt path must restore the actual VRT control state."""
+        expected = str(Path(tempfile.gettempdir()) / "last_output.vrt")
+
+        def stored_value(key, default="", type=None):
+            return expected if key.endswith("last_output_path") else default
+
+        with patch("custom_map_downloader.CustomMapDownloader_dialog.QSettings") as settings:
+            settings.return_value.value.side_effect = stored_value
+            self.dialog._load_settings()
+
+        self.assertEqual(self.dialog.lineEdit_outputDirectory.text(), expected)
+        self.assertTrue(self.dialog.checkBox_createVrt.isChecked())
+        self.assertEqual(self.dialog._selected_output_extension(), ".tif")
+
     def test_internal_coordinate_mapping_does_not_alias_fields(self):
         """Document QGIS child-widget mapping without assuming private names."""
         self.dialog._cache_extent_line_edits()
