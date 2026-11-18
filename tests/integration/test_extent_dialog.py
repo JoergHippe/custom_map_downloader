@@ -74,6 +74,10 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         self.iface = _Interface(self.parent, self.canvas)
         self.dialog = CustomMapDownloaderDialog(self.iface)
         self.addCleanup(self._close_dialog)
+        # The dialog persists CRS choices across instances. Each test must
+        # establish its own metric baseline, independent of execution order.
+        self.dialog.mQgsProjectionSelectionWidget.setCrs(self.crs)
+        self.dialog.reset_extent_to_canvas()
         QCoreApplication.processEvents()
 
     def _close_dialog(self):
