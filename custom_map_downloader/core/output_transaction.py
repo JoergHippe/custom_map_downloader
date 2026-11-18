@@ -83,9 +83,7 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
 
             # Keep any remaining previous versions outside the temporary
             # directory so that normal cleanup cannot delete them.
-            recovery_dir = destination.parent / (
-                f".{destination.stem}.recovery-{uuid.uuid4().hex}"
-            )
+            recovery_dir = destination.parent / (f".{destination.stem}.recovery-{uuid.uuid4().hex}")
             try:
                 backup_dir.rename(recovery_dir)
             except OSError as recovery_error:
