@@ -1,8 +1,9 @@
 # Validierungsstand
 
-**Aktuelle Einordnung (18.11.2026):** Der jüngste bestätigte
-automatisierte Stand ist `main` auf
-`ae7de62cf878913a9e8a72028efcd8d54f81389f`.
+**Aktuelle Einordnung (18.11.2026):** Die jüngsten erfolgreich
+automatisiert geprüften Codeänderungen stehen auf
+`7de08e43d119c88ad28cce91a1a739e12ec0e54a`
+(QGIS-Dialog-/Profilkorrekturen).
 Die untenstehenden früheren Befunde bleiben als datierte Nachweise
 erhalten; neue Prüfungen ersetzen keine vollständige Freigabe
 der offiziellen Windows-QGIS-/OSGeo4W-Desktop-Distribution.
@@ -17,6 +18,29 @@ Exportprüfung erfolgreich ist.
 
 Freigabekriterien stehen in [TESTING.md](TESTING.md) und
 [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md).
+
+## Dialog-/Profilzustand: Linux-QGIS-Regression (18.11.2026)
+
+**Code-Commit:** `7de08e43d119c88ad28cce91a1a739e12ec0e54a`  
+**Nachweis:** [Actions #44303291887](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44303291887)
+
+- Python/Formatierung/Packaging: **PASS**
+- QGIS 3: reale Dialog- und Exporttests **PASS**
+- QGIS 4: reale Dialog- und Exporttests **PASS**
+- Neue Regressionen: gespeicherte Layerauswahl beim Dialogstart,
+  Wechsel/Refresh der Layerliste, Wiederherstellung eines
+  VRT-Profils nach MBTiles und VRT-Dateiendung aus QSettings.
+- Eine erste Testvariante mit temporär dem nativen QgsProject
+  zugeordneten und anschließend entfernten Layern führte zu
+  QGIS-C++-Abstürzen. Der Test verwendet jetzt isolierte
+  Layer-Auswahldaten; die QGIS-Dialog- und Qt-Komponenten bleiben echt.
+- **Noch nicht erneut geprüft:** native Windows-QGIS-3/4-Matrix
+  speziell für diese Dialogkorrektur. Ebenso keine Freigabe mit dem
+  offiziellen Windows-OSGeo4W-/Standalone-Installer.
+
+Die dokumentierte Temp-/Staging-Architektur bleibt unverändert.
+Details zu den historischen QGIS-Extent-Workarounds stehen in
+[EXTENT_SELECTION.md](EXTENT_SELECTION.md).
 
 ## Aktueller geprüfter Stand: temporäre Exportoperationen (18.11.2026)
 
