@@ -2,10 +2,10 @@ import os
 import tempfile
 import unittest
 import warnings
-from types import SimpleNamespace
-from unittest.mock import patch
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
