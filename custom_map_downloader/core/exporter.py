@@ -549,12 +549,12 @@ class GeoTiffExporter:
                 )
 
             src_crs = ext.crs
-            if (
-                src_crs is not None
-                and src_crs.isValid()
-                and render_crs.isValid()
-                and src_crs != render_crs
-            ):
+            if src_crs is None or not src_crs.isValid():
+                raise ValidationError(
+                    "ERR_VALIDATION_CRS_INVALID",
+                    "Export extent must have a valid source CRS.",
+                )
+            if src_crs != render_crs:
                 try:
                     tr = QgsCoordinateTransform(src_crs, render_crs, QgsProject.instance())
                     rect = tr.transformBoundingBox(rect)
