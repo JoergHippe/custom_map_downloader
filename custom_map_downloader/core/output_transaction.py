@@ -14,6 +14,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from .errors import ExportError
+
 
 @contextmanager
 def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
@@ -33,7 +35,10 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
         yield staged_path
 
         if not staged_path.is_file():
-            raise RuntimeError(f"Export did not produce its primary output: {staged_path}")
+            raise ExportError(
+                "ERR_EXPORT_STAGE_INCOMPLETE",
+                f"Export did not produce its primary output: {staged_path}",
+            )
 
         staged_files = [file for file in staging_dir.iterdir() if file.is_file()]
         # Publish the VRT last, after all the referenced tiles and sidecars.
@@ -51,7 +56,7 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
                     backed_up.append(target)
                 os.replace(source, target)
                 published.append(target)
-        except Exception:
+        except Exception as publish_error:
             rollback_errors: list[Exception] = []
             for target in reversed(published):
                 try:
@@ -63,19 +68,44 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
                     os.replace(backup_dir / target.name, target)
                 except OSError as error:
                     rollback_errors.append(error)
-            if rollback_errors:
-                # Never destroy remaining backups during temporary-dir cleanup
-                # if the OS or antivirus locks a destination on Windows.
-                recovery_dir = destination.parent / (
-                    f".{destination.stem}.recovery-{uuid.uuid4().hex}"
-                )
-                try:
-                    backup_dir.rename(recovery_dir)
-                except OSError as recovery_error:
-                    raise RuntimeError(
-                        "Publication and rollback failed; unable to preserve recovery files"
-                    ) from recovery_error
-                raise RuntimeError(
-                    f"Publication and rollback failed; remaining backups: {recovery_dir}"
-                ) from rollback_errors[0]
-            raise
+
+            if not rollback_errors:
+                raise ExportError(
+                    "ERR_EXPORT_PUBLISH_ROLLED_BACK",
+                    (
+                        f"Publishing '{destination}' failed: {publish_error}. "
+                        "Previously existing output files were restored; "
+                        "new files from this publication were removed."
+                    ),
+                ) from publish_error
+
+            # Keep any remaining previous versions outside the temporary
+            # directory so that normal cleanup cannot delete them.
+            recovery_dir = destination.parent / (
+                f".{destination.stem}.recovery-{uuid.uuid4().hex}"
+            )
+            try:
+                backup_dir.rename(recovery_dir)
+            except OSError as recovery_error:
+                raise ExportError(
+                    "ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED",
+                    (
+                        f"Publishing '{destination}' failed: {publish_error}. "
+                        f"Rollback also failed: {rollback_errors!r}. "
+                        f"Could not move backups from '{backup_dir}' to a "
+                        f"permanent recovery folder: {recovery_error}. "
+                        "The target directory must be inspected; recovery "
+                        "files cannot be guaranteed to survive temp cleanup."
+                    ),
+                ) from recovery_error
+
+            raise ExportError(
+                "ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED",
+                (
+                    f"Publishing '{destination}' failed: {publish_error}. "
+                    f"Rollback also failed: {rollback_errors!r}. "
+                    f"Remaining backups were saved to '{recovery_dir}'. "
+                    "Some target files may have changed. Inspect both "
+                    "locations before retrying; do not delete recovery files."
+                ),
+            ) from publish_error
