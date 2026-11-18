@@ -556,6 +556,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         except Exception:
             self._last_layer_id = None
 
+        # populate_layers() runs before settings are loaded at dialog startup.
+        # Apply the stored selection now, rather than only on a later refresh.
+        if self._last_layer_id:
+            self._select_layer_from_profile(self._last_layer_id, "")
+
         self._update_scale_hint()
 
     def _save_settings(self) -> None:
