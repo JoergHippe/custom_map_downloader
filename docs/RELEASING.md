@@ -97,18 +97,23 @@ A VRT with invalid or nonportable source paths fails the export. Before
 release, validate overwrite, cancellation, sidecar failure and VRT path
 portability using the actual Windows QGIS distribution.
 
-## Planned optimization for network destinations
+## Planned temporary-workspace architecture
 
-An automatic hybrid strategy for network/UNC destinations is **planned,
-not yet implemented**: render in the local user's temp directory, copy
-completed files into staging on the target filesystem, then publish there.
-Local destinations should retain their existing same-filesystem staging.
-MBTiles remains unchanged pending measurements.
+**Planned, not yet implemented:** Prefer the local user's temporary
+directory for computational intermediate files regardless of whether the
+destination is local or on a network share. Stage completed outputs on
+the target filesystem before replacing published files. Avoid a full
+extra copy when the work and destination staging locations are demonstrably
+on the same filesystem.
 
-See [EXPORT_STAGING.md](EXPORT_STAGING.md) for requirements, risks,
-fallbacks and the mandatory Windows/SMB test matrix. Until implemented,
-the current target-directory staging behavior described above remains
-authoritative.
+The current target-directory staging behavior described above remains
+authoritative until the migration is implemented and tested. MBTiles'
+existing atomic publishing is unchanged for now, although local SQLite
+working data is part of the future evaluation.
+
+See [EXPORT_STAGING.md](EXPORT_STAGING.md) for the architecture,
+capacity/fallback requirements, filesystem constraints and tests.
+No release may assume this planned optimization is already available.
 
 ## Package Output
 
