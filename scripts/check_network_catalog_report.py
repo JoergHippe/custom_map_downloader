@@ -31,6 +31,14 @@ def main() -> int:
         print("ERROR: invalid report format: rows must be a list", file=sys.stderr)
         return 1
 
+    # An empty report cannot prove that the required checks actually ran.
+    if not rows:
+        print("ERROR: report contains no test results", file=sys.stderr)
+        return 1
+    if any(not isinstance(row, dict) for row in rows):
+        print("ERROR: invalid report format: each row must be an object", file=sys.stderr)
+        return 1
+
     allowed_statuses = {"ok"} if group_name == "official_webmaps_catalog" else {"ok", "untracked"}
     bad_rows = [row for row in rows if str(row.get("status", "")) not in allowed_statuses]
     if bad_rows:
