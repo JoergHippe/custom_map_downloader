@@ -27,8 +27,8 @@ try:
     from qgis.PyQt.QtWidgets import QWidget
 
     ensure_plugin_import_path()
-    from custom_map_downloader.CustomMapDownloader_dialog import CustomMapDownloaderDialog
     from custom_map_downloader.core.scale import gsd_to_scale_denominator, scale_to_gsd_m_per_px
+    from custom_map_downloader.CustomMapDownloader_dialog import CustomMapDownloaderDialog
 
     HAS_QGIS = True
 except Exception:
