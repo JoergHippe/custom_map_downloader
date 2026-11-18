@@ -221,6 +221,32 @@ class StagedRasterOutputTests(unittest.TestCase):
                 ["map__tile_r000_c000.tif", "map.vrt"],
             )
 
+    def test_cross_device_fallback_copies_complete_vrt_file_set(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.vrt"
+            original_replace = os.replace
+
+            def force_cross_device_copy(src, dst):
+                if Path(src).parent.name.startswith("cmd-work-"):
+                    raise OSError("simulated cross-device rename")
+                return original_replace(src, dst)
+
+            with patch(
+                "custom_map_downloader.core.output_transaction.os.replace",
+                side_effect=force_cross_device_copy,
+            ):
+                with staged_raster_output(target, prefer_local=True) as staged:
+                    staged.write_bytes(b"vrt-xml")
+                    (staged.parent / "map__tile_r000_c000.tif").write_bytes(b"tile")
+                    (staged.parent / "map__tile_r000_c000.prj").write_bytes(b"crs")
+            self.assertEqual(target.read_bytes(), b"vrt-xml")
+            self.assertEqual(
+                (target.parent / "map__tile_r000_c000.tif").read_bytes(), b"tile"
+            )
+            self.assertEqual(
+                (target.parent / "map__tile_r000_c000.prj").read_bytes(), b"crs"
+            )
+
     def test_cross_device_copy_cancellation_preserves_existing_file(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "map.tif"
