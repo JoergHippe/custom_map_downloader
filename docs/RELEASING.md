@@ -97,6 +97,19 @@ A VRT with invalid or nonportable source paths fails the export. Before
 release, validate overwrite, cancellation, sidecar failure and VRT path
 portability using the actual Windows QGIS distribution.
 
+## Planned optimization for network destinations
+
+An automatic hybrid strategy for network/UNC destinations is **planned,
+not yet implemented**: render in the local user's temp directory, copy
+completed files into staging on the target filesystem, then publish there.
+Local destinations should retain their existing same-filesystem staging.
+MBTiles remains unchanged pending measurements.
+
+See [EXPORT_STAGING.md](EXPORT_STAGING.md) for requirements, risks,
+fallbacks and the mandatory Windows/SMB test matrix. Until implemented,
+the current target-directory staging behavior described above remains
+authoritative.
+
 ## Package Output
 
 Release archives are built from `custom_map_downloader/` only. The package validator ensures that the ZIP does not accidentally include:
