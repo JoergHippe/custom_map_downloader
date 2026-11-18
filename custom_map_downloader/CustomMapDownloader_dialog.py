@@ -378,6 +378,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return
         self.lineEdit_outputDirectory.setText((root or path) + desired)
 
+    def _restore_output_path(self, output_path: str) -> None:
+        """Restore the format before the path so VRT/MBTiles signals agree."""
+        suffix = Path(output_path).suffix.lower()
+        # VRT is a tiled GeoTIFF mosaic, not a standalone format entry.
+        # Switch away from MBTiles before enabling the VRT checkbox.
+        self._set_output_format_from_extension(".tif" if suffix == ".vrt" else suffix)
+        if hasattr(self, "lineEdit_outputDirectory"):
+            self.lineEdit_outputDirectory.setText(output_path)
+            self._apply_output_path_suffix()
+
     def _apply_output_path_suffix(self) -> None:
         if not hasattr(self, "lineEdit_outputDirectory"):
             return
@@ -510,9 +520,8 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
 
         try:
             output_path = settings.value(base + "last_output_path", "", type=str) or ""
-            if output_path and hasattr(self, "lineEdit_outputDirectory"):
-                self.lineEdit_outputDirectory.setText(output_path)
-                self._set_output_format_from_extension(Path(output_path).suffix)
+            if output_path:
+                self._restore_output_path(output_path)
         except Exception:
             pass
 
@@ -1040,9 +1049,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         warnings: list[str] = []
 
         if hasattr(self, "lineEdit_outputDirectory"):
-            output_path = str(profile.get("output_path") or "")
-            self.lineEdit_outputDirectory.setText(output_path)
-            self._apply_output_path_suffix()
+            self._restore_output_path(str(profile.get("output_path") or ""))
 
         resolution_mode = str(profile.get("resolution_mode") or "gsd")
         if hasattr(self, "comboBox_resolutionMode"):
