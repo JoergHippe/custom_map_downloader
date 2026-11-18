@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from custom_map_downloader.core.errors import ExportError
 from custom_map_downloader.core.output_transaction import staged_raster_output
 
 
@@ -37,9 +38,11 @@ class StagedRasterOutputTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             dest = Path(directory) / "map.tif"
             dest.write_bytes(b"old")
-            with self.assertRaisesRegex(RuntimeError, "primary output"):
+            with self.assertRaises(ExportError) as ctx:
                 with staged_raster_output(dest):
                     pass
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_STAGE_INCOMPLETE")
+            self.assertIn("primary output", ctx.exception.details)
             self.assertEqual(dest.read_bytes(), b"old")
 
     def test_vrt_preserves_old_tiles_on_exception(self):
@@ -74,12 +77,49 @@ class StagedRasterOutputTests(unittest.TestCase):
                 "custom_map_downloader.core.output_transaction.os.replace",
                 side_effect=replace_with_failure,
             ):
-                with self.assertRaisesRegex(OSError, "simulated publish"):
+                with self.assertRaises(ExportError) as ctx:
                     with staged_raster_output(dest) as staged:
                         staged.write_bytes(b"new-vrt")
                         (staged.parent / tile.name).write_bytes(b"new-tile")
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_PUBLISH_ROLLED_BACK")
+            self.assertIn("restored", ctx.exception.details)
             self.assertEqual(dest.read_bytes(), b"old-vrt")
             self.assertEqual(tile.read_bytes(), b"old-tile")
+
+    def test_failed_rollback_preserves_backups_and_reports_recovery_path(self):
+        """Do not claim restoration when the original tile cannot be restored."""
+        with tempfile.TemporaryDirectory() as directory:
+            dest = Path(directory) / "map.vrt"
+            tile = Path(directory) / "map__tile_r000_c000.tif"
+            dest.write_bytes(b"original-vrt")
+            tile.write_bytes(b"original-tile")
+            original_replace = os.replace
+
+            def replace_with_failure(src, dst):
+                src = Path(src)
+                dst = Path(dst)
+                if src.name == "map.vrt" and src.parent.name.startswith(".map.stage-"):
+                    raise OSError("publish interrupted")
+                if src.name == tile.name and src.parent.name == ".backups":
+                    raise OSError("tile restore blocked")
+                return original_replace(src, dst)
+
+            with patch(
+                "custom_map_downloader.core.output_transaction.os.replace",
+                side_effect=replace_with_failure,
+            ):
+                with self.assertRaises(ExportError) as ctx:
+                    with staged_raster_output(dest) as staged:
+                        staged.write_bytes(b"new-vrt")
+                        (staged.parent / tile.name).write_bytes(b"new-tile")
+
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED")
+            self.assertEqual(dest.read_bytes(), b"original-vrt")
+            recovery_dirs = list(Path(directory).glob(".map.recovery-*"))
+            self.assertEqual(len(recovery_dirs), 1)
+            self.assertEqual((recovery_dirs[0] / tile.name).read_bytes(), b"original-tile")
+            self.assertIn(str(recovery_dirs[0]), ctx.exception.details)
+            self.assertFalse(tile.exists())
 
 
 if __name__ == "__main__":
