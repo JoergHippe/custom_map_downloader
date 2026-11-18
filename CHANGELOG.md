@@ -10,7 +10,7 @@ The format follows a pragmatic Keep a Changelog style.
 - exact-extent MBTiles export with configurable zoom levels, padding and tile estimates
 
 ### Fixed
-- report validation rejects empty or malformed test results instead of allowing an empty report to pass
+- report validation rejects empty or malformed test results and nonzero process exit codes even when a row says `ok`
 
 ## [0.4.0] - 2026-03-14
 
