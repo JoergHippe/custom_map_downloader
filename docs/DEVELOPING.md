@@ -112,18 +112,18 @@ Recommended local loop:
 4. restart QGIS or use an explicit plugin reloader if you choose to work that way
 5. smoke-check the plugin
 
-## Integrationstests und Zuständigkeiten
+## Integration Tests and Documentation Ownership
 
-- **Teststrategie/Freigabekriterien:** [TESTING.md](TESTING.md)
-- **Ausführung, Testmodi, Umgebungsvariablen und Quellenkatalog:**
+- **Test strategy and release gates:** [TESTING.md](TESTING.md)
+- **Commands, modes, environment variables and service scenarios:**
   [tests/integration/README.md](../tests/integration/README.md)
-- **Dynamische WMS-/WMTS-Inhalte und Hashvergleich:**
+- **Dynamic official WMS/WMTS content and hash interpretation:**
   [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md)
-- **Konkrete datierte Ergebnisse:** [VALIDATION_STATUS.md](VALIDATION_STATUS.md)
+- **Dated test outcomes and evidence:** [VALIDATION_STATUS.md](VALIDATION_STATUS.md)
 
-Der reproduzierbare Entwicklungsloop nutzt kleine lokale Raster- sowie
-WMS-/WMTS-HTTP-Testfälle. Amtliche Live-Dienste sind ausdrücklich
-opt-in und werden nicht als normale PR-CI gestartet.
+The reproducible development loop uses small raster cases and local
+WMS/WMTS HTTP fixtures. Official live services are explicitly opt-in
+and are not invoked by ordinary PR CI.
 
 ## Translations
 
