@@ -203,6 +203,31 @@ class StagedRasterOutputTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b"new")
             self.assertEqual(target.with_suffix(".prj").read_bytes(), b"projection")
 
+    def test_locally_rendered_vrt_is_published_last(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.vrt"
+            published = []
+            original_replace = os.replace
+
+            def track_publication(src, dst):
+                if Path(dst).parent == target.parent and Path(dst).is_file() is False:
+                    # Record replacements of new outputs into the final folder.
+                    if Path(src).parent.name.startswith(".map.stage-"):
+                        published.append(Path(dst).name)
+                return original_replace(src, dst)
+
+            with patch(
+                "custom_map_downloader.core.output_transaction.os.replace",
+                side_effect=track_publication,
+            ):
+                with staged_raster_output(target, prefer_local=True) as staged:
+                    staged.write_bytes(b"vrt")
+                    (staged.parent / "map__tile_r000_c000.tif").write_bytes(b"tile")
+            self.assertEqual(
+                published,
+                ["map__tile_r000_c000.tif", "map.vrt"],
+            )
+
     def test_cross_device_copy_cancellation_preserves_existing_file(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "map.tif"
