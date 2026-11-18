@@ -113,17 +113,13 @@ class GeoTiffExporter:
         a sibling staging directory and publish only after a complete export.
         """
         if Path(params.output_path).suffix.lower() == ".mbtiles":
-            return self._export_unstaged(
-                params, progress_cb=progress_cb, cancel_token=cancel_token
-            )
+            return self._export_unstaged(params, progress_cb=progress_cb, cancel_token=cancel_token)
 
         # Validate the *real* destination before using a writable stage folder.
         validate_output_path(params.output_path)
         with staged_raster_output(params.output_path) as staged_path:
             stage_params = replace(params, output_path=str(staged_path))
-            self._export_unstaged(
-                stage_params, progress_cb=progress_cb, cancel_token=cancel_token
-            )
+            self._export_unstaged(stage_params, progress_cb=progress_cb, cancel_token=cancel_token)
             self._check_cancel(cancel_token)
 
         log_event("export_success", output_path=params.output_path, mode="published")
