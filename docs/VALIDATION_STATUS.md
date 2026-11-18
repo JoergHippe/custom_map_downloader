@@ -1,5 +1,13 @@
 # Validierungsstand
 
+> **Historischer Validierungsbericht:** Die folgenden Messwerte und Bewertungen
+> stammen von der Abschlussvalidierung am 14.03.2026 (Version 0.4.0).
+> Sie sind kein Nachweis für die aktuelle Version 0.5.0 oder einen heutigen
+> QGIS-/Dienste-Stand. Vor jeder Veröffentlichung sind die aktuellen
+> lokalen Checks, QGIS-Integrationsläufe und Webdienst-Reports erneut zu prüfen.
+> Der im Bericht genannte Status „releasefähig“ bezieht sich ausschließlich
+> auf den damals getesteten Stand.
+
 Dieses Dokument beschreibt den aktuell verifizierten Qualitäts- und Laufzeitstand des Plugins auf Basis von:
 
 - lokalen Repository-Checks
