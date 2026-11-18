@@ -627,6 +627,10 @@ class CustomMapDownloader:
             "ERR_EXPORT_STAGE_INCOMPLETE": self.tr(
                 "The export did not produce a complete result. Existing output was not replaced."
             ),
+            "ERR_EXPORT_TRANSFER_FAILED": self.tr(
+                "The finished export could not be transferred into the target folder. "
+                "Existing output files were not replaced."
+            ),
             "ERR_EXPORT_PUBLISH_ROLLED_BACK": self.tr(
                 "Publishing failed. The previous output files were restored."
             ),

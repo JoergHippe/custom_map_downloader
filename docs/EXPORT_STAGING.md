@@ -1,17 +1,40 @@
 # Export-Staging: lokales Benutzer-Temp und sichere Veröffentlichung
 
-Status: **geplant, nicht implementiert** (18.11.2026).
-**Architekturentscheidung:** Temporäre Arbeitsoperationen werden grundsätzlich
-im lokalen Benutzer-Temp-Verzeichnis bevorzugt, unabhängig davon, ob das
-Ausgabeziel lokal oder im Netzwerk liegt. Die bisher nur für Netzlaufwerke
-vorgesehene Sonderstrategie wird dadurch ersetzt.
+Status: **implementiert** (18.11.2026); reale SMB-Performance und der
+sichtbare Test mit der offiziellen Windows-QGIS-Installation bleiben
+gesonderte Freigabeprüfungen. Die Strategie bevorzugt das lokale Benutzer-Temp für
+rechenintensive Arbeitsdateien, ohne bei jedem lokalen Export eine
+vollständige Zusatzkopie zu erzwingen.
 
-## Aktueller Implementierungsstand
+## Implementierter Ablauf
 
-Raster- und VRT-Ausgaben werden derzeit im temporären Verzeichnis **auf dem
-Zielmedium** vorbereitet. MBTiles besitzt eine separate Staging- und atomare
-Veröffentlichungslogik. Diese vorhandenen Abläufe bleiben bis zur späteren,
-testgesicherten Umstellung unverändert.
+- `QgsFileUtils.pathIsSlowDevice()` prüft, ob das Ziel vermutlich langsam
+  ist und ob das Benutzer-Temp als Arbeitsmedium geeignet erscheint.
+  Bei gleichem Dateisystem wird lokales Arbeiten ebenfalls bevorzugt,
+  da die fertigen Dateien ins Ziel-Staging **umbenannt** werden können.
+- Bei geeigneten Bedingungen wird mit `tempfile.mkdtemp()` ein
+  an den Export gebundenes Arbeitsverzeichnis im Benutzer-Temp angelegt.
+  Andernfalls wird das bisherige **Ziel-Staging** verwendet.
+- Die verfügbare lokale Kapazität wird vor Beginn anhand einer
+  konservativen Größenabschätzung plus Reserve überprüft. Nicht
+  verfügbare Temp-Verzeichnisse führen vor dem Rendern zum Fallback.
+- Bei unterschiedlichen Dateisystemen werden fertige Dateien in
+  abbrechbaren Blöcken ins **Ziel-Staging** kopiert und auf vollständige
+  Dateigröße geprüft; niemals direkt über ein Netzlaufwerk in die
+  bestehenden Zieldateien hineinkopiert.
+- Die bisherige VRT-Backup-/Rollback-Logik veröffentlicht Kacheln und
+  Sidecars zuerst, dann die VRT. Eine VRT-Gruppe ist weiterhin
+  **nicht vollständig atomar**.
+- MBTiles verwendet denselben Temp-/Transfer-Baustein; die
+  geschlossene SQLite-Datenbank wird danach weiterhin mit
+  **einem** `os.replace()` auf dem Ziellaufwerk veröffentlicht.
+
+**Einschränkung:** `pathIsSlowDevice()` ist eine QGIS-Heuristik und
+garantiert weder ein lokales Temp-Laufwerk noch einen Performancegewinn.
+Bei unbekannten Geräten wird vorsichtig auf das bisherige Ziel-Staging
+zurückgegriffen. Große Raster können trotz Vorabschätzung lokale
+Speicherengpässe erzeugen. Windows-SMB-Messwerte und Dateisperren müssen
+an einer echten Umgebung gesondert geprüft werden.
 
 ## Zielarchitektur
 
@@ -133,7 +156,7 @@ gezielte Windows-Dateisperr-, Recovery- und SMB-Tests.
 Die conda-basierte CI ersetzt keinen sichtbaren Test mit einer
 offiziellen Windows-QGIS-/OSGeo4W-Installation.
 
-## Vor Umsetzung verpflichtend prüfen
+## Verbleibende Betriebs- und Performanceprüfung
 
 - **Leistung:** lokale SSD, SMB-UNC und gemappte Netzlaufwerke;
   kleine und große GeoTIFFs, PNG/JPEG, VRT mit vielen Kacheln,
@@ -150,14 +173,15 @@ offiziellen Windows-QGIS-/OSGeo4W-Installation.
 - **Regression:** QGIS 3/4 unter Linux und Windows sowie sichtbarer
   Desktop-Test mit offizieller Windows-QGIS-/OSGeo4W-Installation.
 
-## Abgrenzung und Entscheidungsvorbehalt
+## Grenzen der Implementierung
 
-Die bestehende MBTiles-Transaktion bleibt bis zur gesonderten technischen
-Bewertung unverändert. Ziel ist auch dort **grundsätzlich** lokales
-Erzeugen der temporären SQLite-Datei, aber nur bei nachgewiesener
-Korrektheit und sinnvoller Performance.
+Die ursprüngliche MBTiles-Ein-Datei-Atomarität bleibt erhalten; die
+Arbeitsdatei kann nun lokal erzeugt und ins Ziel-Staging übertragen
+werden. Für Raster/VRT bleibt die vorhandene Rollback-Strategie erhalten.
 
-Vor der Implementierung Fallback-Policy, Platzreserve und mögliche
-Schwellenwerte anhand der Testergebnisse konkretisieren. Keine große
-Neustrukturierung und keine generelle zweite Kopie für lokale Kleinexporte,
-wenn eine sichere direkte Veröffentlichung auf demselben Medium möglich ist.
+Der Transfer ist über die bestehende `core/output_transaction.py`
+implementiert: keine neue Storage-Schicht und keine Änderungen an globalen
+TEMP-/GDAL-Umgebungsvariablen. Für die späteren Messungen bleiben
+Gesamtdauer, realer Windows-Dateizugriff, SMB-Ausfälle und unzureichender
+Speicher relevante offene Prüfpunkte; insbesondere wurde keine
+Performancesteigerung ohne Messdaten behauptet.

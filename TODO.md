@@ -28,30 +28,19 @@ dokumentiert. Diese Liste begründet keine Release-Freigabe.
   Wartbarkeitsprobleme prüfen; nur begründet und testgesichert modularisieren.
 - [ ] Stärkere optionale Anzeige der Export-Diagnostik in der UI bewerten.
 
-## Geplante Verbesserung: temporäre Exportoperationen
+## Temporäre Exportoperationen: verbleibende Prüfungen
 
-- [ ] **Lokales Benutzer-Temp als bevorzugten Arbeitsbereich für alle
-  temporären, rechenintensiven Exportoperationen** vorsehen, unabhängig
-  vom Zielmedium. Siehe [EXPORT_STAGING.md](docs/EXPORT_STAGING.md).
-- [ ] Fertige Ausgaben kontrolliert im **Ziel-Staging** bereitstellen
-  und dort sicher veröffentlichen. Bei tatsächlich gleichem Dateisystem
-  unnötiges Kopieren vermeiden; bei unterschiedlichen Dateisystemen
-  vollständig und überprüfbar übertragen.
-- [ ] Temp-Ort, Laufwerkseigenschaften, lokalen und Ziel-Speicherbedarf,
-  sicheren Fallback, Abbruch, Windows-Dateisperren und VRT-Rollback prüfen.
-  Vorhandene QGIS-/Qt-APIs gemäß
-  [Technologiebewertung](docs/EXPORT_STAGING.md#abgleich-mit-etablierten-qgis-gdal-technologien-18112026)
-  bevorzugen: insbesondere `QgsFileUtils.pathIsSlowDevice()`;
-  `QgsProcessingUtils`, `QgsFileUtils.renameDataset()` und
-  `QSaveFile` nur bei konkreter Eignung. Keine zweite Transaktionslogik.
-- [ ] Native Windows-QGIS-3/4-CI für Dateisperren, Überschreibung,
-  Backup-Rollback und Recovery erweitern; SMB-Ausfälle und sichtbar
-  geöffneten Rasterlayer auf echter Windows-Installation gesondert prüfen.
-- [ ] Performance als **Gesamtdauer** einschließlich Transfer und
-  Veröffentlichung auf SSD-/SMB-Zielen messen.
-- [ ] MBTiles-Erzeugung später gesondert prüfen; vorhandene atomare
-  Veröffentlichungslogik zunächst erhalten. Keine unmittelbare
-  Implementierung dieser Planung.
+Die lokale Arbeitsverzeichnis-Strategie sowie das sichere Ziel-Staging sind
+implementiert (siehe [EXPORT_STAGING.md](docs/EXPORT_STAGING.md)).
+
+- [ ] Auf einer realen Windows-QGIS-/OSGeo4W-Installation Dateisperren,
+  Kopierabbruch und geladenen Rasterlayer mit sichtbarer GUI prüfen.
+- [ ] Netzwerkziel unter SMB-UNC und gemapptem Netzlaufwerk testen:
+  Gerätheuristik, Abbruch, Verbindungsunterbrechung, unzureichender
+  Speicherplatz, Wiederherstellung und VRT-Referenzen.
+- [ ] **Gesamtdauer** einschließlich Rendern, Kopieren und Veröffentlichen
+  auf lokalen SSD- und SMB-Zielen mit der alten Variante vergleichen.
+  Optimierungen/Schwellenwerte nur nach Messung einführen.
 
 ## Optionale Erweiterungen
 

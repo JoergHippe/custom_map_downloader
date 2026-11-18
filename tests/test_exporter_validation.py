@@ -123,6 +123,11 @@ def install_qgis_stubs():
         def crs(self):
             return QgsCoordinateReferenceSystem("EPSG:3857")
 
+    class QgsFileUtils:
+        @staticmethod
+        def pathIsSlowDevice(_path):
+            return False
+
     class QgsMapSettings:
         pass
 
@@ -144,6 +149,10 @@ def install_qgis_stubs():
         @staticmethod
         def translate(_context, message):
             return message
+
+        @staticmethod
+        def processEvents():
+            return None
 
     class QByteArray(bytes):
         pass
@@ -170,6 +179,7 @@ def install_qgis_stubs():
 
     core_mod.Qgis = Qgis
     core_mod.QgsUnitTypes = QgsUnitTypes
+    core_mod.QgsFileUtils = QgsFileUtils
     core_mod.QgsCoordinateReferenceSystem = QgsCoordinateReferenceSystem
     core_mod.QgsCoordinateTransform = QgsCoordinateTransform
     core_mod.QgsMapLayer = QgsMapLayer

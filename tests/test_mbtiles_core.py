@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ from tests.test_exporter_validation import install_qgis_stubs
 
 install_qgis_stubs()
 
+from custom_map_downloader.core.errors import ExportError  # noqa: E402
 from custom_map_downloader.core.mbtiles import (  # noqa: E402
     auto_detect_min_zoom,
     build_mbtiles_plan,
@@ -119,6 +121,51 @@ class MbtilesCoreTests(unittest.TestCase):
         percents = [tile.percent for tile in tiles]
         self.assertEqual(percents[-1], 95)
         self.assertEqual(percents, sorted(percents))
+
+    def test_local_temp_mbtiles_replaces_only_after_close(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.mbtiles"
+            target.write_bytes(b"previous")
+            with staged_mbtiles_path(target, prefer_local=True) as staged:
+                self.assertTrue(staged.parent.name.startswith("cmd-work-"))
+                with closing(sqlite3.connect(staged)) as conn:
+                    conn.execute("CREATE TABLE check_table (value INTEGER)")
+                    conn.execute("INSERT INTO check_table VALUES (42)")
+                    conn.commit()
+                self.assertEqual(target.read_bytes(), b"previous")
+            with closing(sqlite3.connect(target)) as conn:
+                self.assertEqual(conn.execute("SELECT value FROM check_table").fetchone()[0], 42)
+
+    def test_mbtiles_transfer_failure_does_not_replace_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.mbtiles"
+            target.write_bytes(b"previous")
+            original_replace = os.replace
+
+            def fail_cross_device_rename(src, dst):
+                if Path(src).parent.name.startswith("cmd-work-"):
+                    raise OSError("simulated separate devices")
+                return original_replace(src, dst)
+
+            with (
+                patch(
+                    "custom_map_downloader.core.output_transaction.os.replace",
+                    side_effect=fail_cross_device_rename,
+                ),
+                patch.dict(
+                    staged_mbtiles_path.__wrapped__.__globals__,
+                    {
+                        "transfer_finished_files": Mock(
+                            side_effect=OSError("network copy interrupted")
+                        )
+                    },
+                ),
+            ):
+                with self.assertRaises(ExportError) as ctx:
+                    with staged_mbtiles_path(target, prefer_local=True) as staged:
+                        staged.write_bytes(b"complete-local-db")
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_TRANSFER_FAILED")
+            self.assertEqual(target.read_bytes(), b"previous")
 
     def test_staged_export_preserves_existing_file_on_failure(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
