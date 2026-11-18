@@ -1371,11 +1371,18 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             except Exception:
                 layer = None
 
-        if layer is not None and hasattr(self, "extentGroupBox"):
+        if layer is not None:
+            # Track the *current* user selection. A later layer-list refresh
+            # must not revert to the ID loaded from QSettings at startup.
             try:
-                self.extentGroupBox.setLayer(layer)
-            except Exception:
+                self._last_layer_id = layer.id()
+            except (AttributeError, RuntimeError):
                 pass
+            if hasattr(self, "extentGroupBox"):
+                try:
+                    self.extentGroupBox.setLayer(layer)
+                except Exception:
+                    pass
 
         self._update_extent_info()
         self._update_vrt_info()
