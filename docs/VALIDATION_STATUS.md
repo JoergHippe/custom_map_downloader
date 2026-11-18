@@ -1,22 +1,58 @@
 # Validierungsstand
 
-**Aktuelle Einordnung (18.11.2026):** Die nachfolgenden datierten
-Prüfergebnisse stammen überwiegend vom 17.11.2026 und belegen nur
-die jeweils genannten Commits und Testumgebungen. Die geprüfte
-Qualitätsbaseline ist seit 18.11.2026 auf `main` integriert
-(Merge-Commit `3ded28ea50b66c556ce55dfbde4675528e06d043`).
-Die weitere Dokumentations-/Werkzeugbereinigung danach ist
-keine neue QGIS-Desktop-Releasefreigabe.
+**Aktuelle Einordnung (18.11.2026):** Der jüngste bestätigte
+automatisierte Stand ist `main` auf
+`ae7de62cf878913a9e8a72028efcd8d54f81389f`.
+Die untenstehenden früheren Befunde bleiben als datierte Nachweise
+erhalten; neue Prüfungen ersetzen keine vollständige Freigabe
+der offiziellen Windows-QGIS-/OSGeo4W-Desktop-Distribution.
 
-Die automatisierte Linux- und Windows-QGIS-3/4-CI ist von einer
-vollständigen Abnahme des offiziellen Windows-QGIS/OSGeo4W-Installers
-zu unterscheiden. Der breite amtliche WMS-Katalog bleibt ein
-separater Release-Prüfpunkt. Historische Hashabweichungen bei
-technisch erfolgreichen öffentlichen Kartenexporten sind Hinweise,
-keine automatisch nachgewiesenen Fehler.
+Die aktuelle Änderung betrifft insbesondere lokale temporäre
+Arbeitsverzeichnisse, sicheren Transfer ins Ziel-Staging,
+MBTiles-Veröffentlichung und VRT-Rollback. Der breite amtliche
+WMS-Katalog und echte SMB-Verbindungsausfälle bleiben separate
+Release-Prüfpunkte. Änderungen von historischen öffentlichen
+Bild-/Dateihashes sind nur Hinweise, solange die technische
+Exportprüfung erfolgreich ist.
 
 Freigabekriterien stehen in [TESTING.md](TESTING.md) und
 [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md).
+
+## Aktueller geprüfter Stand: temporäre Exportoperationen (18.11.2026)
+
+**Merge-Commit auf `main`:**
+`ae7de62cf878913a9e8a72028efcd8d54f81389f`.
+Die Änderung wurde in [PR #3](https://github.com/JoergHippe/custom_map_downloader/pull/3)
+mit folgenden automatisierten Nachweisen geprüft:
+
+| Prüfumgebung | GitHub Actions | Ergebnis |
+| --- | --- | --- |
+| Python/Ruff/Black/Unit/Packaging, Linux QGIS 3 und Linux QGIS 4 auf `main` | [#44296095045](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44296095045) | 3/3 PASS |
+| Native Windows conda-forge QGIS 3.44.15 und 4.2.3 (PR-Head `726ffd601ef83ffed79eaee50d4dbe4c268ca6ad`) | [#44295236004](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44295236004) | 2/2 PASS |
+| Linux-PR-Matrix für denselben PR-Head | [#44295236007](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44295236007) | 3/3 PASS |
+
+Die Windows-Matrix umfasst nun auch
+`tests.test_output_transaction`: lokales Arbeitsverzeichnis,
+Veröffentlichungsreihenfolge der VRT-Kacheln, Sidecars, simulierten
+Kopierabbruch, Platzmangel-Fallback, Dateisperren und
+Recovery-Fehlersituationen. Die QGIS-3/4-Integration deckt weiterhin
+reale Raster-, VRT-, MBTiles- und lokale WMS-/WMTS-Ausgaben ab.
+
+**Nicht durch CI nachgewiesen:**
+
+- Performancegewinn durch lokales Temp auf dem konkreten SMB-Netzwerk;
+  der Vergleich muss die vollständige Laufzeit einschließlich Kopieren
+  und Veröffentlichung berücksichtigen.
+- Reale Netzwerkunterbrechung eines UNC-Pfades bzw. gemappten
+  Firmenlaufwerks.
+- Sichtbare Abnahme des gebauten Plugin-Pakets in einer offiziellen
+  Windows-QGIS-/OSGeo4W-Installation mit deutscher Locale, Dateisperren
+  und allen Ausgabeformaten.
+- Vollständige aktuelle amtliche WMS-Katalog- und Release-Freigabe.
+
+**Bewertung:** Automatische Regressionen erfolgreich;
+**keine allgemeine Releasefreigabe**. Für das weitere Vorgehen siehe
+[TESTING.md](TESTING.md) und [EXPORT_STAGING.md](EXPORT_STAGING.md).
 
 ## CI-Ergebnisse auf dem Entwicklungsbranch (2026-11-17)
 
