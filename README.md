@@ -115,6 +115,7 @@ Translations are maintained via the standard Qt Linguist workflow under `custom_
 ## Documentation
 
 - user operations and support: [Troubleshooting](docs/TROUBLESHOOTING.md)
+- temporary workspace, target staging and recovery: [Export staging](docs/EXPORT_STAGING.md)
 - dated validation results and history: [Validation status](docs/VALIDATION_STATUS.md)
 - current test strategy and release criteria: [Testing](docs/TESTING.md)
 - development workflow: [Development](docs/DEVELOPING.md)
