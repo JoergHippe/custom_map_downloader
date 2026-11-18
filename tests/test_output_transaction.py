@@ -121,6 +121,54 @@ class StagedRasterOutputTests(unittest.TestCase):
             self.assertIn(str(recovery_dirs[0]), ctx.exception.details)
             self.assertFalse(tile.exists())
 
+    def test_failed_recovery_move_keeps_staging_backups(self):
+        """Backup files must survive even when recovery-folder rename fails."""
+        with tempfile.TemporaryDirectory() as directory:
+            dest = Path(directory) / "map.vrt"
+            tile = Path(directory) / "map__tile_r000_c000.tif"
+            dest.write_bytes(b"old-vrt")
+            tile.write_bytes(b"old-tile")
+            original_replace = os.replace
+            original_rename = Path.rename
+
+            def fail_replace(src, dst):
+                src = Path(src)
+                if src.name == "map.vrt" and src.parent.name.startswith(".map.stage-"):
+                    raise OSError("publish interrupted")
+                if src.name == tile.name and src.parent.name == ".backups":
+                    raise OSError("restore refused")
+                return original_replace(src, dst)
+
+            def fail_recovery_move(path, target):
+                if path.name == ".backups":
+                    raise OSError("recovery relocation refused")
+                return original_rename(path, target)
+
+            with (
+                patch(
+                    "custom_map_downloader.core.output_transaction.os.replace",
+                    side_effect=fail_replace,
+                ),
+                patch(
+                    "custom_map_downloader.core.output_transaction.Path.rename",
+                    new=fail_recovery_move,
+                ),
+            ):
+                with self.assertRaises(ExportError) as ctx:
+                    with staged_raster_output(dest) as staged:
+                        staged.write_bytes(b"new-vrt")
+                        (staged.parent / tile.name).write_bytes(b"new-tile")
+
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED")
+            staging_dirs = list(Path(directory).glob(".map.stage-*"))
+            self.assertEqual(len(staging_dirs), 1)
+            self.assertEqual(
+                (staging_dirs[0] / ".backups" / tile.name).read_bytes(),
+                b"old-tile",
+            )
+            self.assertIn(str(staging_dirs[0]), ctx.exception.details)
+            self.assertEqual(dest.read_bytes(), b"old-vrt")
+
 
 if __name__ == "__main__":
     unittest.main()
