@@ -63,6 +63,7 @@ from .gdal_io import (
     write_world_file,
 )
 from .mbtiles import (
+    DEFAULT_AVG_TILE_BYTES,
     WEB_MERCATOR_AUTHID,
     WGS84_AUTHID,
     MbtilesPlan,
@@ -755,9 +756,19 @@ class GeoTiffExporter:
         render_crs = QgsCoordinateReferenceSystem(WEB_MERCATOR_AUTHID)
         layer_extent_render = layer_extent_in_render_crs(params.layer, render_crs=render_crs)
 
-        # Stage next to the destination, then publish only after commit/close.
-        # This protects an existing MBTiles file on errors and cancellation.
-        with staged_mbtiles_path(params.output_path) as staged_path:
+        # SQLite runs in local user temp when QGIS detects a slow target
+        # (or a fast same-device temp). Final MBTiles replacement stays atomic
+        # on the destination filesystem after the database has been closed.
+        local_work = should_use_local_work(
+            params.output_path, QgsFileUtils.pathIsSlowDevice
+        )
+        log_event("export_workspace", output_path=params.output_path, local_work=local_work)
+        with staged_mbtiles_path(
+            params.output_path,
+            prefer_local=local_work,
+            estimated_bytes=int(plan.tile_count) * DEFAULT_AVG_TILE_BYTES,
+            check_cancel=lambda: self._check_cancel(cancel_token),
+        ) as staged_path:
             conn = create_mbtiles_database(staged_path)
             blank_tiles = 0
             try:
