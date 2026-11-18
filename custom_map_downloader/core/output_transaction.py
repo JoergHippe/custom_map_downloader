@@ -37,7 +37,7 @@ def should_use_local_work(
         return False
 
 
-def _transfer_finished_files(
+def transfer_finished_files(
     source_dir: Path,
     target_dir: Path,
     check_cancel: Callable[[], None] | None = None,
@@ -83,8 +83,8 @@ def _transfer_finished_files(
             raise
 
 
-def _create_work_directory(
-    destination: Path, prefer_local: bool, *, estimated_bytes: int = 0
+def create_local_work_directory(
+    prefer_local: bool, *, estimated_bytes: int = 0
 ) -> Path | None:
     """Use local user temp only if it is writable and has basic free capacity."""
     if not prefer_local:
@@ -120,7 +120,7 @@ def staged_raster_output(
         tempfile.mkdtemp(prefix=f".{destination.stem}.stage-", dir=destination.parent)
     )
     preserve_stage = False
-    work_dir = _create_work_directory(destination, prefer_local, estimated_bytes=estimated_bytes)
+    work_dir = create_local_work_directory(prefer_local, estimated_bytes=estimated_bytes)
     try:
         staged_path = (work_dir or staging_dir) / destination.name
         yield staged_path
@@ -133,7 +133,7 @@ def staged_raster_output(
 
         if work_dir is not None:
             try:
-                _transfer_finished_files(work_dir, staging_dir, check_cancel)
+                transfer_finished_files(work_dir, staging_dir, check_cancel)
             except Exception as error:
                 from .errors import CancelledError
 
