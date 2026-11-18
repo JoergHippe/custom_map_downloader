@@ -651,9 +651,23 @@ class CustomMapDownloader:
 
         if create_vrt:
             targets.add(str(base.with_suffix(".vrt")))
-            # Tiles, die wir (voraussichtlich) überschreiben würden (nur vorhandene zählen => realer Konflikt möglich)
-            for p in base.parent.glob(f"{base.name}__tile_r*_c*.tif"):
-                targets.add(str(p))
+            # Existing tiles may use any supported raster format. Only names
+            # belonging to this export are relevant; avoid glob metacharacters
+            # from user-defined output names being interpreted as patterns.
+            tile_prefix = f"{base.name}__tile_r"
+            for p in base.parent.iterdir():
+                if (
+                    p.is_file()
+                    and p.name.startswith(tile_prefix)
+                    and p.suffix.lower() in {".tif", ".tiff", ".png", ".jpg", ".jpeg"}
+                ):
+                    tile_indices = p.stem[len(tile_prefix) :].split("_c", 1)
+                    if (
+                        len(tile_indices) == 2
+                        and tile_indices[0].isdigit()
+                        and tile_indices[1].isdigit()
+                    ):
+                        targets.add(str(p))
         else:
             targets.add(str(Path(output_path)))
 
