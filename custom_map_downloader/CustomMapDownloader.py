@@ -917,5 +917,6 @@ PROGRESS_TEMPLATES = {
     "STEP_WRITE_MBTILES": "{step}/{total}: Writing MBTiles",
     "STEP_BUILD_VRT": "{step}/{total}: Building VRT",
     "STEP_REPROJECT": "{step}/{total}: Reprojecting output raster",
+    "STEP_PUBLISH": "{step}/{total}: Publishing output files",
     "STEP_DONE": "{step}/{total}: Finished",
 }
