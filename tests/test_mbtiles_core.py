@@ -3,7 +3,6 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
-from importlib import import_module
 from itertools import islice
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -153,10 +152,13 @@ class MbtilesCoreTests(unittest.TestCase):
                     "custom_map_downloader.core.output_transaction.os.replace",
                     side_effect=fail_cross_device_rename,
                 ),
-                patch.object(
-                    import_module(staged_mbtiles_path.__module__),
-                    "transfer_finished_files",
-                    side_effect=OSError("network copy interrupted"),
+                patch.dict(
+                    staged_mbtiles_path.__wrapped__.__globals__,
+                    {
+                        "transfer_finished_files": Mock(
+                            side_effect=OSError("network copy interrupted")
+                        )
+                    },
                 ),
             ):
                 with self.assertRaises(ExportError) as ctx:
