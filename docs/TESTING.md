@@ -199,6 +199,37 @@ Die vorherige Self-hosted-Windows-CI wurde außer Betrieb genommen.
 Die aktuelle Windows-Matrix ist nicht mit der offiziellen
 OSGeo4W-/Standalone-Desktop-Abnahme gleichzusetzen.
 
+## Manuelle Abnahme: Windows-Desktop und Netzlaufwerk
+
+**Pflicht vor der nächsten Veröffentlichung**, nicht durch conda-forge-CI
+ersetzbar. Nur mit dem tatsächlich erzeugten Plugin-ZIP in einer
+offiziellen Windows-QGIS-/OSGeo4W-Installation durchführen.
+Je Test Datum, QGIS-/GDAL-Version, Plugin-/Commitversion, Testpfad,
+Ergebnis und Fehlermeldung in
+[VALIDATION_STATUS.md](VALIDATION_STATUS.md) erfassen.
+
+1. **GUI und Koordinaten:** Ausgabe-KBS wechseln, Ausdehnung aus dem
+   Canvas übernehmen, deutsche Zahlen manuell eingeben, Rechteck
+   zeichnen und abbrechen sowie Profile wiederherstellen.
+2. **Formatmatrix:** GeoTIFF, PNG/JPEG mit Sidecars, VRT mit mehreren
+   Kacheln und MBTiles exportieren, wieder laden und auf Pixelmaße,
+   CRS, Bildinhalt und Georeferenzierung prüfen.
+3. **Dateikonflikte:** Vorhandene und in QGIS geladene Ausgaben
+   überschreiben, Sperren/Abbruch und Backup-/Recovery-Verhalten
+   prüfen – ausschließlich in einem Testordner.
+4. **SMB/Netzlaufwerk:** UNC-Pfad und gemapptes Laufwerk, kleine und
+   große Ausgaben, Verbindungsunterbrechung und Transferfehler.
+   Vorhandene Ergebnisse müssen geschützt bleiben.
+5. **Temp-Fallback:** Lokalen Platzmangel gezielt simulieren statt
+   Produktivlaufwerke zu füllen; Fallback muss vor Renderbeginn greifen.
+6. **Performance:** Renderdauer, Kopierdauer, Veröffentlichungsdauer
+   und Gesamtdauer gegenüber direktem Ziel-Staging messen; ohne
+   Messwerte keinen Geschwindigkeitsgewinn behaupten.
+
+Fehlgeschlagene Pflichtfälle sind bis zur Bewertung und Behebung
+Release-Blocker. Architektur und Grenzen:
+[EXPORT_STAGING.md](EXPORT_STAGING.md).
+
 ## Amtliche Live-WMS-/WMTS-Prüfung (opt-in)
 
 Die Workflows `.github/workflows/live-ogc.yml` und
