@@ -5,7 +5,10 @@ Offscreen tests cannot prove interactive mouse drawing in a visible QGIS window.
 """
 
 import os
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
 
@@ -15,6 +18,7 @@ try:
         QgsCoordinateTransform,
         QgsProject,
         QgsRectangle,
+        QgsVectorLayer,
     )
     from qgis.gui import QgsMapCanvas, QgsMapToolPan
     from qgis.PyQt.QtCore import QCoreApplication, QPoint, Qt
@@ -242,6 +246,45 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
 
         self.assertEqual(self.dialog.extentGroupBox.outputCrs().authid(), "EPSG:4326")
         self.assert_rect(self.dialog._get_best_output_extent(commit=False), expected)
+
+    def test_metric_dimensions_fail_closed_when_transform_fails(self):
+        """Never interpret a geographic extent as meters if reprojection fails."""
+        geographic = QgsCoordinateReferenceSystem("EPSG:4326")
+        self.dialog.mQgsProjectionSelectionWidget.setCrs(geographic)
+        self.dialog.extentGroupBox.setOutputExtentFromUser(
+            QgsRectangle(12.0, 51.0, 12.01, 51.01), geographic
+        )
+        with patch(
+            "custom_map_downloader.CustomMapDownloader_dialog.QgsCoordinateTransform",
+            side_effect=RuntimeError("simulated CRS transform failure"),
+        ):
+            width_m, height_m, valid = self.dialog._get_extent_in_meters()
+        self.assertFalse(valid)
+        self.assertEqual((width_m, height_m), (0.0, 0.0))
+
+    def test_export_parameters_fail_closed_when_project_transform_fails(self):
+        """A failed output-to-project transform must never relabel coordinates."""
+        geographic = QgsCoordinateReferenceSystem("EPSG:4326")
+        self.dialog.mQgsProjectionSelectionWidget.setCrs(geographic)
+        self.dialog.extentGroupBox.setOutputExtentFromUser(
+            QgsRectangle(12.0, 51.0, 12.01, 51.01), geographic
+        )
+        layer = QgsVectorLayer("Point?crs=EPSG:3857", "test layer", "memory")
+        self.assertTrue(layer.isValid())
+        self.dialog.comboBox_layer.addItem("test layer", layer)
+        self.dialog.comboBox_layer.setCurrentIndex(self.dialog.comboBox_layer.count() - 1)
+
+        with tempfile.TemporaryDirectory() as directory:
+            self.dialog.lineEdit_outputDirectory.setText(str(Path(directory) / "output.tif"))
+            with (
+                patch.object(self.dialog, "_current_gsd", return_value=1.0),
+                patch.object(self.dialog, "_compute_pixel_dimensions", return_value=(100, 100)),
+                patch(
+                    "custom_map_downloader.CustomMapDownloader_dialog.QgsCoordinateTransform",
+                    side_effect=RuntimeError("simulated CRS transform failure"),
+                ),
+            ):
+                self.assertIsNone(self.dialog.get_parameters())
 
     def test_repeated_canvas_drawing_updates_extent_each_time(self):
         self.parent.show()
