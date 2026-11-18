@@ -295,6 +295,32 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         finally:
             self._resolution_syncing = False
 
+    def _restore_resolution_values(
+        self, gsd: Optional[float], target_scale: Optional[float]
+    ) -> None:
+        """Restore paired inputs without letting the inactive one overwrite the active one."""
+        self._resolution_syncing = True
+        try:
+            if gsd is not None and gsd > 0 and hasattr(self, "spinBox_gsd"):
+                self.spinBox_gsd.setValue(float(gsd))
+            if (
+                target_scale is not None
+                and target_scale > 0
+                and hasattr(self, "doubleSpinBox_targetScale")
+            ):
+                self.doubleSpinBox_targetScale.setValue(float(target_scale))
+        finally:
+            self._resolution_syncing = False
+
+        # The active mode is authoritative. Derive the inactive input once,
+        # instead of relying on incidental Qt valueChanged signal order.
+        if self._resolution_mode() == "scale":
+            if hasattr(self, "doubleSpinBox_targetScale"):
+                self._sync_gsd_from_scale(float(self.doubleSpinBox_targetScale.value()))
+        elif hasattr(self, "spinBox_gsd"):
+            self._sync_scale_from_gsd(float(self.spinBox_gsd.value()))
+        self._refresh_resolution_previews()
+
     def _init_output_format_combo(self) -> None:
         """Initialize output format combobox (single export only)."""
         if not hasattr(self, "comboBox_outputFormat"):
@@ -523,20 +549,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             pass
 
         try:
-            gsd = float(settings.value(base + "last_gsd", "", type=float) or 0.0)
-            if gsd > 0 and hasattr(self, "spinBox_gsd"):
-                self.spinBox_gsd.setValue(gsd)
-        except Exception:
-            pass
-
-        try:
-            target_scale = float(settings.value(base + "last_target_scale", "", type=float) or 0.0)
-            if target_scale > 0 and hasattr(self, "doubleSpinBox_targetScale"):
-                self.doubleSpinBox_targetScale.setValue(target_scale)
-        except Exception:
-            pass
-
-        try:
             resolution_mode = (
                 settings.value(base + "last_resolution_mode", "gsd", type=str) or "gsd"
             )
@@ -546,6 +558,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                     self.comboBox_resolutionMode.setCurrentIndex(idx)
         except Exception:
             pass
+
+        try:
+            gsd = float(settings.value(base + "last_gsd", "", type=float) or 0.0)
+        except (TypeError, ValueError):
+            gsd = 0.0
+        try:
+            target_scale = float(settings.value(base + "last_target_scale", "", type=float) or 0.0)
+        except (TypeError, ValueError):
+            target_scale = 0.0
+        self._restore_resolution_values(gsd, target_scale)
 
         try:
             crs_authid = settings.value(base + "last_crs", "", type=str) or ""
@@ -1055,12 +1077,11 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                 self.comboBox_resolutionMode.setCurrentIndex(idx)
 
         gsd = profile.get("gsd")
-        if gsd is not None and hasattr(self, "spinBox_gsd"):
-            self.spinBox_gsd.setValue(float(gsd))
-
         target_scale = profile.get("target_scale_denominator")
-        if target_scale is not None and hasattr(self, "doubleSpinBox_targetScale"):
-            self.doubleSpinBox_targetScale.setValue(float(target_scale))
+        self._restore_resolution_values(
+            float(gsd) if gsd is not None else None,
+            float(target_scale) if target_scale is not None else None,
+        )
 
         if hasattr(self, "checkBox_loadLayer"):
             self.checkBox_loadLayer.setChecked(bool(profile.get("load_as_layer")))
