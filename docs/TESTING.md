@@ -176,111 +176,48 @@ QGIS-3/4-Integrationstests für die obligatorische Bestätigung und die
 weiterhin gültige Deaktivierung normaler Bestätigungen.
 Eine große Datenmenge allein verbietet den Export ausdrücklich nicht.
 
-## Automatische Windows-QGIS- und lokale OGC-Diensttests
+## Automatische Windows-QGIS- und lokale OGC-Tests
 
-Historischer Nachweis:
-[Windows Actions #44181305999](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44181305999)
-auf Commit `711b72a390f4b8086a63bba3517f80f757b6dd84`.
-**Aktueller Nachweis:**
-[Windows Actions #44295236004](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44295236004),
-beide QGIS-3/4-Jobs erfolgreich. Das Testprogramm wurde seit dem
-historischen Lauf um VRT-/Recovery-/Dateiveröffentlichungstests
-erweitert; die nachfolgende Zahl 24 beschreibt nur den älteren Lauf.
+Die PR-gebundene Windows-Matrix verwendet QGIS 3.44.15 und 4.2.3
+aus conda-forge. Sie prüft die reale Qt-/PyQGIS-Laufzeit einschließlich
+Dialog, Raster-/VRT-/MBTiles-Export, Staging/Recovery und lokale
+WMS-/WMTS-Dienste. Die Linux-Matrix prüft dieselben QGIS-Hauptversionen
+in Containern. Importfehler dürfen nicht als Skips durchgehen.
 
-Die frühere Windows-Matrix führte pro QGIS-Version 24 echte Integrationstests aus:
-12 Ausdehnungsdialog-Tests mit Qt-Maus- und Tastaturereignissen,
-2 QImage-, 4 Raster-, 2 MBTiles-Export-, 2 MBTiles-Preflight-,
-1 WMS- und 1 WMTS-Test.
+Die reproduzierbaren lokalen Server für
+`tests/integration/test_local_wms.py` und
+`tests/integration/test_local_wmts.py` lauschen auf `127.0.0.1`:
+WMS 1.3.0 mit GetCapabilities/GetMap und WMTS 1.0.0 mit
+GetCapabilities/GetTile. Sie verwenden **keine amtlichen Internetdienste**.
+Die öffentliche Live-Szenariomatrix ist bewusst getrennt.
 
-`test_local_wms.py` startet einen lokalen HTTP-Server, liefert
-WMS-1.3.0-`GetCapabilities` und `GetMap` und prüft den tatsächlich
-durch den QGIS-WMS-Provider erzeugten GeoTIFF-Inhalt.
+Für die genauen Testkommandos und Konfigurationsfelder siehe
+[Integrationstests](../tests/integration/README.md);
+für datierte CI-Nachweise siehe
+[VALIDATION_STATUS.md](VALIDATION_STATUS.md).
+Die vorherige Self-hosted-Windows-CI wurde außer Betrieb genommen.
+Die aktuelle Windows-Matrix ist nicht mit der offiziellen
+OSGeo4W-/Standalone-Desktop-Abnahme gleichzusetzen.
 
-`test_local_wmts.py` liefert WMTS-1.0.0-`GetCapabilities` mit
-`TileMatrixSet` und eine REST-`GetTile`-Kachel. Das ist ein
-**echter WMTS-Provider-Test** und kein bloßer XYZ-Ersatz.
+## Amtliche Live-WMS-/WMTS-Prüfung (opt-in)
 
-Sämtliche Testdienste binden nur an `127.0.0.1`; weder Amtliche
-Webdienste noch API-Schlüssel, DNS oder Internetzugang werden dafür
-benötigt. Für die **release-relevanten echten amtlichen Quellen**
-bleiben die bestehenden `ALLOW_INTEGRATION_NETWORK=1`-Szenarien
-separat und bewusst opt-in.
+Die Workflows `.github/workflows/live-ogc.yml` und
+`.github/workflows/live-scale-matrix.yml` werden ausschließlich
+explizit bzw. durch freigegebene PR-Marker ausgeführt. Sie nutzen
+amtliche WMS-/WMTS-Dienste; die reguläre CI bleibt davon unabhängig.
 
-Ein zuvor nur unter Windows sichtbarer Lock wurde ebenfalls behoben:
-`sqlite3.Connection` wird in den Test-Lesezugriffen explizit
-geschlossen; der Context-Manager allein schließt die Verbindung nicht.
-Ein grüner CI-Test bedeutet native Windows-QGIS-Funktionsfähigkeit,
-aber nicht automatisch Abnahme der offiziellen OSGeo4W-/Standalone-
-Desktop-Installation mit sichtbarer Benutzerinteraktion.
+WMS-Szenarien können über `[run-live-wms:basemap_gray_tif]`,
+der echte basemap.de-WMTS über `[run-live-wmts]` und die
+Maßstabsmatrix über `[run-live-scale]` ausgelöst werden.
+Die technischen Gates lehnen fehlende Daten, falsche Maße,
+ungültige Exporte und Prozessfehler ab. Historische Datei-Hash-
+Abweichungen bleiben dagegen **advisory**.
 
-## Manuelle Abnahme: Windows-Desktop und Netzlaufwerk
-
-**Pflicht vor der nächsten Veröffentlichung**, nicht durch conda-forge-CI
-ersetzbar. Nur mit dem tatsächlich erzeugten Plugin-ZIP in einer
-offiziellen Windows-QGIS-/OSGeo4W-Installation durchführen.
-Je Test Datum, QGIS-/GDAL-Version, Plugin-/Commitversion,
-Testpfad, Ergebnis und Fehlermeldung in
-[VALIDATION_STATUS.md](VALIDATION_STATUS.md) erfassen.
-
-1. **GUI und Koordinaten:** Dialog öffnen; Ausgabe-KBS wechseln,
-   Ausdehnung aus Canvas übernehmen, Werte mit deutscher Locale manuell
-   eingeben, Rechteck zeichnen und abbrechen sowie Profil speichern/laden.
-   Die angezeigten Koordinaten und der tatsächliche Exportbereich müssen
-   übereinstimmen.
-2. **Formatmatrix:** GeoTIFF, PNG/JPEG mit Worldfile und `.prj`,
-   VRT inklusive mehrerer Kacheln sowie MBTiles erstellen. Jede Ausgabe
-   wieder in QGIS laden; Bildinhalt, Pixelmaße, CRS und Georeferenzierung
-   stichprobenartig prüfen.
-3. **Lokale Zieldateien:** Vorhandene Ausgaben überschreiben; auch
-   bereits geladene Layer und gesperrte Dateien testen. Kein stiller
-   Ersatz bei Konflikten, kein Verlust einer vorhandenen Ausgabe
-   bei Abbruch oder Fehler.
-4. **SMB-UNC und gemapptes Laufwerk:** Jeweils einen kleinen und großen
-   Raster-/VRT-/MBTiles-Export ausführen; lokalen Temp-Pfad,
-   Kopier-/Veröffentlichungsphase und resultierenden Dateisatz
-   kontrollieren. Netzverbindung testweise während der Übertragung
-   unterbrechen, sofern in einem isolierten Testordner möglich.
-5. **Platzmangel/Fallback:** Lokale Temp-Kapazität kontrolliert
-   begrenzen/simulieren und sicherstellen, dass die Fallback-Strategie
-   vor Renderbeginn greift. Keine produktiven Laufwerke hierfür
-   absichtlich füllen.
-6. **Performance:** Rendern, Kopieren, Veröffentlichen und Gesamtdauer
-   auf lokaler SSD und SMB vergleichen; kleine und große Ausgaben,
-   Dateigrößen und Kachelzahl protokollieren. Ohne Vergleich keinen
-   Geschwindigkeitsgewinn behaupten.
-7. **Recovery:** Nur in einem Testordner künstliche Sperren/Fehler
-   auslösen; Diagnose und eventuell erhaltene Recovery-Dateien prüfen.
-   Niemals unkontrolliert Test-Backups löschen.
-
-Ein fehlgeschlagener Pflichtfall verhindert die Releasefreigabe,
-bis sein Einfluss bewertet und behoben wurde. Eine grüne CI allein
-ist kein Freigabenachweis.
-
-## Amtliche Live-WMS-Smoke-Tests (opt-in)
-
-Der getrennte Workflow `.github/workflows/live-ogc.yml` kontaktiert
-nur nach ausdrücklicher Aktivierung einen öffentlichen WMS-Dienst.
-Über `workflow_dispatch` stehen `bkg_dgm200_relief_tif`,
-`basemap_gray_tif` und `nrw_dtk_color_tif` zur Auswahl.
-Vor einem Merge kann ein expliziter PR-Body-Marker wie
-`[run-live-wms:basemap_gray_tif]` den Test einmalig auslösen.
-Ohne Marker starten keine externen Dienste auf PR-Änderungen.
-
-`scripts/run_live_ogc_smoke.py` führt exakt einen vorhandenen WMS-Test
-in einem QGIS-Unterprozess aus, mit maximal 2 Mio. Pixeln und
-240 Sekunden Laufzeit. Ein ungültiger/übersprungener Dienst,
-fehlender Ergebnisbericht oder Exportfehler führt zu einem Fehlschlag.
-
-**Wichtig:** Technischer Export (`result=ok`, `technical_gate=pass`)
-und historischer Dateivergleich
-(`baseline_status=match|drift|untracked`) sind unabhängige
-Prüfergebnisse. Hashabweichungen bei technisch erfolgreichem Export
-sind **Hinweise**, keine automatischen Pluginfehler. Der Live-Smoke
-setzt `release_gate=not_assessed`: Eine Releasefreigabe ist damit
-ausdrücklich nicht erteilt. Referenzwerte werden niemals automatisch
-überschrieben. Die vollständige Maßstabsmatrix und ein echter
-amtlicher WMTS-Live-Test bleiben gesondert zu prüfen.
-Siehe [Prüfstrategie für dynamische OGC-Daten](OGC_TEST_POLICY.md).
+Verbindliche Interpretation: [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md).
+Konfiguration und manuelle Aufrufe:
+[Integrationstests](../tests/integration/README.md).
+Datierte Nachweise einschließlich wechselnder WMTS-Pixelhashes:
+[VALIDATION_STATUS.md](VALIDATION_STATUS.md).
 
 ## Rasterpixel und GeoTIFF-Metadaten getrennt vergleichen
 
@@ -322,22 +259,3 @@ liegen bisher nur **Dateihashes**, keine Pixel-/Georeferenzierungsdaten vor.
 Ohne ein solches Alt-Raster ist eine eindeutige historische
 Ursachenzuordnung nicht möglich.
 
-## Amtliche Live-Maßstabsmatrix und WMTS
-
-`.github/workflows/live-scale-matrix.yml` startet nur nach explizitem
-PR-Marker `[run-live-scale]` oder manuell. Die **drei Pflichtfälle**
-werden unter QGIS 3/4 in eigenen Unterprozessen mit zwei Maßstäben
-je Quelle geprüft (max. 240 Sekunden je Fall; 8 Mio. Pixel je Ausgabe).
-Fehlende Ergebnisse, falsche Rasterdimensionen und echte Exportfehler
-lassen den Lauf scheitern; alte Dateihash-Abweichungen werden gemeldet.
-[Erfolgreicher Lauf #44196241970](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44196241970).
-
-Der echte basemap.de-WMTS wird über `.github/workflows/live-ogc.yml`
-und `[run-live-wmts]` oder manuell als
-`basemap_wmts_gray_tif` getestet. QGIS verwendet intern den
-Rasterprovider `wms` auch für WMTS. Der Dienst benutzt tatsächlich
-`WMTSCapabilities.xml` und `DE_EPSG_25833_ADV`, keinen XYZ-Ersatz.
-Zwei Live-Läufe unter beiden QGIS-Versionen bestanden, allerdings
-mit wechselnden Pixel-/Dateihashes bei identischer Georeferenzierung.
-Dies bleibt als Diagnosepunkt offen; siehe
-[VALIDATION_STATUS.md](VALIDATION_STATUS.md).
