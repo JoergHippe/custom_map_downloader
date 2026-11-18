@@ -52,32 +52,31 @@ Before publishing, validate the built plugin once in a real QGIS runtime:
 4. Remove the dev deployment if needed:
    - `make undeploy-dev`
 
-For Windows/QGIS E2E verification you can also set `CMD_INTEGRATION_REPORT_DIR` before running the integration batch helper. The network suite then writes JSON result artifacts, including scale-matrix hashes. The required `scale_matrix` now contains only repeatedly validated public-service cases; reserve or newly added probes belong in `experimental_scale_matrix` until they prove stable.
+## Current Runtime and Public-Service Validation
 
-Recommended release-grade runtime validation:
+Before a release, use [TESTING.md](TESTING.md) for current test requirements
+and [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md) for public-service interpretation.
+Historical March 2026 results do not validate the current candidate.
 
-1. Run the Windows/QGIS E2E workflow or the equivalent local batch helper against a real QGIS installation.
-2. Generate the scale-matrix summary and report artifacts.
-3. Enforce the report gate:
-   - required `scale_matrix` cases must all be `ok`
-   - `experimental_scale_matrix` may contain `untracked` reserve probes
-4. Treat any `drift`, `missing` or `error` status in the required matrix as a release blocker.
-5. If the scheduled Windows/QGIS workflow has failed recently, do not publish before the failure is explained or the matrix is revalidated manually.
-6. Treat the strict `official_webmaps_catalog` report the same way: no `drift`, `missing`, `error` or `untracked` rows before release.
+1. Require successful current Linux/QGIS and native Windows/QGIS CI on the
+   candidate commit. The Windows CI uses conda-forge, not the official QGIS installer.
+2. Smoke-test the **packaged** plugin in a visible official Windows QGIS desktop:
+   extent/CRS, raster, VRT, MBTiles, cancellation and supported layer reload.
+3. Run the opt-in official WMS/WMTS and scale-matrix checks as needed and assess
+   the broader official WMS catalog separately.
+4. Treat missing/failed cases, invalid imagery, dimensions or georeferencing,
+   and failed subprocesses as blockers until resolved.
+5. Treat historical SHA-256 drift from public services as **advisory**, not as
+   automatic failure of an otherwise valid export. Never silently reset baselines.
+6. Record commit, date, versions, results and limitations in
+   [VALIDATION_STATUS.md](VALIDATION_STATUS.md). CI is not a release approval.
 
-Relevant report files:
+Current optional live workflows: `.github/workflows/live-ogc.yml` and
+`.github/workflows/live-scale-matrix.yml`. Historical local runner reports
+(`scale_matrix_report.json`, `scenario_catalog_report.json`) can still be
+generated for diagnosis; their gates permit advisory drift and reject
+technical failures.
 
-- `scale_matrix_summary.json`
-- `scale_matrix_report.json`
-- `scale_matrix_report.md`
-- `official_webmaps_catalog/scenario_summary.json`
-- `official_webmaps_catalog/scenario_catalog_report.json`
-- `official_webmaps_catalog/scenario_catalog_report.md`
-
-Relevant gate:
-
-- `scripts/check_scale_matrix_report.py`
-- `scripts/check_network_catalog_report.py`
 
 ## Package Output
 
