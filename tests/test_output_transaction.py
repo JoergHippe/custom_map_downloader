@@ -4,10 +4,14 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from custom_map_downloader.core.errors import ExportError
-from custom_map_downloader.core.output_transaction import staged_raster_output
+from custom_map_downloader.core.errors import CancelledError, ExportError
+from custom_map_downloader.core.output_transaction import (
+    should_use_local_work,
+    staged_raster_output,
+)
 
 
 class StagedRasterOutputTests(unittest.TestCase):
@@ -168,6 +172,100 @@ class StagedRasterOutputTests(unittest.TestCase):
             )
             self.assertIn(str(staging_dirs[0]), ctx.exception.details)
             self.assertEqual(dest.read_bytes(), b"old-vrt")
+
+
+    def test_qgis_slow_device_selection_and_fast_local_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "map.tif"
+            self.assertTrue(should_use_local_work(target, lambda _path: False))
+            self.assertTrue(
+                should_use_local_work(
+                    target, lambda path: path == str(target.parent)
+                )
+            )
+            self.assertFalse(
+                should_use_local_work(
+                    target, lambda path: path == tempfile.gettempdir()
+                )
+            )
+
+    def test_user_temp_workspace_publishes_raster_and_sidecars(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.tif"
+            target.write_bytes(b"old")
+            with staged_raster_output(target, prefer_local=True) as work:
+                self.assertTrue(work.parent.name.startswith("cmd-work-"))
+                self.assertNotEqual(work.parent, target.parent)
+                work.write_bytes(b"new")
+                work.with_suffix(".prj").write_bytes(b"projection")
+                self.assertEqual(target.read_bytes(), b"old")
+            self.assertEqual(target.read_bytes(), b"new")
+            self.assertEqual(target.with_suffix(".prj").read_bytes(), b"projection")
+
+    def test_cross_device_copy_cancellation_preserves_existing_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.tif"
+            target.write_bytes(b"old")
+            original_replace = os.replace
+            counts = {"checks": 0}
+
+            def force_copy_for_workdir(src, dst):
+                if Path(src).parent.name.startswith("cmd-work-"):
+                    raise OSError("simulated cross-device rename")
+                return original_replace(src, dst)
+
+            def check_cancel():
+                counts["checks"] += 1
+                if counts["checks"] >= 3:
+                    raise CancelledError("ERR_CANCELLED", "cancel during transfer")
+
+            with patch(
+                "custom_map_downloader.core.output_transaction.os.replace",
+                side_effect=force_copy_for_workdir,
+            ):
+                with self.assertRaises(CancelledError):
+                    with staged_raster_output(
+                        target, prefer_local=True, check_cancel=check_cancel
+                    ) as work:
+                        work.write_bytes(b"x" * (16 * 1024 * 1024))
+            self.assertEqual(target.read_bytes(), b"old")
+            self.assertEqual(sorted(p.name for p in Path(directory).iterdir()), ["map.tif"])
+
+    def test_local_space_shortage_falls_back_before_rendering(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.tif"
+            with patch(
+                "custom_map_downloader.core.output_transaction.shutil.disk_usage",
+                return_value=SimpleNamespace(free=0),
+            ):
+                with staged_raster_output(target, prefer_local=True) as staged:
+                    self.assertTrue(staged.parent.name.startswith(".map.stage-"))
+                    staged.write_bytes(b"fallback")
+            self.assertEqual(target.read_bytes(), b"fallback")
+
+    def test_locked_destination_keeps_previous_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "map.tif"
+            target.write_bytes(b"old")
+            original_replace = os.replace
+
+            def locked_target(src, dst):
+                if Path(dst) == target and Path(src).parent.name.startswith(
+                    ".map.stage-"
+                ):
+                    raise PermissionError("simulated Windows file lock")
+                return original_replace(src, dst)
+
+            with patch(
+                "custom_map_downloader.core.output_transaction.os.replace",
+                side_effect=locked_target,
+            ):
+                with self.assertRaises(ExportError) as ctx:
+                    with staged_raster_output(target, prefer_local=True) as work:
+                        work.write_bytes(b"new")
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_PUBLISH_ROLLED_BACK")
+            self.assertEqual(target.read_bytes(), b"old")
 
 
 if __name__ == "__main__":
