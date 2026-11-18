@@ -30,18 +30,48 @@ Note:
 
 Symptoms:
 
-- VRT opens locally but not after moving the folder
-- success dialog contains a portability warning
+- the exporter rejects a VRT whose tile paths cannot be made relative
+- a previously exported VRT does not work after its folder was moved
 
-Cause:
+Causes:
 
-- tile paths in the `.vrt` could not be rewritten to relative paths
+- source paths in the VRT XML could not be rewritten or verified
+- tiles were moved separately from the VRT
 
 Actions:
 
-1. Keep the VRT and tiles together in the same folder.
-2. Treat the result as locally usable but not safely portable.
-3. Check the QGIS message log and Python logs for the rewrite failure details.
+1. Keep the VRT and its referenced tiles in the same folder.
+2. Inspect the VRT's `SourceFilename` entries and verify relative paths.
+3. Check the QGIS message log and export diagnostics. New VRT exports
+   with nonportable tile paths fail before publication instead of being
+   reported as successful with a warning.
+
+## Publication or Recovery Failed
+
+The export first writes files to staging and publishes them afterward.
+A completed raster render does **not** mean that the target files have
+already been replaced.
+
+- `ERR_EXPORT_STAGE_INCOMPLETE`: Staging did not produce a complete
+  primary output. The previous target was not replaced.
+- `ERR_EXPORT_PUBLISH_ROLLED_BACK`: Publishing failed, but the prior
+  target files were restored and newly published files were removed.
+- `ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED`: Publishing and rollback both
+  failed. Some destination files may be missing or changed.
+
+For recovery-required errors:
+
+1. Do not start another export to the same destination yet.
+2. Open **Details** in the error dialog or the QGIS message log to find
+   the recovery or preserved staging directory.
+3. Compare the target folder with backed-up files; only restore or
+   delete files after checking which versions belong together.
+4. On Windows, close QGIS layers or other applications holding these
+   files open before retrying.
+
+A VRT with multiple tiles and sidecars cannot be published as a single
+atomic filesystem operation. A recovery directory must not be
+automatically deleted before its contents are inspected.
 
 ## Output CRS vs Render CRS
 
