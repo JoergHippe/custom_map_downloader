@@ -74,7 +74,6 @@ class ScaleMatrixReportCheckTests(unittest.TestCase):
     def test_rejects_empty_matrix(self):
         self.assertNotEqual(self._run({"matrix_key": "scale_matrix", "rows": []}).returncode, 0)
 
-
     def test_rejects_malformed_rows(self):
         # A malformed row must fail closed instead of raising an unhandled exception.
         payload = {"matrix_key": "scale_matrix", "rows": ["invalid"]}
@@ -87,6 +86,7 @@ class ScaleMatrixReportCheckTests(unittest.TestCase):
             "rows": [{"case": "sample", "status": "ok", "exit_code": 1}],
         }
         self.assertNotEqual(self._run(payload).returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
