@@ -73,6 +73,7 @@ from .mbtiles import (
     write_metadata,
 )
 from .models import CancelToken, ExportParams
+from .output_transaction import staged_raster_output
 from .raster_ops import (
     build_geotransform,
     ensure_not_fully_transparent,
@@ -101,6 +102,35 @@ class GeoTiffExporter:
     MAX_TILE_PX = DEFAULT_MAX_TILE_PX
 
     def export(
+        self,
+        params: ExportParams,
+        *,
+        progress_cb: Optional[ProgressCallback] = None,
+        cancel_token: Optional[CancelToken] = None,
+    ) -> str:
+        """Export to the requested destination without exposing partial rasters.
+
+        MBTiles already has its own atomic staging. Raster and VRT exports use
+        a sibling staging directory and publish only after a complete export.
+        """
+        if Path(params.output_path).suffix.lower() == ".mbtiles":
+            return self._export_unstaged(
+                params, progress_cb=progress_cb, cancel_token=cancel_token
+            )
+
+        # Validate the *real* destination before using a writable stage folder.
+        validate_output_path(params.output_path)
+        with staged_raster_output(params.output_path) as staged_path:
+            stage_params = replace(params, output_path=str(staged_path))
+            self._export_unstaged(
+                stage_params, progress_cb=progress_cb, cancel_token=cancel_token
+            )
+            self._check_cancel(cancel_token)
+
+        log_event("export_success", output_path=params.output_path, mode="published")
+        return params.output_path
+
+    def _export_unstaged(
         self,
         params: ExportParams,
         *,
@@ -196,7 +226,6 @@ class GeoTiffExporter:
                     progress_cb=progress_cb,
                     cancel_token=cancel_token,
                 )
-                log_event("export_success", output_path=result, mode="warp")
                 return result
 
         result = self._export_internal(
@@ -208,7 +237,6 @@ class GeoTiffExporter:
             report_done=True,
             write_sidecars=True,
         )
-        log_event("export_success", output_path=result, mode="direct")
         return result
 
     def _export_internal(
