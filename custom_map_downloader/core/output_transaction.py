@@ -135,7 +135,10 @@ def staged_raster_output(
             except Exception as error:
                 # CancelToken errors are ExportError subclasses. Preserve the
                 # original cancel state even under re-imported test bindings.
-                if isinstance(error, ExportError) or getattr(error, "code", None) == "ERR_CANCELLED":
+                if (
+                    isinstance(error, ExportError)
+                    or getattr(error, "code", None) == "ERR_CANCELLED"
+                ):
                     raise
                 raise ExportError(
                     "ERR_EXPORT_TRANSFER_FAILED",
