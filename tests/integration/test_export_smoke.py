@@ -52,7 +52,6 @@ try:
         OGC_STANDARD_DPI,
         gsd_to_scale_denominator,
     )
-
     from custom_map_downloader.CustomMapDownloader import CustomMapDownloader  # type: ignore
 
     HAS_QGIS = True
