@@ -83,6 +83,17 @@ QGIS-Zustand hat daher weiterhin Vorrang vor Textparsing.
 **Nachweis:** [GitHub Actions #44172109704](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44172109704)
 unter QGIS 3.44.15 und QGIS 4.2.3.
 
+## Transformationsfehler (18.11.2026)
+
+Die Dialogvalidierung darf ein Rechteck nach fehlgeschlagener Transformation
+**nicht** unverändert als Rechteck in einem anderen KBS interpretieren.
+Ebenso darf eine nicht transformierte geografische Ausdehnung nicht als
+metrische Länge für Pixelzahlen verwendet werden. Beide Fälle werden
+nun als ungültig behandelt (fail-closed), ohne mit falsch etikettierten
+Koordinaten fortzufahren. Zwei echte QGIS-Integrationstests simulieren
+Transformationsfehler; die Test-Fixtures setzen das Ausgangs-KBS explizit,
+damit persistierte Dialogeinstellungen keine Testreihenfolge beeinflussen.
+
 ## Bewusst noch nicht entfernt
 
 - Polling von Änderungen nach `Draw on canvas`.
