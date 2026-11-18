@@ -93,6 +93,39 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         for method in ("xMinimum", "yMinimum", "xMaximum", "yMaximum"):
             self.assertAlmostEqual(getattr(actual, method)(), getattr(expected, method)(), places=4)
 
+    def test_last_layer_setting_restored_and_refresh_keeps_new_selection(self):
+        """QSettings startup order and refresh must not reset the selected layer."""
+        first = QgsVectorLayer("Point?crs=EPSG:3857", "first", "memory")
+        second = QgsVectorLayer("Point?crs=EPSG:3857", "second", "memory")
+        self.assertTrue(first.isValid())
+        self.assertTrue(second.isValid())
+        self.project.addMapLayer(first)
+        self.project.addMapLayer(second)
+        self.addCleanup(lambda: self.project.removeMapLayer(first.id()))
+        self.addCleanup(lambda: self.project.removeMapLayer(second.id()))
+        self.dialog.populate_layers()
+
+        # Simulate QSettings independently from the real user's preferences.
+        def stored_value(key, default="", type=None):
+            return second.id() if key.endswith("last_layer_id") else default
+
+        with patch("custom_map_downloader.CustomMapDownloader_dialog.QSettings") as settings:
+            settings.return_value.value.side_effect = stored_value
+            self.dialog._load_settings()
+
+        self.assertEqual(self.dialog.comboBox_layer.currentData().id(), second.id())
+
+        # A manual layer change must take precedence over stale startup settings.
+        first_index = next(
+            i
+            for i in range(self.dialog.comboBox_layer.count())
+            if self.dialog.comboBox_layer.itemData(i).id() == first.id()
+        )
+        self.dialog.comboBox_layer.setCurrentIndex(first_index)
+        self.assertEqual(self.dialog._last_layer_id, first.id())
+        self.dialog.populate_layers()
+        self.assertEqual(self.dialog.comboBox_layer.currentData().id(), first.id())
+
     def test_internal_coordinate_mapping_does_not_alias_fields(self):
         """Document QGIS child-widget mapping without assuming private names."""
         self.dialog._cache_extent_line_edits()
