@@ -33,6 +33,10 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Present raw export diagnostics only in the expandable UI details instead
+  of duplicating them in the main error dialog. Add a specific message for
+  invalid render/output CRS, surface large-export warnings in completion
+  dialogs, and remove the obsolete nonportable-VRT warning branch.
 - Classify staged raster/VRT publication failures as safely rolled back,
   incomplete staging, or requiring manual recovery; retain emergency backups
   if recovery-folder relocation also fails.
