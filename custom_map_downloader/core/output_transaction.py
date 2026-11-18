@@ -18,9 +18,7 @@ from typing import Callable, Iterator
 from .errors import ExportError
 
 
-def should_use_local_work(
-    destination: str | Path, slow_device: Callable[[str], bool]
-) -> bool:
+def should_use_local_work(destination: str | Path, slow_device: Callable[[str], bool]) -> bool:
     """Prefer a fast user temp when target is slow or shares temp's device.
 
     QgsFileUtils.pathIsSlowDevice is injected by the QGIS exporter so this
@@ -84,9 +82,7 @@ def transfer_finished_files(
             raise
 
 
-def create_local_work_directory(
-    prefer_local: bool, *, estimated_bytes: int = 0
-) -> Path | None:
+def create_local_work_directory(prefer_local: bool, *, estimated_bytes: int = 0) -> Path | None:
     """Use local user temp only if it is writable and has basic free capacity."""
     if not prefer_local:
         return None
