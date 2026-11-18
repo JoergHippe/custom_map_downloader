@@ -153,8 +153,9 @@ class MbtilesCoreTests(unittest.TestCase):
                     "custom_map_downloader.core.output_transaction.os.replace",
                     side_effect=fail_cross_device_rename,
                 ),
-                patch(
-                    "custom_map_downloader.core.mbtiles.transfer_finished_files",
+                patch.object(
+                    import_module(staged_mbtiles_path.__module__),
+                    "transfer_finished_files",
                     side_effect=OSError("network copy interrupted"),
                 ),
             ):
