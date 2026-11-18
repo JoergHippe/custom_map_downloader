@@ -17,9 +17,8 @@ Notes:
 
 from __future__ import annotations
 
-import os
-import xml.etree.ElementTree as ET
 import tempfile
+import xml.etree.ElementTree as ET
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Optional
