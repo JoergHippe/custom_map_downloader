@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from importlib import import_module
 import tempfile
 import unittest
 from contextlib import closing
