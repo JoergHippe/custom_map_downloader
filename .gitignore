@@ -30,11 +30,7 @@ Thumbs.db
 artifacts/
 symbology-style.db
 
-# Documentation (except README)
-*.md
-!README.md
-!CHANGELOG.md
-!docs/*.md
+# Markdown documentation is tracked normally.
 
 # Local tool caches
 .mypy_cache/
