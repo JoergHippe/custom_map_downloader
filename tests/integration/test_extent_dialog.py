@@ -184,6 +184,31 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             places=3,
         )
 
+    def test_vrt_preset_updates_tile_grid_once(self):
+        """Qt signal blocking avoids intermediate VRT previews for each spinbox."""
+        self.dialog.checkBox_createVrt.setChecked(True)
+        preset = self.dialog.comboBox_vrtPreset
+        next_index = 0 if preset.currentIndex() != 0 else 1
+        expected = int(preset.itemText(next_index))
+
+        with patch.object(
+            self.dialog, "_update_vrt_info", wraps=self.dialog._update_vrt_info
+        ) as update:
+            preset.setCurrentIndex(next_index)
+            self.assertEqual(update.call_count, 1)
+
+        self.assertEqual(self.dialog.spinBox_vrtMaxCols.value(), expected)
+        self.assertEqual(self.dialog.spinBox_vrtMaxRows.value(), expected)
+
+    def test_resolution_change_does_not_recompute_mbtiles_coverage(self):
+        """MBTiles tile counts depend on extent and zoom, not GSD or scale."""
+        self.dialog.comboBox_resolutionMode.setCurrentIndex(
+            self.dialog.comboBox_resolutionMode.findData("gsd")
+        )
+        with patch.object(self.dialog, "_update_mbtiles_info") as update:
+            self.dialog.spinBox_gsd.setValue(3.7)
+            update.assert_not_called()
+
     def test_profile_resolution_mode_wins_over_conflicting_inactive_value(self):
         """Restoring a profile must honor the selected input, not signal order."""
         profile = self.dialog._collect_profile_state()
