@@ -29,6 +29,7 @@ from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
+    QgsFileUtils,
     QgsMapLayer,
     QgsMapRendererParallelJob,
     QgsMapSettings,
@@ -72,7 +73,7 @@ from .mbtiles import (
     write_metadata,
 )
 from .models import CancelToken, ExportParams
-from .output_transaction import staged_raster_output
+from .output_transaction import should_use_local_work, staged_raster_output
 from .raster_ops import (
     build_geotransform,
     ensure_not_fully_transparent,
@@ -115,8 +116,13 @@ class GeoTiffExporter:
         if Path(params.output_path).suffix.lower() == ".mbtiles":
             return self._export_unstaged(params, progress_cb=progress_cb, cancel_token=cancel_token)
 
-        # Validate the *real* destination before using a writable stage folder.
+        # Validate the real target first. QGIS' slow-device check is a
+        # heuristic; a same-volume local rename also avoids extra copies.
         validate_output_path(params.output_path)
+        local_work = should_use_local_work(
+            params.output_path, QgsFileUtils.pathIsSlowDevice
+        )
+        log_event("export_workspace", output_path=params.output_path, local_work=local_work)
 
         def staged_progress(percent: int, key: str, args: dict[str, Any]) -> None:
             # Rendering may finish before target files are published.
@@ -127,7 +133,12 @@ class GeoTiffExporter:
                 self._report(progress_cb, percent, key, args)
 
         try:
-            with staged_raster_output(params.output_path) as staged_path:
+            with staged_raster_output(
+                params.output_path,
+                prefer_local=local_work,
+                estimated_bytes=int(params.width_px) * int(params.height_px) * 4,
+                check_cancel=lambda: self._check_cancel(cancel_token),
+            ) as staged_path:
                 stage_params = replace(params, output_path=str(staged_path))
                 self._export_unstaged(
                     stage_params, progress_cb=staged_progress, cancel_token=cancel_token
