@@ -138,7 +138,7 @@ class GeoTiffExporter:
                 params.output_path,
                 prefer_local=local_work,
                 estimated_bytes=int(params.width_px) * int(params.height_px) * 4,
-                check_cancel=lambda: self._check_cancel(cancel_token),
+                check_cancel=lambda: self._check_cancel_with_events(cancel_token),
             ) as staged_path:
                 stage_params = replace(params, output_path=str(staged_path))
                 self._export_unstaged(
@@ -670,6 +670,11 @@ class GeoTiffExporter:
                 except Exception:
                     pass
             raise CancelledError("ERR_CANCELLED", "Cancelled by user.")
+
+    def _check_cancel_with_events(self, token: Optional[CancelToken]) -> None:
+        """Keep the QGIS cancel button responsive during long file copies."""
+        QCoreApplication.processEvents()
+        self._check_cancel(token)
 
     def _report(
         self,
