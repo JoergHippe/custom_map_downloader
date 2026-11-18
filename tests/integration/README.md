@@ -8,7 +8,7 @@ Diese Tests benötigen eine echte QGIS-Python-Umgebung (qgis.core/qgis.gui). Unt
 
 1. QGIS installieren (z. B. OSGeo4W oder Standalone).
 2. OSGeo4W Shell / „QGIS Python“ öffnen.
-3. In das Projekt wechseln: `cd C:\Users\joerg\OneDrive\Documents\Coding\GitHubRepos\custom_map_downloader`
+3. In das lokale Repository wechseln: `cd <Repository-Pfad>`
 4. Optional: `set QGIS_PREFIX_PATH=C:\OSGeo4W64\apps\qgis` (oder entsprechender QGIS-Pfad).
 
 ## Ausführen (lokal)
@@ -67,7 +67,7 @@ Details: [TESTING.md](../../docs/TESTING.md).
 - `defaults`: zentrale Defaults (CRS, Extent, GSD, VRT/Output), die von Quellen/Szenarien geerbt werden.
 - `sources`: Datenquellen mit `name`, `provider`, `uri`, optional `default_crs`, `extent`, `gsd`, `create_vrt`, `output_extension`.
 - `scenarios`: konkrete Testläufe mit `name`, `source`-Verweis und optionalen Overrides (`crs`, `extent`, `gsd`, `vrt_preset_size`, `create_vrt`, `output_extension`).
-- `scale_matrix`: explizite Matrix für stabile, verpflichtende Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet unterschiedliche Rasterdimensionen und unterschiedliche Export-Hashes.
+- `scale_matrix`: explizite Matrix für stabile, verpflichtende Maßstabsproben mit zwei Zielmaßstäben pro Fall. Der Test erwartet korrekte Rasterdimensionen und erfolgreiche Exporte. Änderungen historischer Hashes sind Diagnosehinweise.
 - `experimental_scale_matrix`: Reserve für instabile oder noch nicht freigegebene öffentliche Maßstabsfälle.
 - Optional `expected_hashes`: Referenz-Hashes für `small` und `large`. Wenn gesetzt, vergleicht der Test gegen diese Baselines.
 - Der aktuelle Szenarienkatalog deckt bewusst mehrere amtliche Diensttypen ab:
@@ -95,11 +95,11 @@ Die Modi `all`, `smoke` und `network` testen den Repo-Stand direkt. Der Modus `e
 
 Im historischen Self-Hosted-Windows-Workflow lief die Scale-Matrix isoliert pro Fall über `scripts/run_windows_qgis_matrix.py`. Dadurch bleibt sichtbar, welcher konkrete Netzfall crasht oder fehlschlägt.
 Per `--matrix-key experimental_scale_matrix` oder `CMD_SCALE_MATRIX_KEY=experimental_scale_matrix` lassen sich optionale Reservefälle gezielt manuell ausführen.
-Die aktuelle Pflichtmatrix wurde mehrfach auf echter Windows/QGIS-Runtime mit identischen Hashes verifiziert.
+Historische Referenz-Hashes stammen aus früheren Windows/QGIS-Läufen; öffentliche Dienste können ihre Inhalte ändern.
 Für die Feineingrenzung eines einzelnen Falls gibt es zusätzlich `scripts/probe_windows_scale_case.py`, z. B. `python-qgis.bat scripts\probe_windows_scale_case.py geosn_ortho_gray_scale_matrix --label large`. Standardmäßig arbeitet der Probe-Runner gegen `scale_matrix`.
-`expected_hashes` sind für Pflichtfälle verbindlich. In `experimental_scale_matrix` dürfen sie ebenfalls gepflegt werden, um Stil- oder Serveränderungen sichtbar zu machen.
+`expected_hashes` sind historische Vergleichswerte, keine zeitlich unbegrenzt gültigen Bildinhalte.
 `scripts/summarize_scale_matrix.py` verdichtet die Roh-Artefakte danach zu `scale_matrix_report.json` und `scale_matrix_report.md`. Der archivierte Windows-CI-Workflow hängte den Markdown-Report an die Step Summary.
-`scripts/check_scale_matrix_report.py` prüft den JSON-Report anschließend als kompaktes Gate: für `scale_matrix` ist nur `ok` erlaubt, für optionale Experimental-Reports zusätzlich `untracked`.
+`scripts/check_scale_matrix_report.py` verlangt technisch erfolgreiche, vorhandene Ergebnisse. `drift` und `untracked` werden dabei als Hinweise akzeptiert.
 Für isolierte Katalogläufe ohne Maßstabsmatrix gibt es zusätzlich `scripts/run_windows_qgis_scenarios.py`, z. B. `python scripts\\run_windows_qgis_scenarios.py --group official_webmaps_catalog`.
 Für diesen Katalog gibt es außerdem `scripts/summarize_network_catalog.py` und `scripts/check_network_catalog_report.py`, sodass auch der breite amtliche Dienstmix hashbasiert als Report/Gate ausgewertet werden kann.
 
