@@ -8,6 +8,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from tests.integration.qgis_test_support import ensure_plugin_import_path, init_qgis_app
@@ -95,36 +96,34 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
 
     def test_last_layer_setting_restored_and_refresh_keeps_new_selection(self):
         """QSettings startup order and refresh must not reset the selected layer."""
-        first = QgsVectorLayer("Point?crs=EPSG:3857", "first", "memory")
-        second = QgsVectorLayer("Point?crs=EPSG:3857", "second", "memory")
-        self.assertTrue(first.isValid())
-        self.assertTrue(second.isValid())
-        self.project.addMapLayer(first)
-        self.project.addMapLayer(second)
-        self.addCleanup(lambda: self.project.removeMapLayer(first.id()))
-        self.addCleanup(lambda: self.project.removeMapLayer(second.id()))
-        self.dialog.populate_layers()
+        # Keep Qt layer-combo behavior real, but avoid deleting native QGIS
+        # layers while QgsExtentGroupBox may still hold C++ references.
+        first = SimpleNamespace(id=lambda: "first-id", name=lambda: "first")
+        second = SimpleNamespace(id=lambda: "second-id", name=lambda: "second")
+        project = SimpleNamespace(mapLayers=lambda: {"first-id": first, "second-id": second})
 
-        # Simulate QSettings independently from the real user's preferences.
-        def stored_value(key, default="", type=None):
-            return second.id() if key.endswith("last_layer_id") else default
+        with patch.object(CustomMapDownloaderDialog, "_project", return_value=project):
+            self.dialog.populate_layers()
 
-        with patch("custom_map_downloader.CustomMapDownloader_dialog.QSettings") as settings:
-            settings.return_value.value.side_effect = stored_value
-            self.dialog._load_settings()
+            def stored_value(key, default="", type=None):
+                return second.id() if key.endswith("last_layer_id") else default
 
-        self.assertEqual(self.dialog.comboBox_layer.currentData().id(), second.id())
+            with patch("custom_map_downloader.CustomMapDownloader_dialog.QSettings") as settings:
+                settings.return_value.value.side_effect = stored_value
+                self.dialog._load_settings()
 
-        # A manual layer change must take precedence over stale startup settings.
-        first_index = next(
-            i
-            for i in range(self.dialog.comboBox_layer.count())
-            if self.dialog.comboBox_layer.itemData(i).id() == first.id()
-        )
-        self.dialog.comboBox_layer.setCurrentIndex(first_index)
-        self.assertEqual(self.dialog._last_layer_id, first.id())
-        self.dialog.populate_layers()
-        self.assertEqual(self.dialog.comboBox_layer.currentData().id(), first.id())
+            self.assertEqual(self.dialog.comboBox_layer.currentData().id(), second.id())
+
+            # A manual layer change must take precedence over stale settings.
+            first_index = next(
+                i
+                for i in range(self.dialog.comboBox_layer.count())
+                if self.dialog.comboBox_layer.itemData(i).id() == first.id()
+            )
+            self.dialog.comboBox_layer.setCurrentIndex(first_index)
+            self.assertEqual(self.dialog._last_layer_id, first.id())
+            self.dialog.populate_layers()
+            self.assertEqual(self.dialog.comboBox_layer.currentData().id(), first.id())
 
     def test_profile_restores_vrt_when_previous_format_was_mbtiles(self):
         """Qt signal ordering must not silently rewrite a VRT profile to MBTiles."""
