@@ -100,7 +100,10 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         # layers while QgsExtentGroupBox may still hold C++ references.
         first = SimpleNamespace(id=lambda: "first-id", name=lambda: "first")
         second = SimpleNamespace(id=lambda: "second-id", name=lambda: "second")
-        project = SimpleNamespace(mapLayers=lambda: {"first-id": first, "second-id": second})
+        project = SimpleNamespace(
+            mapLayers=lambda: {"first-id": first, "second-id": second},
+            crs=self.project.crs,
+        )
 
         with patch.object(CustomMapDownloaderDialog, "_project", return_value=project):
             self.dialog.populate_layers()
