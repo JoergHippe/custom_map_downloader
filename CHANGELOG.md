@@ -29,6 +29,13 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Classify staged raster/VRT publication failures as safely rolled back,
+  incomplete staging, or requiring manual recovery; retain emergency backups
+  if recovery-folder relocation also fails.
+- Report publication diagnostics with stable error codes in QGIS and export
+  logs; show 100% progress only after the staged result is published.
+- Update VRT portability guidance: invalid relative tile references fail
+  before publication rather than returning a misleading warning.
 - Detect collisions with loaded VRT layers when overwriting existing
   tiles in GeoTIFF, TIFF, PNG or JPEG formats; previously only `.tif`
   files were considered. Ignore unrelated filenames and preserve the
