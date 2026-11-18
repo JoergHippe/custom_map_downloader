@@ -133,9 +133,9 @@ def staged_raster_output(
             try:
                 transfer_finished_files(work_dir, staging_dir, check_cancel)
             except Exception as error:
-                from .errors import CancelledError
-
-                if isinstance(error, CancelledError):
+                # CancelToken errors are ExportError subclasses. Preserve the
+                # original cancel state even under re-imported test bindings.
+                if isinstance(error, ExportError) or getattr(error, "code", None) == "ERR_CANCELLED":
                     raise
                 raise ExportError(
                     "ERR_EXPORT_TRANSFER_FAILED",
