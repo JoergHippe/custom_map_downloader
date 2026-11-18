@@ -289,9 +289,7 @@ def staged_mbtiles_path(
         prefix=f".{destination.stem}.", dir=destination.parent
     ) as temp_dir:
         target_stage = Path(temp_dir)
-        work_dir = create_local_work_directory(
-            prefer_local, estimated_bytes=estimated_bytes
-        )
+        work_dir = create_local_work_directory(prefer_local, estimated_bytes=estimated_bytes)
         try:
             staged_path = (work_dir or target_stage) / destination.name
             yield staged_path
