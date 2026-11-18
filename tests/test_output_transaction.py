@@ -173,21 +173,14 @@ class StagedRasterOutputTests(unittest.TestCase):
             self.assertIn(str(staging_dirs[0]), ctx.exception.details)
             self.assertEqual(dest.read_bytes(), b"old-vrt")
 
-
     def test_qgis_slow_device_selection_and_fast_local_target(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "map.tif"
             self.assertTrue(should_use_local_work(target, lambda _path: False))
-            self.assertTrue(
-                should_use_local_work(
-                    target, lambda path: path == str(target.parent)
-                )
-            )
+            self.assertTrue(should_use_local_work(target, lambda path: path == str(target.parent)))
             self.assertFalse(
-                should_use_local_work(
-                    target, lambda path: path == tempfile.gettempdir()
-                )
+                should_use_local_work(target, lambda path: path == tempfile.gettempdir())
             )
 
     def test_user_temp_workspace_publishes_raster_and_sidecars(self):
@@ -276,9 +269,7 @@ class StagedRasterOutputTests(unittest.TestCase):
             original_replace = os.replace
 
             def locked_target(src, dst):
-                if Path(dst) == target and Path(src).parent.name.startswith(
-                    ".map.stage-"
-                ):
+                if Path(dst) == target and Path(src).parent.name.startswith(".map.stage-"):
                     raise PermissionError("simulated Windows file lock")
                 return original_replace(src, dst)
 
