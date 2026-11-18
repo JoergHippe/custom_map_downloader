@@ -195,6 +195,8 @@ class QgisExportIntegrationTest(unittest.TestCase):
             ("ERR_EXPORT_PUBLISH_ROLLED_BACK", "restored"),
             ("ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED", "recovery"),
             ("ERR_EXPORT_STAGE_INCOMPLETE", "not replaced"),
+            ("ERR_EXPORT_TRANSFER_FAILED", "transferred"),
+            ("ERR_VALIDATION_CRS_INVALID", "crs"),
         )
         for code, expected_fragment in cases:
             with self.subTest(code=code):
@@ -202,7 +204,9 @@ class QgisExportIntegrationTest(unittest.TestCase):
                     translation_stub, ExportError(code, "test diagnostics")
                 )
                 self.assertIn(expected_fragment, message.lower())
-                self.assertIn("test diagnostics", message)
+                # Detailed traceback/context is displayed in the expandable
+                # Details field, not duplicated in the main message.
+                self.assertNotIn("test diagnostics", message)
 
     def test_export_small_raster(self):
         output_path = Path(self._export_test_raster("cmd_integration_export", target_scale=False))
