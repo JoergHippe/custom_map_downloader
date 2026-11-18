@@ -1,23 +1,43 @@
 # Validierungsstand
 
 **Aktuelle Einordnung (18.11.2026):** Die jüngsten erfolgreich
-automatisiert geprüften Codeänderungen stehen auf
-`7de08e43d119c88ad28cce91a1a739e12ec0e54a`
-(QGIS-Dialog-/Profilkorrekturen).
+automatisiert geprüften Änderungen stehen auf
+`7a9b0461d0db43f35857b49bffc0c373f32ac1e2`
+(QGIS-Dialog, GSD-/Maßstabs-Synchronisation und Vorschau).
 Die untenstehenden früheren Befunde bleiben als datierte Nachweise
 erhalten; neue Prüfungen ersetzen keine vollständige Freigabe
 der offiziellen Windows-QGIS-/OSGeo4W-Desktop-Distribution.
 
-Die aktuelle Änderung betrifft insbesondere lokale temporäre
-Arbeitsverzeichnisse, sicheren Transfer ins Ziel-Staging,
-MBTiles-Veröffentlichung und VRT-Rollback. Der breite amtliche
-WMS-Katalog und echte SMB-Verbindungsausfälle bleiben separate
-Release-Prüfpunkte. Änderungen von historischen öffentlichen
-Bild-/Dateihashes sind nur Hinweise, solange die technische
+Die aktuellen Dialogkorrekturen verändern weder Export-Rendering
+noch die zuvor getestete lokale Temp-/Ziel-Staging-Architektur.
+Der breite amtliche WMS-Katalog und echte SMB-Verbindungsausfälle
+bleiben separate Release-Prüfpunkte. Änderungen historischer
+öffentlicher Bild-/Dateihashes sind Hinweise, solange die technische
 Exportprüfung erfolgreich ist.
 
 Freigabekriterien stehen in [TESTING.md](TESTING.md) und
 [OGC_TEST_POLICY.md](OGC_TEST_POLICY.md).
+
+## Auflösungssignale und Vorschau: QGIS 3/4 (18.11.2026)
+
+**Geprüfter Stand:** `7a9b0461d0db43f35857b49bffc0c373f32ac1e2`  
+**CI:** [Actions #44306105043](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44306105043) –
+Python/Formatierung/Packaging, Linux QGIS 3 und Linux QGIS 4:
+**3/3 PASS**.
+
+Regressionen prüfen: Vorrang des aktiven GSD-/Zielmaßstabswerts
+bei Profil-/QSettings-Wiederherstellung; nur eine
+Vorschauaktualisierung beim synchronisierten Spinbox-Wechsel;
+einmaliges VRT-Preview beim Kachelgrößen-Preset mittels
+`QSignalBlocker`; keine MBTiles-Neuberechnung bei GSD-Wechsel.
+Die Rasterpixelgrößen-Vorschau verwendet das bereits berechnete
+metrische Extent und vermeidet eine doppelte Transformation.
+
+**Weiterhin offen:** offizielle Windows-QGIS-/OSGeo4W-Abnahme
+mit sichtbarer GUI und speziell für diese Änderungen ein
+nativer Windows-QGIS-3/4-Testlauf. Die vorherigen
+Windows-Regressionen zu Staging/Export bleiben gültig,
+sind aber keine Freigabe dieser neuen Dialogänderung.
 
 ## Dialog-/Profilzustand: Linux-QGIS-Regression (18.11.2026)
 
