@@ -660,9 +660,7 @@ class ExporterValidationTests(unittest.TestCase):
         try:
             output = exporter.export(
                 params,
-                progress_cb=lambda percent, key, args: progress_events.append(
-                    (percent, key, args)
-                ),
+                progress_cb=lambda percent, key, args: progress_events.append((percent, key, args)),
             )
         finally:
             exporter._export_unstaged = original_export
