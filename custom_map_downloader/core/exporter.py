@@ -117,10 +117,24 @@ class GeoTiffExporter:
 
         # Validate the *real* destination before using a writable stage folder.
         validate_output_path(params.output_path)
-        with staged_raster_output(params.output_path) as staged_path:
-            stage_params = replace(params, output_path=str(staged_path))
-            self._export_unstaged(stage_params, progress_cb=progress_cb, cancel_token=cancel_token)
-            self._check_cancel(cancel_token)
+        try:
+            with staged_raster_output(params.output_path) as staged_path:
+                stage_params = replace(params, output_path=str(staged_path))
+                self._export_unstaged(
+                    stage_params, progress_cb=progress_cb, cancel_token=cancel_token
+                )
+                self._check_cancel(cancel_token)
+        except ExportError as error:
+            if error.code.startswith("ERR_EXPORT_PUBLISH_") or error.code == (
+                "ERR_EXPORT_STAGE_INCOMPLETE"
+            ):
+                log_event(
+                    "export_publication_failed",
+                    output_path=params.output_path,
+                    error_code=error.code,
+                    details=error.details,
+                )
+            raise
 
         log_event("export_success", output_path=params.output_path, mode="published")
         return params.output_path
