@@ -40,7 +40,15 @@ def main() -> int:
         return 1
 
     allowed_statuses = {"ok"} if group_name == "official_webmaps_catalog" else {"ok", "untracked"}
-    bad_rows = [row for row in rows if str(row.get("status", "")) not in allowed_statuses]
+    # A successful status must never mask an unsuccessful child process.
+    bad_rows = [
+        row
+        for row in rows
+        if str(row.get("status", "")) not in allowed_statuses
+        or not isinstance(row.get("exit_code"), int)
+        or isinstance(row.get("exit_code"), bool)
+        or row["exit_code"] != 0
+    ]
     if bad_rows:
         for row in bad_rows:
             print(
