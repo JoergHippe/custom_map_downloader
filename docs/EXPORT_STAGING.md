@@ -1,7 +1,8 @@
 # Export-Staging: lokales Benutzer-Temp und sichere Veröffentlichung
 
-Status: **implementiert auf Feature-Branch, Validierung ausstehend**
-(18.11.2026). Die Strategie bevorzugt das lokale Benutzer-Temp für
+Status: **implementiert** (18.11.2026); reale SMB-Performance und der
+sichtbare Test mit der offiziellen Windows-QGIS-Installation bleiben
+gesonderte Freigabeprüfungen. Die Strategie bevorzugt das lokale Benutzer-Temp für
 rechenintensive Arbeitsdateien, ohne bei jedem lokalen Export eine
 vollständige Zusatzkopie zu erzwingen.
 
