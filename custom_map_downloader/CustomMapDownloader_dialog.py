@@ -110,8 +110,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.pushButton_loadProfile.clicked.connect(self.load_profile)
 
         if hasattr(self, "spinBox_gsd"):
-            self.spinBox_gsd.valueChanged.connect(self._update_extent_info)
-            self.spinBox_gsd.valueChanged.connect(self._update_vrt_info)
+            # One handler synchronizes the paired control and refreshes previews.
             self.spinBox_gsd.valueChanged.connect(self._on_gsd_changed)
 
         if hasattr(self, "comboBox_resolutionMode"):
@@ -120,8 +119,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             )
 
         if hasattr(self, "doubleSpinBox_targetScale"):
-            self.doubleSpinBox_targetScale.valueChanged.connect(self._update_extent_info)
-            self.doubleSpinBox_targetScale.valueChanged.connect(self._update_vrt_info)
             self.doubleSpinBox_targetScale.valueChanged.connect(self._on_target_scale_changed)
 
         if hasattr(self, "comboBox_layer"):
@@ -1395,21 +1392,31 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._update_vrt_info()
         self._update_mbtiles_info()
 
-    def _on_resolution_mode_changed(self, _index: int) -> None:
-        """Toggle the active resolution input."""
-        self._update_resolution_controls()
+    def _refresh_resolution_previews(self) -> None:
+        """Refresh derived output information once per resolution change."""
         self._update_extent_info()
         self._update_vrt_info()
         self._update_mbtiles_info()
         self._update_scale_hint()
 
+    def _on_resolution_mode_changed(self, _index: int) -> None:
+        """Toggle the active resolution input."""
+        self._update_resolution_controls()
+        self._refresh_resolution_previews()
+
     def _on_gsd_changed(self, value: float) -> None:
-        """Keep scale denominator synchronized when GSD changes."""
+        """Synchronize target scale and refresh once, not recursively."""
+        if self._resolution_syncing:
+            return
         self._sync_scale_from_gsd(float(value))
+        self._refresh_resolution_previews()
 
     def _on_target_scale_changed(self, value: float) -> None:
-        """Keep GSD synchronized when target scale changes."""
+        """Synchronize GSD and refresh once, not recursively."""
+        if self._resolution_syncing:
+            return
         self._sync_gsd_from_scale(float(value))
+        self._refresh_resolution_previews()
 
     def _on_output_crs_changed(self, crs: QgsCoordinateReferenceSystem) -> None:
         """Update extent output CRS when CRS widget changes."""
