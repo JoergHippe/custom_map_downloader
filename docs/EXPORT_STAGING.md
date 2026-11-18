@@ -64,15 +64,74 @@ testgesicherten Umstellung unverändert.
 - Bestehende Benennungen, QGIS-Layer-Konfliktprüfung, Koordinatensysteme,
   Formatsemantik und Exportausdehnungen nicht verändern.
 
-## QGIS-Konvention
+## Abgleich mit etablierten QGIS-/GDAL-Technologien (18.11.2026)
 
-QGIS Processing verwendet für Zwischenergebnisse typischerweise einen
-temporären Arbeitsbereich; entsprechende API-Beispiele sind
-`QgsProcessingUtils.tempFolder()` und `generateTempFilename()`.
-Das Plugin ist **kein Processing-Algorithmus**, daher ist die Python-
-Standardbibliothek `tempfile` für eigenständig kontrollierte
-Arbeitsverzeichnisse vorzuziehen. QGIS-Processing-Temporärpfade müssen
-nicht zwingend übernommen werden.
+Die folgenden dokumentierten APIs wurden gezielt für QGIS 3.44 und 4.2
+verglichen. Keine eigene QGIS-Processing- oder Dateisystem-Bibliothek bauen.
+
+| Vorhandene Technologie | Verwendung / Entscheidung |
+| --- | --- |
+| `QgsProcessingUtils.tempFolder()` / `generateTempFilename()` | QGIS-Processing-konforme, sitzungsbezogene Temp-Dateien; für Processing-Algorithmen passend, aber kein automatischer Vorteil für unser eigenständiges Plugin. Processing-Temp kann von Benutzereinstellungen beeinflusst sein und ist nicht garantiert lokal. |
+| `tempfile.TemporaryDirectory()` / `tempfile.gettempdir()` | **Bevorzugt** für eindeutig besessene, zeitlich begrenzte Arbeitsverzeichnisse. Benutzer-Temp tatsächlich prüfen, da umgeleitete Profile und TEMP/TMP möglich sind. |
+| Qt `QTemporaryDir` | Alternative mit ähnlicher Lebensdauerverwaltung; aktuell kein Grund, parallel zur Python-Standardbibliothek einen zweiten Mechanismus einzuführen. |
+| `QgsFileUtils.pathIsSlowDevice(path)` | **Verwenden** als QGIS-eigene Heuristik für langsame/netzgebundene Speichermedien (seit QGIS 3.20; QGIS 3.44/4.2). Kein Beweis für ein anderes Dateisystem oder eine bestimmte Datenrate. |
+| `QgsFileUtils.driveType(path)` | Optional zur Diagnose; kann auf nicht unterstützten Plattformen eine QGIS-Ausnahme auslösen. Keine eigene Windows-Laufwerkserkennung, solange die QGIS-API genügt. |
+| `QgsFileUtils.sidecarFilesForPath()` | Für Datensatz-Nebenprodukte gezielt prüfen. Vorhandene Staging-Dateiliste bleibt für tatsächlich erzeugte Artefakte maßgeblich. |
+| `QgsFileUtils.renameDataset()` | Kann GIS-Datensätze samt Sidecars umbenennen; ersetzt **keine** transaktionale Veröffentlichung von VRT + Kacheln und kein Backup/Rollback. Nicht pauschal einsetzen. |
+| `QSaveFile` | Geeignet für einzelne Qt-seitig geschriebene Dateien, **nicht** als allgemeiner Ersatz für GDAL-Driver-Ausgaben und mehrteilige VRTs. Direktes Schreib-Fallback würde Atomarität aufgeben. |
+| GDAL `/vsimem/` | Nur für kleine, begrenzte Zwischenraster; bei großen Exporten droht unnötiger RAM-Druck. Bestehende GDAL-Writer weiterverwenden. |
+| `shutil.copyfile()` / `copy2()`, `os.replace()` | Bewährte Standardwerkzeuge für Transfers bzw. Umbenennung **innerhalb** des Zielfilesystems; keine Eigenentwicklung eines Kopierprogramms. Abbruch und Fehlerstatus prüfen. |
+
+Referenzen:
+[PyQGIS QgsProcessingUtils 3.44](https://qgis.org/pyqgis/3.44/core/QgsProcessingUtils.html),
+[PyQGIS QgsFileUtils 3.44](https://qgis.org/pyqgis/3.44/core/QgsFileUtils.html),
+[PyQGIS QgsFileUtils 4.2](https://qgis.org/pyqgis/4.2/core/QgsFileUtils.html),
+[Qt QTemporaryDir](https://doc.qt.io/qt-6/qtemporarydir.html),
+[Qt QSaveFile](https://doc.qt.io/qt-6/qsavefile.html),
+[GDAL Virtual File Systems](https://gdal.org/en/stable/user/virtual_file_systems.html),
+[Python 3.12 shutil](https://docs.python.org/3.12/library/shutil.html).
+
+### Schlanke, generische Zielstruktur
+
+**Nur zwei Verantwortlichkeiten**, bevorzugt in/bei der bestehenden
+`core/output_transaction.py`, keine universelle Storage-Abstraktion:
+
+1. **Arbeitsverzeichnis** verwalten: lokale Temp-Eignung prüfen,
+   erzeugen, Dateinamen bereitstellen, beenden/aufräumen. Die
+   eigentlichen GDAL-/QGIS-Exportfunktionen erhalten lediglich Pfade.
+2. **Ergebnisse veröffentlichen**: tatsächlich erzeugte Datei-
+   und Sidecar-Menge erfassen; ggf. von lokal nach Ziel-Staging kopieren;
+   erst dann bestehende Zieldateien mit Backup/Rollback ersetzen.
+   Fehlercodes, Recovery-Verhalten und Protokollierung wiederverwenden.
+
+Die Unterscheidung **Scratch-Artefakt vs. veröffentlichungsreifer Dateisatz**
+ist wichtiger als eine generische Laufwerk-/Netzwerk-Klassenhierarchie.
+Für große Mehrdatei-Exporte (VRT) bleibt die Veröffentlichung als Ganzes
+nicht atomar; es ist keine vollständige Transaktion wie bei einer Datenbank.
+
+Die QGIS-Heuristik `pathIsSlowDevice()` kann zwischen direktem
+Ziel-Staging (insbesondere schnelle lokale Ziellaufwerke) und
+lokalem Arbeits-Staging mit späterem Transfer entscheiden. Die
+prinzipielle Bevorzugung lokaler Temp-Arbeiten bleibt erhalten,
+**ohne zwingend jeden lokalen Kleinexport doppelt zu schreiben**.
+Eine pauschale Optimierung nach Dateiendung oder eine harte
+Größenschwelle ist ohne Messungen nicht gerechtfertigt.
+
+**Nicht verwenden:** pauschale globale Änderung von `TEMP`, `TMP`,
+`CPL_TMPDIR` oder QGIS-Processing-Einstellungen für das Plugin.
+Das könnte andere QGIS-Plugins, GDAL-Operationen und parallele
+Exporte beeinflussen. Eigene explizite Arbeitsverzeichnisse vorziehen.
+
+### Bereits festgestellte Testlücke unter Windows
+
+`.github/workflows/windows-qgis.yml` prüft QGIS 3/4 aus
+conda-forge und wird über Pull Requests bzw. manuelles
+`workflow_dispatch` gestartet; **kein automatischer Push-Lauf
+auf `main`**. Bereits geprüft werden Raster-/VRT-/MBTiles-
+Exporte. **Zusätzlich benötigt** die spätere Umstellung
+gezielte Windows-Dateisperr-, Recovery- und SMB-Tests.
+Die conda-basierte CI ersetzt keinen sichtbaren Test mit einer
+offiziellen Windows-QGIS-/OSGeo4W-Installation.
 
 ## Vor Umsetzung verpflichtend prüfen
 
