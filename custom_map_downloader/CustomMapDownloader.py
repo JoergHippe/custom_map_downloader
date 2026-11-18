@@ -621,8 +621,21 @@ class CustomMapDownloader:
             "ERR_RENDER_FAILED": self.tr("Rendering failed."),
             "ERR_RENDER_TILE_FAILED": self.tr("Tile rendering failed."),
             "ERR_VRT_BUILD_FAILED": self.tr("Failed to build VRT mosaic."),
+            "ERR_VRT_RELATIVE_PATHS_FAILED": self.tr(
+                "The VRT tile paths could not be made portable. The export was not published."
+            ),
+            "ERR_EXPORT_STAGE_INCOMPLETE": self.tr(
+                "The export did not produce a complete result. Existing output was not replaced."
+            ),
+            "ERR_EXPORT_PUBLISH_ROLLED_BACK": self.tr(
+                "Publishing failed. The previous output files were restored."
+            ),
+            "ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED": self.tr(
+                "Publishing and recovery both failed. Some target files may have changed. "
+                "Check the recovery path in the error details before retrying."
+            ),
             "ERR_SIDECAR_WRITE_FAILED": self.tr(
-                "Raster export succeeded, but georeferencing sidecar files could not be written."
+                "Could not write georeferencing sidecar files. The staged export was not published."
             ),
         }
 
