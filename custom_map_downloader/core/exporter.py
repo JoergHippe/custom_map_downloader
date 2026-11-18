@@ -141,6 +141,13 @@ class GeoTiffExporter:
         self._report(progress_cb, 8, "STEP_PREPARE", {"step": 2, "total": 6})
         render_crs = params.render_crs or self._default_render_crs()
         output_crs = params.output_crs or render_crs
+        # Never treat an invalid CRS as equivalent to another CRS: that would
+        # silently bypass transformation and mislabel exported coordinates.
+        if not render_crs.isValid() or not output_crs.isValid():
+            raise ValidationError(
+                "ERR_VALIDATION_CRS_INVALID",
+                "Render and output CRS must both be valid.",
+            )
         log_event(
             "export_start", **summarize_params(params, render_crs=render_crs, output_crs=output_crs)
         )
@@ -410,8 +417,6 @@ class GeoTiffExporter:
                 progress_cb=progress_cb,
                 cancel_token=cancel_token,
             )
-            if not write_sidecars:
-                return result
             return result
 
     @staticmethod
@@ -478,6 +483,8 @@ class GeoTiffExporter:
         ext = params.extent
         if ext is None or ext.east <= ext.west or ext.north <= ext.south:
             raise ValidationError("ERR_VALIDATION_EXTENT_INVALID", "Invalid MBTiles extent.")
+        if ext.crs is None or not ext.crs.isValid():
+            raise ValidationError("ERR_VALIDATION_CRS_INVALID", "Invalid MBTiles extent CRS.")
 
         zoom_min = int(params.mbtiles_zoom_min)
         zoom_max = int(params.mbtiles_zoom_max)
