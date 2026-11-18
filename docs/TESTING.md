@@ -1,6 +1,6 @@
 # Teststrategie und Freigabekriterien
 
-Stand: 2026-11-17. Dieses Dokument ist die Quelle für geplante QGIS-Kompatibilitätsprüfungen;
+Stand: 2026-11-18. Dieses Dokument ist die Quelle für geplante QGIS-Kompatibilitätsprüfungen;
 [VALIDATION_STATUS.md](VALIDATION_STATUS.md) enthält historische Messwerte.
 
 ## Status
@@ -81,18 +81,32 @@ Die Docker-Tags sind versionsfest, aber nicht auf Image-Digests fixiert;
 Digest-Pinning kann bei Bedarf ergänzend erfolgen; die verwendeten GitHub Actions
 sind bereits auf vollständige Commit-SHAs fixiert.
 
-## MBTiles-Dateisicherheit
+## MBTiles-Dateisicherheit und temporäre Arbeitsdateien
 
-MBTiles wird zunächst als temporäre SQLite-Datei **im Zielverzeichnis** geschrieben.
-Erst nach erfolgreichem Commit und Schließen der Verbindung erfolgt
-`os.replace` auf das endgültige Ziel. Bei Fehler/Abbruch bleibt eine bestehende
-Datei unverändert; das temporäre Verzeichnis wird entfernt.
+MBTiles wird bevorzugt in einem geeigneten lokalen Benutzer-Temp-Verzeichnis
+als SQLite-Datei aufgebaut. Die Auswahl nutzt die etablierte QGIS-Heuristik
+`QgsFileUtils.pathIsSlowDevice()`. Falls das lokale Temp ungeeignet ist oder
+die grob geschätzte Speicherreserve fehlt, erfolgt der Fallback **vor Beginn
+des Exports** auf das bisherige Staging im Zielverzeichnis.
 
-Automatisiert geprüft werden Datenbank-Schema, Dateierhaltung im Fehlerfall,
-Dateiersetzung im Erfolgsfall sowie echte QGIS-3/4-End-to-End-Szenarien mit
-lokaler Vektorebene (keine Netzabhängigkeit). Diese Garantie gilt für normale
-Prozessfehler und Abbrüche; eine Aussage zur Stromausfall-Dauerhaftigkeit
-(Filesystem-Sync) wird damit nicht getroffen.
+Nach erfolgreichem SQLite-Commit und dem **Schließen** der Datenbank werden
+fertige Dateien gegebenenfalls in das Staging auf dem Ziellaufwerk kopiert
+bzw. dort umbenannt. Erst danach wird die einzelne MBTiles-Datei mit
+`os.replace()` auf demselben Dateisystem veröffentlicht. Bei Fehler/Abbruch
+vor diesem Schritt bleibt die vorhandene Datei unverändert. Für Raster/VRT
+gilt dasselbe Arbeitsverzeichnis-Prinzip mit bestehendem mehrdateibasiertem
+Rollback; siehe [EXPORT_STAGING.md](EXPORT_STAGING.md).
+
+Automatisiert geprüft sind Datenbank-Schema, lokale Temp-Erzeugung,
+Transfer-Fehler, Dateierhaltung beim Abbruch, Dateiersetzung im Erfolgsfall
+und reale QGIS-3/4-End-to-End-Exporte. Die Windows-Matrix enthält zusätzlich
+Staging-/Recovery-Regressionstests. Dies ist **keine** Garantie für
+Stromausfall-Dauerhaftigkeit (Filesystem-Sync) oder reale SMB-Ausfälle.
+
+Nachweise:
+[Windows-QGIS-3/4-CI #44295236004](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44295236004)
+und
+[CI auf main #44296095045](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44296095045).
 
 ## Extent-/Dialog-Regression
 
@@ -164,11 +178,16 @@ Eine große Datenmenge allein verbietet den Export ausdrücklich nicht.
 
 ## Automatische Windows-QGIS- und lokale OGC-Diensttests
 
-Nachweis: [Windows Actions #44181305999](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44181305999)
-auf Commit `711b72a390f4b8086a63bba3517f80f757b6dd84`:
-**2/2 Windows-Matrix-Jobs PASS** (QGIS 3.44.15 und QGIS 4.2.3).
+Historischer Nachweis:
+[Windows Actions #44181305999](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44181305999)
+auf Commit `711b72a390f4b8086a63bba3517f80f757b6dd84`.
+**Aktueller Nachweis:**
+[Windows Actions #44295236004](https://github.com/JoergHippe/custom_map_downloader/actions/runs/44295236004),
+beide QGIS-3/4-Jobs erfolgreich. Das Testprogramm wurde seit dem
+historischen Lauf um VRT-/Recovery-/Dateiveröffentlichungstests
+erweitert; die nachfolgende Zahl 24 beschreibt nur den älteren Lauf.
 
-Die Windows-Matrix führt pro QGIS-Version 24 echte Integrationstests aus:
+Die frühere Windows-Matrix führte pro QGIS-Version 24 echte Integrationstests aus:
 12 Ausdehnungsdialog-Tests mit Qt-Maus- und Tastaturereignissen,
 2 QImage-, 4 Raster-, 2 MBTiles-Export-, 2 MBTiles-Preflight-,
 1 WMS- und 1 WMTS-Test.
@@ -193,6 +212,49 @@ geschlossen; der Context-Manager allein schließt die Verbindung nicht.
 Ein grüner CI-Test bedeutet native Windows-QGIS-Funktionsfähigkeit,
 aber nicht automatisch Abnahme der offiziellen OSGeo4W-/Standalone-
 Desktop-Installation mit sichtbarer Benutzerinteraktion.
+
+## Manuelle Abnahme: Windows-Desktop und Netzlaufwerk
+
+**Pflicht vor der nächsten Veröffentlichung**, nicht durch conda-forge-CI
+ersetzbar. Nur mit dem tatsächlich erzeugten Plugin-ZIP in einer
+offiziellen Windows-QGIS-/OSGeo4W-Installation durchführen.
+Je Test Datum, QGIS-/GDAL-Version, Plugin-/Commitversion,
+Testpfad, Ergebnis und Fehlermeldung in
+[VALIDATION_STATUS.md](VALIDATION_STATUS.md) erfassen.
+
+1. **GUI und Koordinaten:** Dialog öffnen; Ausgabe-KBS wechseln,
+   Ausdehnung aus Canvas übernehmen, Werte mit deutscher Locale manuell
+   eingeben, Rechteck zeichnen und abbrechen sowie Profil speichern/laden.
+   Die angezeigten Koordinaten und der tatsächliche Exportbereich müssen
+   übereinstimmen.
+2. **Formatmatrix:** GeoTIFF, PNG/JPEG mit Worldfile und `.prj`,
+   VRT inklusive mehrerer Kacheln sowie MBTiles erstellen. Jede Ausgabe
+   wieder in QGIS laden; Bildinhalt, Pixelmaße, CRS und Georeferenzierung
+   stichprobenartig prüfen.
+3. **Lokale Zieldateien:** Vorhandene Ausgaben überschreiben; auch
+   bereits geladene Layer und gesperrte Dateien testen. Kein stiller
+   Ersatz bei Konflikten, kein Verlust einer vorhandenen Ausgabe
+   bei Abbruch oder Fehler.
+4. **SMB-UNC und gemapptes Laufwerk:** Jeweils einen kleinen und großen
+   Raster-/VRT-/MBTiles-Export ausführen; lokalen Temp-Pfad,
+   Kopier-/Veröffentlichungsphase und resultierenden Dateisatz
+   kontrollieren. Netzverbindung testweise während der Übertragung
+   unterbrechen, sofern in einem isolierten Testordner möglich.
+5. **Platzmangel/Fallback:** Lokale Temp-Kapazität kontrolliert
+   begrenzen/simulieren und sicherstellen, dass die Fallback-Strategie
+   vor Renderbeginn greift. Keine produktiven Laufwerke hierfür
+   absichtlich füllen.
+6. **Performance:** Rendern, Kopieren, Veröffentlichen und Gesamtdauer
+   auf lokaler SSD und SMB vergleichen; kleine und große Ausgaben,
+   Dateigrößen und Kachelzahl protokollieren. Ohne Vergleich keinen
+   Geschwindigkeitsgewinn behaupten.
+7. **Recovery:** Nur in einem Testordner künstliche Sperren/Fehler
+   auslösen; Diagnose und eventuell erhaltene Recovery-Dateien prüfen.
+   Niemals unkontrolliert Test-Backups löschen.
+
+Ein fehlgeschlagener Pflichtfall verhindert die Releasefreigabe,
+bis sein Einfluss bewertet und behoben wurde. Eine grüne CI allein
+ist kein Freigabenachweis.
 
 ## Amtliche Live-WMS-Smoke-Tests (opt-in)
 
