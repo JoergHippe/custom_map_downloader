@@ -28,6 +28,20 @@ dokumentiert. Diese Liste begründet keine Release-Freigabe.
   Wartbarkeitsprobleme prüfen; nur begründet und testgesichert modularisieren.
 - [ ] Stärkere optionale Anzeige der Export-Diagnostik in der UI bewerten.
 
+## Geplante Performanceverbesserung: Netzlaufwerk-Exporte
+
+- [ ] **Hybrides Export-Staging** gemäß
+  [EXPORT_STAGING.md](docs/EXPORT_STAGING.md) vorsehen:
+  bei erkannten Netzwerk-/UNC-Zielen zunächst im lokalen Benutzer-Temp
+  rendern, fertige Dateien in Ziel-Staging kopieren und erst dann sicher
+  veröffentlichen; lokale Ziele unverändert auf dem Zielmedium stagen.
+- [ ] Laufwerkerkennung, ausreichenden lokalen/Ziel-Speicher,
+  konservativen Fallback, Abbruch/Kopierfehler, Windows-Dateisperren und
+  VRT-Dateisatz-Rollback gezielt testen.
+- [ ] Gesamtdauer (Rendering **plus** Kopieren und Veröffentlichen)
+  gegen bisherige Strategie auf lokalen und SMB-Zielen messen.
+  MBTiles zunächst unverändert lassen.
+
 ## Optionale Erweiterungen
 
 - [ ] Weitere GDAL-Kompressionsoptionen und geringere Farbtiefe prüfen.
