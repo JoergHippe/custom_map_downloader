@@ -1,9 +1,9 @@
 import os
 import sqlite3
-from importlib import import_module
 import tempfile
 import unittest
 from contextlib import closing
+from importlib import import_module
 from itertools import islice
 from pathlib import Path
 from unittest.mock import Mock, patch
