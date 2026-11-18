@@ -117,11 +117,21 @@ class GeoTiffExporter:
 
         # Validate the *real* destination before using a writable stage folder.
         validate_output_path(params.output_path)
+        def staged_progress(percent: int, key: str, args: dict[str, Any]) -> None:
+            # Rendering may finish before target files are published.
+            # Do not signal 100% until publication has actually succeeded.
+            if key == "STEP_DONE":
+                self._report(
+                    progress_cb, 95, "STEP_PUBLISH", {"step": 6, "total": 6}
+                )
+            else:
+                self._report(progress_cb, percent, key, args)
+
         try:
             with staged_raster_output(params.output_path) as staged_path:
                 stage_params = replace(params, output_path=str(staged_path))
                 self._export_unstaged(
-                    stage_params, progress_cb=progress_cb, cancel_token=cancel_token
+                    stage_params, progress_cb=staged_progress, cancel_token=cancel_token
                 )
                 self._check_cancel(cancel_token)
         except ExportError as error:
@@ -136,6 +146,7 @@ class GeoTiffExporter:
                 )
             raise
 
+        self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         log_event("export_success", output_path=params.output_path, mode="published")
         return params.output_path
 
