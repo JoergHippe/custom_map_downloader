@@ -42,6 +42,7 @@ try:
 
     ensure_plugin_import_path()
 
+    from custom_map_downloader.core.errors import ExportError  # type: ignore
     from custom_map_downloader.core.exporter import GeoTiffExporter  # type: ignore
     from custom_map_downloader.core.models import (  # type: ignore
         CenterSpec,
@@ -186,6 +187,22 @@ class QgisExportIntegrationTest(unittest.TestCase):
                     self.assertEqual(len(conflicts), 1)
                     self.assertEqual(conflicts[0][2], "vrt-references-targets")
                     tile.unlink()
+
+    def test_publication_error_messages_explain_file_state(self):
+        """Users must distinguish restored files from manual recovery."""
+        translation_stub = SimpleNamespace(tr=lambda text: text)
+        cases = (
+            ("ERR_EXPORT_PUBLISH_ROLLED_BACK", "restored"),
+            ("ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED", "recovery"),
+            ("ERR_EXPORT_STAGE_INCOMPLETE", "not replaced"),
+        )
+        for code, expected_fragment in cases:
+            with self.subTest(code=code):
+                message = CustomMapDownloader._format_export_error(
+                    translation_stub, ExportError(code, "test diagnostics")
+                )
+                self.assertIn(expected_fragment, message.lower())
+                self.assertIn("test diagnostics", message)
 
     def test_export_small_raster(self):
         output_path = Path(self._export_test_raster("cmd_integration_export", target_scale=False))
