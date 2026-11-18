@@ -35,7 +35,7 @@ from qgis.core import (
 )
 from qgis.gui import QgsExtentWidget
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtCore import QCoreApplication, QLocale, QSettings, Qt, QTimer
+from qgis.PyQt.QtCore import QCoreApplication, QLocale, QSettings, QSignalBlocker, Qt, QTimer
 
 from .core.constants import (
     GSD_DECIMALS,
@@ -1414,10 +1414,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._update_mbtiles_info()
 
     def _refresh_resolution_previews(self) -> None:
-        """Refresh derived output information once per resolution change."""
+        """Refresh only previews depending on GSD or target scale."""
         self._update_extent_info()
         self._update_vrt_info()
-        self._update_mbtiles_info()
+        # MBTiles coverage depends on extent and zoom, not output GSD.
         self._update_scale_hint()
 
     def _on_resolution_mode_changed(self, _index: int) -> None:
@@ -1491,10 +1491,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         except (TypeError, ValueError):
             return
 
-        if hasattr(self, "spinBox_vrtMaxCols"):
-            self.spinBox_vrtMaxCols.setValue(size)
-        if hasattr(self, "spinBox_vrtMaxRows"):
-            self.spinBox_vrtMaxRows.setValue(size)
+        for widget_name in ("spinBox_vrtMaxCols", "spinBox_vrtMaxRows"):
+            if hasattr(self, widget_name):
+                widget = getattr(self, widget_name)
+                # Qt updates both values without triggering two intermediate
+                # tile-grid calculations before the final combined preview.
+                blocker = QSignalBlocker(widget)
+                try:
+                    widget.setValue(size)
+                finally:
+                    del blocker
 
         self._update_vrt_info()
 
