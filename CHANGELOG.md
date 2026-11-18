@@ -33,6 +33,10 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Restore the last selected project layer after reading saved QSettings, and
+  preserve subsequent manual layer changes when refreshing the layer list.
+- Restore VRT output profiles and saved `.vrt` paths consistently even when
+  MBTiles was previously selected; avoid format-switch signal races.
 - Present raw export diagnostics only in the expandable UI details instead
   of duplicating them in the main error dialog. Add a specific message for
   invalid render/output CRS, surface large-export warnings in completion
