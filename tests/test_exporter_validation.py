@@ -342,6 +342,34 @@ class ExporterValidationTests(unittest.TestCase):
 
         self.assertEqual(ctx.exception.code, "ERR_VALIDATION_OUTPUT_EXT")
 
+    def test_rejects_invalid_render_or_output_crs(self):
+        """A non-valid CRS must never bypass the reprojection decision."""
+
+        class InvalidCrs:
+            def isValid(self):
+                return False
+
+        base = self._base_params()
+        for field in ("render_crs", "output_crs"):
+            with self.subTest(field=field):
+                params = replace(base, **{field: InvalidCrs()})
+                with self.assertRaises(ValidationError) as ctx:
+                    GeoTiffExporter().export(params)
+                self.assertEqual(ctx.exception.code, "ERR_VALIDATION_CRS_INVALID")
+
+    def test_rejects_invalid_mbtiles_extent_crs(self):
+        """An invalid source CRS cannot be interpreted as WGS84."""
+
+        class InvalidCrs:
+            def isValid(self):
+                return False
+
+        params = self._base_params(path_suffix=".mbtiles")
+        params = replace(params, extent=replace(params.extent, crs=InvalidCrs()))
+        with self.assertRaises(ValidationError) as ctx:
+            GeoTiffExporter()._validate_mbtiles(params)
+        self.assertEqual(ctx.exception.code, "ERR_VALIDATION_CRS_INVALID")
+
     def test_accepts_mbtiles_extension_in_mbtiles_validation(self):
         params = self._base_params(path_suffix=".mbtiles")
         params = replace(params, mbtiles_zoom_min=0, mbtiles_zoom_max=1)
