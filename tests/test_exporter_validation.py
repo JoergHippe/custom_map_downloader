@@ -204,7 +204,9 @@ def install_qgis_stubs():
     osr_mod = types.ModuleType("osgeo.osr")
 
     class DummyDriver:
-        def Create(self, *_args, **_kwargs):
+        def Create(self, path, *_args, **_kwargs):
+            # GDAL test stubs must materialize files for staged publication.
+            Path(path).write_bytes(b"stub-raster")
             return DummyWritableDataset()
 
     class DummyBand:
@@ -249,6 +251,15 @@ def install_qgis_stubs():
 
         @staticmethod
         def BuildVRT(_path, _tiles):
+            # Minimal valid XML carrying real tile filenames for portability tests.
+            import xml.etree.ElementTree as ET
+
+            root = ET.Element("VRTDataset")
+            for tile in _tiles:
+                source = ET.SubElement(ET.SubElement(root, "SimpleSource"), "SourceFilename")
+                source.text = str(tile)
+                source.set("relativeToVRT", "0")
+            ET.ElementTree(root).write(_path, encoding="utf-8", xml_declaration=True)
             return object()
 
         @staticmethod
@@ -257,6 +268,7 @@ def install_qgis_stubs():
 
         @staticmethod
         def Warp(_dst, _src, **_kwargs):
+            Path(_dst).write_bytes(b"stub-warped-raster")
             return DummyWarpDataset()
 
     class osr:
@@ -295,7 +307,7 @@ from custom_map_downloader.core.constants import (  # noqa: E402
     GSD_MIN,
     LARGE_RASTER_STRONG_MAX_DIM_PX,
 )
-from custom_map_downloader.core.errors import ValidationError  # noqa: E402
+from custom_map_downloader.core.errors import ExportError, ValidationError  # noqa: E402
 from custom_map_downloader.core.exporter import GeoTiffExporter  # noqa: E402
 from custom_map_downloader.core.models import CenterSpec, ExportParams, ExtentSpec  # noqa: E402
 
@@ -547,7 +559,7 @@ class ExporterValidationTests(unittest.TestCase):
 
         self.assertEqual(crs.authid(), "EPSG:3857")
 
-    def test_vrt_relative_path_failure_emits_warning_and_still_succeeds(self):
+    def test_vrt_relative_path_failure_preserves_previous_output(self):
         exporter = GeoTiffExporter()
         params = replace(
             self._base_params(path_suffix=".vrt"),
@@ -576,18 +588,22 @@ class ExporterValidationTests(unittest.TestCase):
         exporter._make_vrt_paths_relative = fail_make_relative
         exporter._render_tile_rgba = fake_render_tile_rgba
         exporter._wait_with_events = lambda *_args, **_kwargs: None
+        Path(params.output_path).write_bytes(b"previous-vrt")
         try:
-            result = exporter.export(
-                params,
-                progress_cb=lambda percent, key, args: progress_events.append((percent, key, args)),
-            )
+            with self.assertRaises(ExportError) as ctx:
+                exporter.export(
+                    params,
+                    progress_cb=lambda percent, key, args: progress_events.append(
+                        (percent, key, args)
+                    ),
+                )
+            self.assertEqual(ctx.exception.code, "ERR_VRT_RELATIVE_PATHS_FAILED")
         finally:
             exporter._make_vrt_paths_relative = original_make_relative
             exporter._render_tile_rgba = original_render_tile
             exporter._wait_with_events = original_wait
 
-        self.assertTrue(result.endswith(".vrt"))
-        self.assertTrue(any(key == "WARN_VRT_ABSOLUTE_PATHS" for _, key, _ in progress_events))
+        self.assertEqual(Path(params.output_path).read_bytes(), b"previous-vrt")
 
     def test_tiled_png_uses_intermediate_gtiff_conversion(self):
         exporter = GeoTiffExporter()
