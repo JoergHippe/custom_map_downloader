@@ -791,6 +791,7 @@ class ExporterValidationTests(unittest.TestCase):
         exporter_module.QgsMapRendererParallelJob = lambda *_args, **_kwargs: FakeRenderJob()
         exporter_module.QgsMapSettings = FakeMapSettings
         exporter_module.qimage_to_rgba_array = fake_qimage_to_rgba_array
+
         def fake_write_full_raster(**kwargs):
             # A staged export must have an actual output file to publish.
             calls["direct_write"] += 1
