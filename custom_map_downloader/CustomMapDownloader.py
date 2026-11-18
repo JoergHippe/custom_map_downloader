@@ -429,16 +429,10 @@ class CustomMapDownloader:
                 )
 
             elif key == "WARN_LARGE_EXPORT":
+                is_warning = True
                 mb = float(args.get("bytes", 0) or 0.0) / (1024 * 1024)
                 msg = self.tr("Warning: Very large export (raw approx. {mb:.0f} MB).").format(
                     mb=mb,
-                )
-
-            elif key == "WARN_VRT_ABSOLUTE_PATHS":
-                is_warning = True
-                msg = self.tr(
-                    "Warning: The VRT was created, but tile paths could not be rewritten to relative paths. "
-                    "The VRT may not be portable."
                 )
 
             else:
@@ -582,12 +576,11 @@ class CustomMapDownloader:
     def _format_export_error(self, err: ExportError) -> str:
         """Convert exporter errors into user-facing messages."""
         code = getattr(err, "code", "ERR_UNKNOWN")
-        details = getattr(err, "details", "")
-
         messages = {
             "ERR_CANCELLED": self.tr("Export was cancelled."),
             "ERR_VALIDATION_LAYER_MISSING": self.tr("Please select a layer."),
             "ERR_VALIDATION_SIZE_INVALID": self.tr("Invalid output size (width/height)."),
+            "ERR_VALIDATION_CRS_INVALID": self.tr("Invalid render or output CRS."),
             "ERR_VALIDATION_SIZE_TOO_LARGE": self.tr("Requested raster is too large."),
             "ERR_VALIDATION_GSD_INVALID": self.tr("Invalid GSD value."),
             "ERR_VALIDATION_OUTPUT_MISSING": self.tr("Output path missing."),
@@ -643,10 +636,9 @@ class CustomMapDownloader:
             ),
         }
 
-        base = messages.get(code, self.tr("Export failed."))
-        if details:
-            return self.tr("{base}\n\nDetails:\n{details}").format(base=base, details=details)
-        return base
+        # Technical diagnostics belong in the expandable Details field,
+        # not duplicated in the main message (see _build_error_details).
+        return messages.get(code, self.tr("Export failed."))
 
     def _find_loaded_layer_conflicts(
         self, output_path: str, *, create_vrt: bool
