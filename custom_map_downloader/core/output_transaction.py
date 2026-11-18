@@ -75,7 +75,8 @@ def transfer_finished_files(
                     if not chunk:
                         break
                     writer.write(chunk)
-            shutil.copystat(source, staged)
+            # Raster payloads need their bytes, not inherited local file
+            # timestamps/permissions (which can fail on some SMB shares).
             if staged.stat().st_size != source.stat().st_size:
                 raise OSError(f"Copied file size mismatch: {source.name}")
         except Exception:
