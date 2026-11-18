@@ -29,6 +29,10 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Reject invalid render, output and source extent CRS before raster/MBTiles
+  export, rather than silently treating coordinates as if CRS matched.
+- Remove a redundant return branch from the tiled PNG/JPEG conversion path
+  without changing its output handling.
 - Reject output-to-project and geographic-to-metric extent transformations that fail;
   avoid treating unchanged coordinates as if they were in the destination CRS.
 - Make extent integration tests independent of persistent CRS settings.
