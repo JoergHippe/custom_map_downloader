@@ -43,3 +43,19 @@ Aktueller, bereinigter Backlog. Nur noch tatsächlich offene Themen.
 - Optional weitere UX-Hilfen im Dialog ergänzen:
   - expliziter Aspect-Ratio-Hinweis
   - zusätzliche Experteninfos für Raster-/Tile-Größen
+
+## Geplante Erweiterung: Hinweise zur Dienstauflösung
+
+Optionale, nachvollziehbare Auflösungs- und Maßstabsempfehlungen für Webkarten:
+
+- WMS: Angaben `MinScaleDenominator`/`MaxScaleDenominator` aus
+  `GetCapabilities` berücksichtigen, sofern verfügbar; als Darstellungsgrenzen,
+  nicht als native Rasterauflösung kennzeichnen.
+- Näherungsweise GSD bei WMS: `Maßstabsnenner × 0,00028 m`
+  (OGC-Standardpixel), ausdrücklich nur als Orientierung.
+- WMTS/XYZ: Stufen aus TileMatrixSet oder Zoom-Metadaten berücksichtigen.
+- ArcGIS MapServer/TileServer: bei Verfügbarkeit `tileInfo.lods` verwenden.
+- Empfehlungen transparent mit Quelle und Unsicherheit anzeigen; keine
+  stillschweigende Änderung der gewählten GSD oder des Zielmaßstabs.
+- Eine Aktion „Empfohlene Auflösung übernehmen“ erst nach Prüfung
+  der Datenverfügbarkeit und des Benutzerablaufs erwägen.
