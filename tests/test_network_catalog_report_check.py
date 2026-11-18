@@ -76,5 +76,18 @@ class NetworkCatalogReportCheckTests(unittest.TestCase):
         self.assertIn("error", proc.stderr)
 
 
+    def test_rejects_malformed_rows(self):
+        # A malformed row must fail closed instead of raising an unhandled exception.
+        payload = {"group_name": "official_webmaps_catalog", "rows": ["invalid"]}
+        self.assertNotEqual(self._run(payload).returncode, 0)
+
+    def test_rejects_success_status_with_failed_child_process(self):
+        # A success label cannot overrule a failed QGIS child process.
+        payload = {
+            "group_name": "official_webmaps_catalog",
+            "rows": [{"scenario": "sample", "status": "ok", "exit_code": 1}],
+        }
+        self.assertNotEqual(self._run(payload).returncode, 0)
+
 if __name__ == "__main__":
     unittest.main()
