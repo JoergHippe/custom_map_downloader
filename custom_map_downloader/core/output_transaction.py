@@ -50,7 +50,9 @@ def transfer_finished_files(
         return
 
     same_device = source_dir.stat().st_dev == target_dir.stat().st_dev
-    for source in source_dir.iterdir():
+    # Snapshot the listing before same-device moves remove files from it.
+    # Directory enumeration is not guaranteed stable during mutation.
+    for source in list(source_dir.iterdir()):
         if not source.is_file():
             continue
         if check_cancel is not None:
