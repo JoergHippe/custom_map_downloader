@@ -8,6 +8,7 @@ cannot be atomic as a whole using ordinary filesystem operations.
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -27,10 +28,11 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
     tiles are intentionally left alone.
     """
     destination = Path(output_path)
-    with tempfile.TemporaryDirectory(
-        prefix=f".{destination.stem}.stage-", dir=destination.parent
-    ) as directory:
-        staging_dir = Path(directory)
+    staging_dir = Path(
+        tempfile.mkdtemp(prefix=f".{destination.stem}.stage-", dir=destination.parent)
+    )
+    preserve_stage = False
+    try:
         staged_path = staging_dir / destination.name
         yield staged_path
 
@@ -87,15 +89,18 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
             try:
                 backup_dir.rename(recovery_dir)
             except OSError as recovery_error:
+                # Keep the entire staging folder when its backup subfolder
+                # cannot be moved. Never let automatic cleanup erase backups.
+                preserve_stage = True
                 raise ExportError(
                     "ERR_EXPORT_PUBLISH_RECOVERY_REQUIRED",
                     (
                         f"Publishing '{destination}' failed: {publish_error}. "
                         f"Rollback also failed: {rollback_errors!r}. "
-                        f"Could not move backups from '{backup_dir}' to a "
-                        f"permanent recovery folder: {recovery_error}. "
-                        "The target directory must be inspected; recovery "
-                        "files cannot be guaranteed to survive temp cleanup."
+                        f"Could not relocate backups: {recovery_error}. "
+                        f"Recovery files remain in '{staging_dir}'. "
+                        "Some target files may have changed. Inspect both "
+                        "locations before retrying; do not delete backups."
                     ),
                 ) from recovery_error
 
@@ -109,3 +114,7 @@ def staged_raster_output(output_path: str | Path) -> Iterator[Path]:
                     "locations before retrying; do not delete recovery files."
                 ),
             ) from publish_error
+
+    finally:
+        if not preserve_stage:
+            shutil.rmtree(staging_dir)
