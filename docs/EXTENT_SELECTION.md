@@ -94,6 +94,39 @@ Koordinaten fortzufahren. Zwei echte QGIS-Integrationstests simulieren
 Transformationsfehler; die Test-Fixtures setzen das Ausgangs-KBS explizit,
 damit persistierte Dialogeinstellungen keine Testreihenfolge beeinflussen.
 
+## Profil- und Layerzustand (18.11.2026)
+
+Die Dialogsteuerung führt den aktuell ausgewählten Projektlayer als
+`_last_layer_id`, um bei einer Aktualisierung der Layerliste möglichst
+dieselbe Auswahl beizubehalten.
+
+Eine bisherige Reihenfolgeabweichung wurde behoben:
+`populate_layers()` lief bei der Dialoginitialisierung **vor**
+`_load_settings()`. Daher wurde die anschließend geladene
+`last_layer_id` nicht sofort angewendet. Zusätzlich wurde die
+ID nach manueller Änderung nicht aktualisiert; ein erneutes
+`populate_layers()` konnte deshalb zu einer veralteten Auswahl
+zurückspringen. Die gespeicherte ID wird jetzt nach dem Laden
+angewendet und bei einer neuen Auswahl nachgeführt.
+
+Die Wiederherstellung von Ausgabepfaden nutzt jetzt eine gemeinsame
+kleine Hilfsmethode: zuerst den passenden Format-Combo-Zustand
+herstellen, danach den Pfad setzen und VRT-Umschaltung anwenden.
+So kann ein zuvor aktives MBTiles-Format ein geladenes
+`.vrt`-Profil nicht mehr über Qt-Signale auf `.mbtiles` zurücksetzen.
+
+Die neuen echten QGIS-3/4-Dialogtests prüfen diese Reihenfolgen,
+einschließlich Profilwechsel MBTiles → VRT und gespeicherter
+Layerauswahl mit anschließendem manuellen Wechsel und Refresh.
+Die Tests verwenden für die Layer-Auswahllogik isolierte Objekte,
+um QGIS-C++-Layerlebenszyklen nicht künstlich während des Dialogs
+zu zerstören.
+
+Diese Korrekturen **ändern keine Extent-Transformationen,
+Polling-Intervalle oder QGIS-private Feld-Fallbacks**.
+Eine interaktive Abnahme auf der offiziellen Windows-QGIS-
+Installation bleibt vor einer Änderung dieser Mechanismen erforderlich.
+
 ## Bewusst noch nicht entfernt
 
 - Polling von Änderungen nach `Draw on canvas`.
