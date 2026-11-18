@@ -150,6 +150,10 @@ def install_qgis_stubs():
         def translate(_context, message):
             return message
 
+        @staticmethod
+        def processEvents():
+            return None
+
     class QByteArray(bytes):
         pass
 
