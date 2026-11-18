@@ -78,42 +78,25 @@ generated for diagnosis; their gates permit advisory drift and reject
 technical failures.
 
 
-## Raster and VRT file safety
+## Export-Dateisicherheit und temporäre Arbeitsbereiche
 
-Raster exports are staged next to the target folder and published only after
-their data and georeferencing sidecars are complete. Single-file replacement
-uses same-filesystem renaming; files already loaded by QGIS or locked by Windows
-may still prevent publication.
+Das Plugin bevorzugt für GeoTIFF/PNG/JPEG, VRT und MBTiles geeignete
+lokale Benutzer-Temp-Verzeichnisse. Vollständige Ergebnisse werden
+zunächst auf das Zieldateisystem übertragen und dort veröffentlicht.
+Einzelne MBTiles-Dateien werden atomar ersetzt; VRT-Kachelsätze
+sind als Gruppe **nicht atomar**, besitzen aber Backup-/Rollback-Schutz.
 
-A VRT, its tiles and tile sidecars are a **set of files**: the exporter publishes
-tiles first, then the VRT, and attempts to roll back all replacements if a
-publish operation fails. Multi-file replacement is **not atomic as a group**,
-so concurrent readers can briefly observe mixed tile versions. A failed
-rollback may leave a separately named recovery directory and requires manual
-attention. Old tiles not referenced by the new VRT are deliberately not
-deleted automatically.
+**Verbindliche Architektur einschließlich Fehlergrenzen:**
+[EXPORT_STAGING.md](EXPORT_STAGING.md).
+**Konkrete Pflichtprüfungen auf Windows und SMB:**
+[TESTING.md](TESTING.md#manuelle-abnahme-windows-desktop-und-netzlaufwerk).
+**Bisherige CI-Nachweise:** [VALIDATION_STATUS.md](VALIDATION_STATUS.md).
 
-A VRT with invalid or nonportable source paths fails the export. Before
-release, validate overwrite, cancellation, sidecar failure and VRT path
-portability using the actual Windows QGIS distribution.
-
-## Temporary workspace and target publication
-
-GeoTIFF/PNG/JPEG/VRT rendering and MBTiles SQLite writing now prefer the
-local user's temporary directory when QGIS' `QgsFileUtils.pathIsSlowDevice()`
-indicates a slow target or when local temp and destination share a filesystem.
-If local temp is unsuitable or lacks estimated free space, the existing
-target-side staging path is used before rendering begins.
-
-Completed files are moved to target staging if possible, or copied there in
-cancellable chunks; **only completed target-staging files are published**.
-MBTiles retains a single atomic `os.replace()` for its final file.
-Multi-file VRT publication is still rollback-based, not group-atomic.
-The plugin does not modify the process-wide temp configuration.
-
-Before release, test real Windows file locks, SMB interruptions and
-the full export duration on representative sizes; CI alone cannot confirm
-a performance improvement. See [EXPORT_STAGING.md](EXPORT_STAGING.md).
+Eine funktionierende Linux-/Windows-conda-forge-CI ersetzt weder
+die Desktop-Abnahme mit dem offiziellen QGIS-/OSGeo4W-Paket noch
+Performance- und Unterbrechungstests auf einem echten Netzlaufwerk.
+Bei fehlgeschlagener Wiederherstellung müssen Recovery-Dateien
+vor einem erneuten Versuch manuell geprüft werden.
 
 ## Package Output
 
