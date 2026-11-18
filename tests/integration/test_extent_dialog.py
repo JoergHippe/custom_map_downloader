@@ -187,12 +187,14 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
     def test_profile_resolution_mode_wins_over_conflicting_inactive_value(self):
         """Restoring a profile must honor the selected input, not signal order."""
         profile = self.dialog._collect_profile_state()
-        profile.update({
-            "resolution_mode": "gsd",
-            "gsd": 5.5,
-            "target_scale_denominator": 1000,
-            "extent": None,
-        })
+        profile.update(
+            {
+                "resolution_mode": "gsd",
+                "gsd": 5.5,
+                "target_scale_denominator": 1000,
+                "extent": None,
+            }
+        )
         self.dialog._apply_profile_state(profile)
         self.assertEqual(self.dialog._resolution_mode(), "gsd")
         self.assertAlmostEqual(self.dialog._current_gsd(), 5.5, places=3)
@@ -202,11 +204,13 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
             delta=1,
         )
 
-        profile.update({
-            "resolution_mode": "scale",
-            "gsd": 0.5,
-            "target_scale_denominator": 50000,
-        })
+        profile.update(
+            {
+                "resolution_mode": "scale",
+                "gsd": 0.5,
+                "target_scale_denominator": 50000,
+            }
+        )
         self.dialog._apply_profile_state(profile)
         self.assertEqual(self.dialog._resolution_mode(), "scale")
         self.assertAlmostEqual(self.dialog._current_target_scale(), 50000)
@@ -218,6 +222,7 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
 
     def test_qsettings_resolution_mode_wins_over_stale_secondary_value(self):
         """Last used target scale must not override a GSD-driven saved session."""
+
         def stored_value(key, default="", type=None):
             values = {
                 "last_resolution_mode": "gsd",
