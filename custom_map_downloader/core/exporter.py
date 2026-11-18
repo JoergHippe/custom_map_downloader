@@ -762,9 +762,7 @@ class GeoTiffExporter:
         # SQLite runs in local user temp when QGIS detects a slow target
         # (or a fast same-device temp). Final MBTiles replacement stays atomic
         # on the destination filesystem after the database has been closed.
-        local_work = should_use_local_work(
-            params.output_path, QgsFileUtils.pathIsSlowDevice
-        )
+        local_work = should_use_local_work(params.output_path, QgsFileUtils.pathIsSlowDevice)
         log_event("export_workspace", output_path=params.output_path, local_work=local_work)
         with staged_mbtiles_path(
             params.output_path,
