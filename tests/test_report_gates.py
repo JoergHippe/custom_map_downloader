@@ -57,6 +57,15 @@ class ReportGateTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_success_status_with_failed_process_fails(self) -> None:
+        for script, key, name_field in GATES:
+            with self.subTest(script=script):
+                row = {name_field: "sample", "status": "ok", "exit_code": 1}
+                result = self.run_gate(
+                    script, {"matrix_key": key, "group_name": key, "rows": [row]}
+                )
+                self.assertNotEqual(result.returncode, 0)
+
     def test_failed_results_fail(self) -> None:
         for script, key, name_field in GATES:
             with self.subTest(script=script):
