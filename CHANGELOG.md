@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 The format follows a pragmatic Keep a Changelog style.
 
+## [0.5.0] - Unreleased
+
+### Added
+- exact-extent MBTiles export with configurable zoom levels, padding and tile estimates
+
+### Fixed
+- report validation rejects empty or malformed test results instead of allowing an empty report to pass
+
 ## [0.4.0] - 2026-03-14
 
 ### Added
