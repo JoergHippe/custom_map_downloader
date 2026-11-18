@@ -640,6 +640,38 @@ class ExporterValidationTests(unittest.TestCase):
         self.assertEqual(calls["tiled"], 1)
         self.assertEqual(calls["warp"], 1)
 
+    def test_progress_finishes_only_after_staged_publication(self):
+        """A completed render is not a successfully published export."""
+        exporter = GeoTiffExporter()
+        params = self._base_params(path_suffix=".tif")
+        target = Path(params.output_path)
+        target.write_bytes(b"previous-result")
+        progress_events = []
+        original_export = exporter._export_unstaged
+
+        def fake_staged_export(stage_params, *, progress_cb, cancel_token):
+            self.assertEqual(target.read_bytes(), b"previous-result")
+            Path(stage_params.output_path).write_bytes(b"new-result")
+            progress_cb(100, "STEP_DONE", {"step": 6, "total": 6})
+            self.assertEqual(target.read_bytes(), b"previous-result")
+            return stage_params.output_path
+
+        exporter._export_unstaged = fake_staged_export
+        try:
+            output = exporter.export(
+                params,
+                progress_cb=lambda percent, key, args: progress_events.append(
+                    (percent, key, args)
+                ),
+            )
+        finally:
+            exporter._export_unstaged = original_export
+
+        self.assertEqual(output, params.output_path)
+        self.assertEqual(target.read_bytes(), b"new-result")
+        self.assertEqual(progress_events[-2][0:2], (95, "STEP_PUBLISH"))
+        self.assertEqual(progress_events[-1][0:2], (100, "STEP_DONE"))
+
     def test_web_map_layer_forces_tiled_path_even_below_tile_limit(self):
         exporter = GeoTiffExporter()
 
