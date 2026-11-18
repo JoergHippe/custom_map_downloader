@@ -240,12 +240,8 @@ class StagedRasterOutputTests(unittest.TestCase):
                     (staged.parent / "map__tile_r000_c000.tif").write_bytes(b"tile")
                     (staged.parent / "map__tile_r000_c000.prj").write_bytes(b"crs")
             self.assertEqual(target.read_bytes(), b"vrt-xml")
-            self.assertEqual(
-                (target.parent / "map__tile_r000_c000.tif").read_bytes(), b"tile"
-            )
-            self.assertEqual(
-                (target.parent / "map__tile_r000_c000.prj").read_bytes(), b"crs"
-            )
+            self.assertEqual((target.parent / "map__tile_r000_c000.tif").read_bytes(), b"tile")
+            self.assertEqual((target.parent / "map__tile_r000_c000.prj").read_bytes(), b"crs")
 
     def test_cross_device_copy_cancellation_preserves_existing_file(self):
         with tempfile.TemporaryDirectory() as directory:
