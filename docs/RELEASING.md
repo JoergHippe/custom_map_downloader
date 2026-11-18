@@ -78,25 +78,23 @@ generated for diagnosis; their gates permit advisory drift and reject
 technical failures.
 
 
-## Export-Dateisicherheit und temporäre Arbeitsbereiche
+## Export File Safety and Temporary Workspaces
 
-Das Plugin bevorzugt für GeoTIFF/PNG/JPEG, VRT und MBTiles geeignete
-lokale Benutzer-Temp-Verzeichnisse. Vollständige Ergebnisse werden
-zunächst auf das Zieldateisystem übertragen und dort veröffentlicht.
-Einzelne MBTiles-Dateien werden atomar ersetzt; VRT-Kachelsätze
-sind als Gruppe **nicht atomar**, besitzen aber Backup-/Rollback-Schutz.
+GeoTIFF/PNG/JPEG, VRT and MBTiles outputs prefer a suitable local user
+temporary directory. Completed artifacts are transferred to staging on
+the target filesystem before publication. A single MBTiles database is
+replaced atomically, while a multi-file VRT set is **not group-atomic**
+and uses backup/rollback safeguards.
 
-**Verbindliche Architektur einschließlich Fehlergrenzen:**
-[EXPORT_STAGING.md](EXPORT_STAGING.md).
-**Konkrete Pflichtprüfungen auf Windows und SMB:**
-[TESTING.md](TESTING.md#manuelle-abnahme-windows-desktop-und-netzlaufwerk).
-**Bisherige CI-Nachweise:** [VALIDATION_STATUS.md](VALIDATION_STATUS.md).
+- **Implementation and limits:** [EXPORT_STAGING.md](EXPORT_STAGING.md)
+- **Mandatory Windows and SMB release checks:**
+  [TESTING.md](TESTING.md#manuelle-abnahme-windows-desktop-und-netzlaufwerk)
+- **Dated CI evidence:** [VALIDATION_STATUS.md](VALIDATION_STATUS.md)
 
-Eine funktionierende Linux-/Windows-conda-forge-CI ersetzt weder
-die Desktop-Abnahme mit dem offiziellen QGIS-/OSGeo4W-Paket noch
-Performance- und Unterbrechungstests auf einem echten Netzlaufwerk.
-Bei fehlgeschlagener Wiederherstellung müssen Recovery-Dateien
-vor einem erneuten Versuch manuell geprüft werden.
+Passing Linux/Windows conda-forge CI does not replace testing the packaged
+plugin with the official Windows QGIS/OSGeo4W installation, or measuring
+real SMB throughput and interruption behavior. After an unsuccessful
+rollback, inspect and preserve recovery files before retrying.
 
 ## Package Output
 
