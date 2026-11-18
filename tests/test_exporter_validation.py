@@ -791,9 +791,12 @@ class ExporterValidationTests(unittest.TestCase):
         exporter_module.QgsMapRendererParallelJob = lambda *_args, **_kwargs: FakeRenderJob()
         exporter_module.QgsMapSettings = FakeMapSettings
         exporter_module.qimage_to_rgba_array = fake_qimage_to_rgba_array
-        exporter_module.write_full_raster = lambda **_kwargs: calls.__setitem__(
-            "direct_write", calls["direct_write"] + 1
-        )
+        def fake_write_full_raster(**kwargs):
+            # A staged export must have an actual output file to publish.
+            calls["direct_write"] += 1
+            Path(kwargs["output_path"]).write_bytes(b"fake-direct-raster")
+
+        exporter_module.write_full_raster = fake_write_full_raster
         try:
             result = exporter.export(params)
         finally:
