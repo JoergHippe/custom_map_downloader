@@ -39,6 +39,14 @@ dokumentiert. Diese Liste begründet keine Release-Freigabe.
   vollständig und überprüfbar übertragen.
 - [ ] Temp-Ort, Laufwerkseigenschaften, lokalen und Ziel-Speicherbedarf,
   sicheren Fallback, Abbruch, Windows-Dateisperren und VRT-Rollback prüfen.
+  Vorhandene QGIS-/Qt-APIs gemäß
+  [Technologiebewertung](docs/EXPORT_STAGING.md#abgleich-mit-etablierten-qgis-gdal-technologien-18112026)
+  bevorzugen: insbesondere `QgsFileUtils.pathIsSlowDevice()`;
+  `QgsProcessingUtils`, `QgsFileUtils.renameDataset()` und
+  `QSaveFile` nur bei konkreter Eignung. Keine zweite Transaktionslogik.
+- [ ] Native Windows-QGIS-3/4-CI für Dateisperren, Überschreibung,
+  Backup-Rollback und Recovery erweitern; SMB-Ausfälle und sichtbar
+  geöffneten Rasterlayer auf echter Windows-Installation gesondert prüfen.
 - [ ] Performance als **Gesamtdauer** einschließlich Transfer und
   Veröffentlichung auf SSD-/SMB-Zielen messen.
 - [ ] MBTiles-Erzeugung später gesondert prüfen; vorhandene atomare
