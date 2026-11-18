@@ -29,6 +29,13 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Stage GeoTIFF, PNG, JPEG and VRT outputs in the destination filesystem,
+  protecting previous outputs from rendering/cancellation failures.
+- Publish staged raster/sidecar files only on success, with rollback attempts
+  when a multi-file VRT publication fails; MBTiles retains its own atomic flow.
+- Validate VRT tile paths structurally as relative XML references; a broken
+  relative-path rewrite now fails the export instead of publishing an
+  unusable VRT.
 - Reject invalid render, output and source extent CRS before raster/MBTiles
   export, rather than silently treating coordinates as if CRS matched.
 - Remove a redundant return branch from the tiled PNG/JPEG conversion path
