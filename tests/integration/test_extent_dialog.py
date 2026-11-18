@@ -28,6 +28,7 @@ try:
 
     ensure_plugin_import_path()
     from custom_map_downloader.CustomMapDownloader_dialog import CustomMapDownloaderDialog
+    from custom_map_downloader.core.scale import gsd_to_scale_denominator, scale_to_gsd_m_per_px
 
     HAS_QGIS = True
 except Exception:
@@ -156,6 +157,86 @@ class ExtentDialogIntegrationTest(unittest.TestCase):
         self.assertEqual(self.dialog.lineEdit_outputDirectory.text(), expected)
         self.assertTrue(self.dialog.checkBox_createVrt.isChecked())
         self.assertEqual(self.dialog._selected_output_extension(), ".tif")
+
+    def test_resolution_changes_refresh_previews_once(self):
+        """Synchronizing the paired spinboxes must not double-refresh output."""
+        self.dialog.comboBox_resolutionMode.setCurrentIndex(
+            self.dialog.comboBox_resolutionMode.findData("gsd")
+        )
+        with patch.object(self.dialog, "_refresh_resolution_previews") as refresh:
+            self.dialog.spinBox_gsd.setValue(3.5)
+            self.assertEqual(refresh.call_count, 1)
+        self.assertAlmostEqual(
+            self.dialog.doubleSpinBox_targetScale.value(),
+            round(gsd_to_scale_denominator(3.5)),
+            delta=1,
+        )
+
+        self.dialog.comboBox_resolutionMode.setCurrentIndex(
+            self.dialog.comboBox_resolutionMode.findData("scale")
+        )
+        with patch.object(self.dialog, "_refresh_resolution_previews") as refresh:
+            self.dialog.doubleSpinBox_targetScale.setValue(50000)
+            self.assertEqual(refresh.call_count, 1)
+        self.assertAlmostEqual(
+            self.dialog.spinBox_gsd.value(),
+            scale_to_gsd_m_per_px(50000),
+            places=3,
+        )
+
+    def test_profile_resolution_mode_wins_over_conflicting_inactive_value(self):
+        """Restoring a profile must honor the selected input, not signal order."""
+        profile = self.dialog._collect_profile_state()
+        profile.update({
+            "resolution_mode": "gsd",
+            "gsd": 5.5,
+            "target_scale_denominator": 1000,
+            "extent": None,
+        })
+        self.dialog._apply_profile_state(profile)
+        self.assertEqual(self.dialog._resolution_mode(), "gsd")
+        self.assertAlmostEqual(self.dialog._current_gsd(), 5.5, places=3)
+        self.assertAlmostEqual(
+            self.dialog.doubleSpinBox_targetScale.value(),
+            round(gsd_to_scale_denominator(5.5)),
+            delta=1,
+        )
+
+        profile.update({
+            "resolution_mode": "scale",
+            "gsd": 0.5,
+            "target_scale_denominator": 50000,
+        })
+        self.dialog._apply_profile_state(profile)
+        self.assertEqual(self.dialog._resolution_mode(), "scale")
+        self.assertAlmostEqual(self.dialog._current_target_scale(), 50000)
+        self.assertAlmostEqual(
+            self.dialog.spinBox_gsd.value(),
+            scale_to_gsd_m_per_px(50000),
+            places=3,
+        )
+
+    def test_qsettings_resolution_mode_wins_over_stale_secondary_value(self):
+        """Last used target scale must not override a GSD-driven saved session."""
+        def stored_value(key, default="", type=None):
+            values = {
+                "last_resolution_mode": "gsd",
+                "last_gsd": 4.5,
+                "last_target_scale": 1000,
+            }
+            return values.get(key.split("/")[-1], default)
+
+        with patch("custom_map_downloader.CustomMapDownloader_dialog.QSettings") as settings:
+            settings.return_value.value.side_effect = stored_value
+            self.dialog._load_settings()
+
+        self.assertEqual(self.dialog._resolution_mode(), "gsd")
+        self.assertAlmostEqual(self.dialog._current_gsd(), 4.5, places=3)
+        self.assertAlmostEqual(
+            self.dialog.doubleSpinBox_targetScale.value(),
+            round(gsd_to_scale_denominator(4.5)),
+            delta=1,
+        )
 
     def test_internal_coordinate_mapping_does_not_alias_fields(self):
         """Document QGIS child-widget mapping without assuming private names."""
