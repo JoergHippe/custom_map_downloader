@@ -6,14 +6,18 @@ from __future__ import annotations
 
 import math
 import os
+import shutil
 import sqlite3
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from qgis.core import QgsRectangle
+
+from .errors import CancelledError, ExportError
+from .output_transaction import create_local_work_directory, transfer_finished_files
 
 WEB_MERCATOR_AUTHID = "EPSG:3857"
 WGS84_AUTHID = "EPSG:4326"
@@ -268,20 +272,50 @@ def build_mbtiles_plan(
 
 
 @contextmanager
-def staged_mbtiles_path(output_path: str | Path) -> Iterator[Path]:
-    """Stage an MBTiles export beside its destination and replace only on success.
+def staged_mbtiles_path(
+    output_path: str | Path,
+    *,
+    prefer_local: bool = False,
+    estimated_bytes: int = 0,
+    check_cancel: Callable[[], None] | None = None,
+) -> Iterator[Path]:
+    """Build SQLite in fast user temp when suitable, then atomically publish.
 
-    The exporter must close its SQLite connection before leaving this context.
-    os.replace is atomic on the same filesystem and preserves the previous
-    output when rendering, cancellation, or SQLite writing fails.
+    Database handles must be closed before transfer; only the final
+    same-filesystem os.replace touches the destination MBTiles.
     """
     destination = Path(output_path)
     with tempfile.TemporaryDirectory(
         prefix=f".{destination.stem}.", dir=destination.parent
     ) as temp_dir:
-        staged_path = Path(temp_dir) / destination.name
-        yield staged_path
-        os.replace(staged_path, destination)
+        target_stage = Path(temp_dir)
+        work_dir = create_local_work_directory(
+            prefer_local, estimated_bytes=estimated_bytes
+        )
+        try:
+            staged_path = (work_dir or target_stage) / destination.name
+            yield staged_path
+            if not staged_path.is_file():
+                raise ExportError(
+                    "ERR_EXPORT_STAGE_INCOMPLETE",
+                    f"MBTiles export did not produce a database: {staged_path}",
+                )
+            if work_dir is not None:
+                try:
+                    transfer_finished_files(work_dir, target_stage, check_cancel)
+                except CancelledError:
+                    raise
+                except Exception as error:
+                    raise ExportError(
+                        "ERR_EXPORT_TRANSFER_FAILED",
+                        f"Could not copy MBTiles into target staging: {error}",
+                    ) from error
+            if check_cancel is not None:
+                check_cancel()
+            os.replace(target_stage / destination.name, destination)
+        finally:
+            if work_dir is not None:
+                shutil.rmtree(work_dir)
 
 
 def create_mbtiles_database(path: str | Path) -> sqlite3.Connection:
