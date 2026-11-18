@@ -29,6 +29,10 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Detect collisions with loaded VRT layers when overwriting existing
+  tiles in GeoTIFF, TIFF, PNG or JPEG formats; previously only `.tif`
+  files were considered. Ignore unrelated filenames and preserve the
+  existing loaded-layer safety gate.
 - Stage GeoTIFF, PNG, JPEG and VRT outputs in the destination filesystem,
   protecting previous outputs from rendering/cancellation failures.
 - Publish staged raster/sidecar files only on success, with rollback attempts
