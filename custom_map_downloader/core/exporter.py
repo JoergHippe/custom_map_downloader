@@ -18,7 +18,7 @@ Notes:
 from __future__ import annotations
 
 import os
-import re
+import xml.etree.ElementTree as ET
 import tempfile
 from dataclasses import replace
 from pathlib import Path
@@ -997,65 +997,46 @@ class GeoTiffExporter:
             raise ExportError("ERR_VRT_BUILD_FAILED", "gdal.BuildVRT returned None")
         vrt_ds = None
 
-        # Make VRT portable (relative SourceFilename entries)
+        # A VRT that still refers to the temporary staging directory would
+        # become invalid immediately after publication. Fail rather than
+        # publishing a success with broken absolute paths.
         try:
             self._make_vrt_paths_relative(vrt_path, tile_paths_abs)
         except Exception as ex:
-            log_event(
-                "vrt_relative_paths_warning",
-                output_path=str(vrt_path),
-                details=str(ex),
-            )
-            self._report(
-                progress_cb,
-                96,
-                "WARN_VRT_ABSOLUTE_PATHS",
-                {"details": str(ex)},
-            )
+            raise ExportError(
+                "ERR_VRT_RELATIVE_PATHS_FAILED",
+                f"Failed to write portable VRT source paths: {ex}",
+            ) from ex
 
         if report_done:
             self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return str(vrt_path)
 
     def _make_vrt_paths_relative(self, vrt_path: Path, tile_paths_abs: list[str]) -> None:
-        """Rewrite VRT SourceFilename entries to be relative to the VRT.
+        """Use XML source elements to bind the VRT to its sibling tile files.
 
-        Rationale:
-            The Python GDAL bindings used by QGIS on Windows don't reliably expose
-            the "-relative" flag from gdalbuildvrt. Post-processing the XML is a
-            pragmatic way to make the VRT portable.
+        Only the tile paths produced by this export are permitted. XML parsing
+        correctly handles escaped filename characters and avoids replacing
+        arbitrary text inside GDAL metadata.
         """
-        text = vrt_path.read_text(encoding="utf-8", errors="replace")
+        tile_names = {Path(path).name for path in tile_paths_abs}
+        tree = ET.parse(vrt_path)
+        source_elements = [
+            elem for elem in tree.iter() if elem.tag.rsplit("}", 1)[-1] == "SourceFilename"
+        ]
+        if not source_elements:
+            raise ValueError("VRT does not contain any SourceFilename elements")
 
-        # Replace known absolute paths by their basenames and mark relativeToVRT="1".
-        for p in tile_paths_abs:
-            base_name = os.path.basename(p)
-            # Handle both Windows backslashes and normalized paths.
-            escaped = re.escape(p)
-            escaped2 = re.escape(p.replace("\\", "/"))
+        for element in source_elements:
+            raw_name = (element.text or "").strip()
+            # Windows paths can occur in VRT XML even when tested on Linux.
+            name = raw_name.replace("\\", "/").rsplit("/", 1)[-1]
+            if name not in tile_names:
+                raise ValueError(f"VRT references an unexpected source: {raw_name}")
+            element.text = name
+            element.set("relativeToVRT", "1")
 
-            text = re.sub(
-                rf"(<SourceFilename[^>]*>)\s*{escaped}\s*(</SourceFilename>)",
-                rf"\1{base_name}\2",
-                text,
-                flags=re.IGNORECASE,
-            )
-            text = re.sub(
-                rf"(<SourceFilename[^>]*>)\s*{escaped2}\s*(</SourceFilename>)",
-                rf"\1{base_name}\2",
-                text,
-                flags=re.IGNORECASE,
-            )
-
-        # Ensure relativeToVRT="1" where possible.
-        text = re.sub(
-            r"<SourceFilename(\s+[^>]*?)relativeToVRT=\"0\"",
-            r"<SourceFilename\1relativeToVRT=\"1\"",
-            text,
-            flags=re.IGNORECASE,
-        )
-
-        vrt_path.write_text(text, encoding="utf-8")
+        tree.write(vrt_path, encoding="utf-8", xml_declaration=True)
 
     def _export_tiled(
         self,
