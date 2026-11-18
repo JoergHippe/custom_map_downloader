@@ -75,5 +75,18 @@ class ScaleMatrixReportCheckTests(unittest.TestCase):
         self.assertNotEqual(self._run({"matrix_key": "scale_matrix", "rows": []}).returncode, 0)
 
 
+    def test_rejects_malformed_rows(self):
+        # A malformed row must fail closed instead of raising an unhandled exception.
+        payload = {"matrix_key": "scale_matrix", "rows": ["invalid"]}
+        self.assertNotEqual(self._run(payload).returncode, 0)
+
+    def test_rejects_success_status_with_failed_child_process(self):
+        # A success label cannot overrule a failed QGIS child process.
+        payload = {
+            "matrix_key": "scale_matrix",
+            "rows": [{"case": "sample", "status": "ok", "exit_code": 1}],
+        }
+        self.assertNotEqual(self._run(payload).returncode, 0)
+
 if __name__ == "__main__":
     unittest.main()
