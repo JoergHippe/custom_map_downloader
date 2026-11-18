@@ -78,6 +78,25 @@ generated for diagnosis; their gates permit advisory drift and reject
 technical failures.
 
 
+## Raster and VRT file safety
+
+Raster exports are staged next to the target folder and published only after
+their data and georeferencing sidecars are complete. Single-file replacement
+uses same-filesystem renaming; files already loaded by QGIS or locked by Windows
+may still prevent publication.
+
+A VRT, its tiles and tile sidecars are a **set of files**: the exporter publishes
+tiles first, then the VRT, and attempts to roll back all replacements if a
+publish operation fails. Multi-file replacement is **not atomic as a group**,
+so concurrent readers can briefly observe mixed tile versions. A failed
+rollback may leave a separately named recovery directory and requires manual
+attention. Old tiles not referenced by the new VRT are deliberately not
+deleted automatically.
+
+A VRT with invalid or nonportable source paths fails the export. Before
+release, validate overwrite, cancellation, sidecar failure and VRT path
+portability using the actual Windows QGIS distribution.
+
 ## Package Output
 
 Release archives are built from `custom_map_downloader/` only. The package validator ensures that the ZIP does not accidentally include:
