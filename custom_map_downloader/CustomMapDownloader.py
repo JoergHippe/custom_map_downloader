@@ -30,11 +30,18 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QCoreApplication, QEventLoop, QSettings, Qt, QTimer, QTranslator
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QCheckBox, QMessageBox, QProgressDialog
+from qgis.PyQt.QtWidgets import QCheckBox, QMessageBox, QProgressDialog
+
+# QAction moved from QtWidgets (Qt5) to QtGui (Qt6).
+try:
+    from qgis.PyQt.QtGui import QAction
+except ImportError:
+    from qgis.PyQt.QtWidgets import QAction
 
 from .core.errors import CancelledError, ExportError, ValidationError
 from .core.exporter import GeoTiffExporter
 from .core.locale import resolve_locale_code
+from .core.mbtiles import build_mbtiles_plan, mbtiles_export_risk
 from .core.models import CancelToken, CenterSpec, ExportParams, ExtentSpec
 from .CustomMapDownloader_dialog import CustomMapDownloaderDialog
 
@@ -123,7 +130,7 @@ class CustomMapDownloader:
         box.setText(text)
         if details:
             box.setDetailedText(details)
-        box.exec_()
+        box.exec()
 
     def _build_export_context_details(
         self,
@@ -235,7 +242,7 @@ class CustomMapDownloader:
         self.dlg.setModal(False)
         self.dlg.show()
         QTimer.singleShot(0, self.dlg.reset_extent_to_canvas)
-        dialog_loop.exec_()
+        dialog_loop.exec()
         try:
             self.dlg.finished.disconnect(dialog_loop.quit)
         except Exception:
@@ -396,7 +403,7 @@ class CustomMapDownloader:
             self.iface.mainWindow(),
         )
         progress.setWindowTitle(self.tr("Custom Map Downloader"))
-        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setMinimumDuration(0)
         progress.setValue(0)
         progress.show()
@@ -729,6 +736,57 @@ class CustomMapDownloader:
             self.tr("Output: {path}").format(path=export_params.output_path),
         ]
         is_mbtiles = export_params.output_path.lower().endswith(".mbtiles")
+        # Use the same projected WGS84 bounds and tile planner as the exporter.
+        # The estimate is advisory; PNG compression and render times vary.
+        mbtiles_risk = "normal"
+        if is_mbtiles:
+            try:
+                bounds = GeoTiffExporter().mbtiles_bounds_4326(export_params)
+                mbtiles_plan = build_mbtiles_plan(
+                    bounds,
+                    zoom_min=export_params.mbtiles_zoom_min,
+                    zoom_max=export_params.mbtiles_zoom_max,
+                    tile_size=export_params.mbtiles_tile_size,
+                    padding=export_params.mbtiles_padding,
+                )
+            except (ValidationError, ValueError) as ex:
+                QMessageBox.critical(
+                    self.iface.mainWindow(),
+                    self.tr("Invalid MBTiles export"),
+                    str(ex),
+                )
+                return False
+            mbtiles_risk = mbtiles_export_risk(
+                mbtiles_plan.tile_count, mbtiles_plan.estimated_bytes
+            )
+            lines.extend(
+                [
+                    self.tr("Tile count: {tiles}").format(tiles=f"{mbtiles_plan.tile_count:,}"),
+                    self.tr("Estimated PNG data: {gib:.2f} GiB (rough estimate)").format(
+                        gib=mbtiles_plan.estimated_bytes / 1024**3
+                    ),
+                ]
+            )
+            if mbtiles_risk == "large":
+                lines.append(
+                    self.tr(
+                        "Warning: A large MBTiles export can need substantial time and disk space."
+                    )
+                )
+            elif mbtiles_risk == "extreme":
+                lines.extend(
+                    [
+                        "",
+                        self.tr(
+                            "VERY LARGE EXPORT: This operation may take a long time "
+                            "and consume substantial disk space."
+                        ),
+                        self.tr(
+                            "Check the zoom range and extent carefully. "
+                            "Continue only if this export size is intentional."
+                        ),
+                    ]
+                )
         if is_mbtiles:
             lines.extend(
                 [
@@ -795,7 +853,9 @@ class CustomMapDownloader:
         settings = QSettings()
         base = "CustomMapDownloader/"
         ask_confirm = settings.value(base + "confirm_export", True, type=bool)
-        if ask_confirm is False:
+        # Even if ordinary confirmations were disabled, extreme MBTiles
+        # exports must obtain an explicit, one-time confirmation.
+        if ask_confirm is False and mbtiles_risk != "extreme":
             return True
 
         msg_box = QMessageBox(
@@ -805,13 +865,16 @@ class CustomMapDownloader:
             QMessageBox.Yes | QMessageBox.No,
             self.iface.mainWindow(),
         )
-        msg_box.setDefaultButton(QMessageBox.Yes)
+        if mbtiles_risk == "extreme":
+            # The user must actively opt in; do not offer a persistent bypass.
+            msg_box.setDefaultButton(QMessageBox.No)
+        else:
+            msg_box.setDefaultButton(QMessageBox.Yes)
+            dont_ask_cb = QCheckBox(self.tr("Do not ask again"))
+            msg_box.setCheckBox(dont_ask_cb)
 
-        dont_ask_cb = QCheckBox(self.tr("Do not ask again"))
-        msg_box.setCheckBox(dont_ask_cb)
-
-        reply = msg_box.exec_()
-        if dont_ask_cb.isChecked():
+        reply = msg_box.exec()
+        if mbtiles_risk != "extreme" and dont_ask_cb.isChecked():
             settings.setValue(base + "confirm_export", False)
 
         return reply == QMessageBox.Yes

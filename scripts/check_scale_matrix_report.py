@@ -31,18 +31,28 @@ def main() -> int:
         print("ERROR: invalid report format: rows must be a list", file=sys.stderr)
         return 1
 
-    allowed_statuses = {"ok"} if matrix_key == "scale_matrix" else {"ok", "untracked"}
-    bad_rows = [row for row in rows if str(row.get("status", "")) not in allowed_statuses]
+    if not rows:
+        print("ERROR: scale matrix report has no rows", file=sys.stderr)
+        return 1
+    allowed_statuses = {"ok", "drift", "untracked"}
+    bad_rows = [
+        row
+        for row in rows
+        if not isinstance(row, dict)
+        or row.get("status") not in allowed_statuses
+        or row.get("exit_code") != 0
+    ]
     if bad_rows:
         for row in bad_rows:
-            print(
-                f"ERROR: {row.get('status')} case={row.get('case')} "
-                f"label={row.get('label')} exit={row.get('exit_code')}",
-                file=sys.stderr,
-            )
+            print(f"ERROR: invalid or failed scale matrix row: {row!r}", file=sys.stderr)
         return 1
 
-    print(f"Scale matrix report OK: {report_path}")
+    for row in rows:
+        if row["status"] in {"drift", "untracked"}:
+            print(
+                f"NOTICE: historical hash {row['status']} for {row.get('case')} [{row.get('label')}]"
+            )
+    print(f"Scale matrix report OK: {matrix_key}: {report_path}")
     return 0
 
 

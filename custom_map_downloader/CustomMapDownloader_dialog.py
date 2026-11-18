@@ -43,7 +43,12 @@ from .core.constants import (
     GSD_MIN,
     GSD_STEP,
 )
-from .core.mbtiles import auto_detect_min_zoom, count_tiles, estimate_mbtiles_size
+from .core.mbtiles import (
+    auto_detect_min_zoom,
+    count_tiles,
+    estimate_mbtiles_size,
+    mbtiles_export_risk,
+)
 from .core.profile_io import read_profile, write_profile
 from .core.scale import OGC_STANDARD_DPI, gsd_to_scale_denominator, scale_to_gsd_m_per_px
 from .core.validation import pixel_limit_status
@@ -68,7 +73,7 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         self._init_output_format_combo()
         self._apply_tooltips()
 
-        self.setWindowModality(Qt.WindowModal)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
         # Wire OK / Cancel of QDialogButtonBox
         if hasattr(self, "buttonBox"):
@@ -678,7 +683,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         except Exception:
             pass
         self._cache_extent_line_edits()
-        self._write_extent_line_edits(output_rect)
         self._update_extent_info()
         self._update_vrt_info()
         self._update_mbtiles_info()
@@ -1109,7 +1113,10 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
                     float(extent["east"]),
                     float(extent["north"]),
                 )
-                self.extentGroupBox.setCurrentExtent(rect, crs)
+                # The saved rectangle is an explicit user selection. Updating
+                # currentExtent() alone does NOT update outputExtent(), so the
+                # exporter would silently use the previous map extent.
+                self.extentGroupBox.setOutputExtentFromUser(rect, crs)
             except Exception:
                 warnings.append(self.tr("Stored extent could not be restored."))
 
@@ -1462,7 +1469,16 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
         # Remove common thousands separators
         s = s.replace(" ", "").replace("'", "").replace("_", "")
 
-        # Try system locale first (e.g. de_DE uses comma decimal)
+        # Both separator types present: the rightmost one is the decimal
+        # separator; the other is grouping. QLocale.system() alone cannot
+        # recognize de_DE text on an en_US host (or vice versa).
+        if "," in s and "." in s:
+            decimal = "," if s.rfind(",") > s.rfind(".") else "."
+            grouping = "." if decimal == "," else ","
+            return float(s.replace(grouping, "").replace(decimal, "."))
+
+        # With a single separator, retain the historical locale-first
+        # behavior (e.g. an ambiguous "1,234" depends on the host locale).
         val, ok = QLocale.system().toDouble(s)
         if ok:
             return float(val)
@@ -1486,76 +1502,31 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return None
 
     def _cache_extent_line_edits(self) -> None:
-        """Cache the 4 coordinate line edits inside QgsExtentGroupBox.
+        """Resolve QGIS's private coordinate editors only by exact object name.
 
-        Notes:
-            This is intentionally cached once to avoid repeated heuristic scans.
-            The internal object names / tooltips may vary, so we keep a small
-            keyword-based resolver but store the result.
+        This fallback is intentionally *not* the source of truth: prefer the
+        public outputExtent() API. An unsupported QGIS widget layout must leave
+        fields unresolved instead of guessing axes from labels or tab order.
         """
-        self._extent_line_edits = {"xmin": None, "xmax": None, "ymin": None, "ymax": None}
-
+        self._extent_line_edits = {
+            "xmin": None,
+            "xmax": None,
+            "ymin": None,
+            "ymax": None,
+        }
         if not hasattr(self, "extentGroupBox"):
             return
 
-        try:
-            edits = self.extentGroupBox.findChildren(QtWidgets.QLineEdit)
-        except Exception:
-            return
-
-        def bag(e: QtWidgets.QLineEdit) -> str:
-            parts = [
-                (e.objectName() or ""),
-                (e.accessibleName() or ""),
-                (e.toolTip() or ""),
-                (e.placeholderText() or ""),
-                (e.statusTip() or ""),
-            ]
-            return " ".join(p.lower() for p in parts if p)
-
-        # English + German keyword sets (QGIS UI can be localized)
-        keys = {
-            "xmin": ("xmin", "x min", "min x", "minimum x", "west", "w", "links", "linke"),
-            "xmax": ("xmax", "x max", "max x", "maximum x", "east", "e", "rechts", "rechte"),
-            "ymin": ("ymin", "y min", "min y", "minimum y", "south", "s", "unten", "untere"),
-            "ymax": ("ymax", "y max", "max y", "maximum y", "north", "n", "oben", "obere"),
+        # Current QGIS 3/4 widget internals. Explicitly private and optional:
+        # if upstream renames a control, no potentially wrong values are used.
+        object_names = {
+            "xmin": "mXMinLineEdit",
+            "xmax": "mXMaxLineEdit",
+            "ymin": "mYMinLineEdit",
+            "ymax": "mYMaxLineEdit",
         }
-
-        # First pass: prefer strong matches in objectName
-        for e in edits:
-            name = (e.objectName() or "").lower()
-            for k, kws in keys.items():
-                if any(kw.replace(" ", "") in name.replace("_", "") for kw in kws):
-                    if self._extent_line_edits[k] is None:
-                        self._extent_line_edits[k] = e
-
-        # Second pass: use the full metadata bag
-        for e in edits:
-            meta = bag(e)
-            for k, kws in keys.items():
-                if self._extent_line_edits[k] is not None:
-                    continue
-                if any(kw in meta for kw in kws):
-                    self._extent_line_edits[k] = e
-
-        # If still incomplete: try positional fallback (4 numeric edits)
-        if any(v is None for v in self._extent_line_edits.values()):
-            numeric_edits = []
-            for e in edits:
-                t = (e.text() or "").strip()
-                if not t:
-                    # empty is still fine; check validator / input mask
-                    pass
-                numeric_edits.append(e)
-
-            # Keep only unique, stable order from Qt
-            if len(numeric_edits) >= 4:
-                # Best guess: the internal widget usually stores as xmin,xmax,ymin,ymax.
-                # We only fill missing slots to avoid breaking already matched ones.
-                fallback_order = ["xmin", "xmax", "ymin", "ymax"]
-                for slot, e in zip(fallback_order, numeric_edits[:4], strict=False):
-                    if self._extent_line_edits[slot] is None:
-                        self._extent_line_edits[slot] = e
+        for axis, name in object_names.items():
+            self._extent_line_edits[axis] = self.extentGroupBox.findChild(QtWidgets.QLineEdit, name)
 
     def _on_extent_toggle_dialog_visibility(self, visible: bool) -> None:
         """Hide/show dialog during 'Draw on canvas' to match QGIS behavior."""
@@ -1618,23 +1589,6 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             return None
 
         return rect
-
-    def _write_extent_line_edits(self, rect: QgsRectangle) -> None:
-        """Update visible extent fields if QgsExtentGroupBox did not repaint them."""
-        if not hasattr(self, "_extent_line_edits") or not isinstance(self._extent_line_edits, dict):
-            self._cache_extent_line_edits()
-
-        values = {
-            "xmin": rect.xMinimum(),
-            "xmax": rect.xMaximum(),
-            "ymin": rect.yMinimum(),
-            "ymax": rect.yMaximum(),
-        }
-        locale = QLocale.system()
-        for key, value in values.items():
-            edit = self._extent_line_edits.get(key)
-            if edit is not None:
-                edit.setText(locale.toString(float(value), "f", 4))
 
     def _get_best_output_extent(self, *, commit: bool) -> Optional[QgsRectangle]:
         """Return the most reliable extent."""
@@ -1884,13 +1838,31 @@ class CustomMapDownloaderDialog(QtWidgets.QDialog, FORM_CLASS):  # type: ignore[
             self.label_mbtilesInfo.setStyleSheet("color: #a00000;")
             return
 
-        estimated = self._format_bytes(estimate_mbtiles_size(tiles))
-        self.label_mbtilesInfo.setStyleSheet("")
+        tile_size = (
+            int(self.spinBox_mbtilesTileSize.value())
+            if hasattr(self, "spinBox_mbtilesTileSize")
+            else 256
+        )
+        estimated_bytes = estimate_mbtiles_size(tiles, tile_size=tile_size)
+        estimated = self._format_bytes(estimated_bytes)
+        risk = mbtiles_export_risk(tiles, estimated_bytes)
+        # These limits are advisory. Never reject an export merely for size.
+        if risk == "extreme":
+            suffix = self.tr(" — very large; explicit confirmation required")
+            style = "color: #a00000; font-weight: 600;"
+        elif risk == "large":
+            suffix = self.tr(" — large export; check time and disk space")
+            style = "color: #8a5900;"
+        else:
+            suffix = ""
+            style = ""
+        self.label_mbtilesInfo.setStyleSheet(style)
         self.label_mbtilesInfo.setText(
-            self.tr("MBTiles: {tiles} tile(s), estimated {size}").format(
+            self.tr("MBTiles: {tiles} tile(s), estimated {size} (approx.)").format(
                 tiles=f"{tiles:,}",
                 size=estimated,
             )
+            + suffix
         )
 
     def _on_mbtiles_auto_zoom_clicked(self) -> None:

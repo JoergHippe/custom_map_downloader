@@ -5,7 +5,11 @@
 from __future__ import annotations
 
 import math
+import os
 import sqlite3
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,6 +22,12 @@ MIN_WEB_MERCATOR_LAT = -85.05112878
 MAX_WEB_MERCATOR_LAT = 85.05112878
 MAX_ZOOM = 22
 DEFAULT_AVG_TILE_BYTES = 50 * 1024
+# Advisory thresholds, not hard export limits. The size estimate assumes the
+# default average PNG tile size; actual content can compress very differently.
+MBTILES_LARGE_TILE_COUNT = 10_000
+MBTILES_EXTREME_TILE_COUNT = 100_000
+MBTILES_LARGE_ESTIMATED_BYTES = 1 * 1024**3
+MBTILES_EXTREME_ESTIMATED_BYTES = 10 * 1024**3
 
 
 @dataclass(frozen=True)
@@ -34,22 +44,44 @@ class MbtilesTile:
 
 @dataclass(frozen=True)
 class MbtilesPlan:
-    """Complete MBTiles export plan."""
+    """MBTiles export parameters with on-demand, repeatable tile iteration."""
 
     bounds_4326: tuple[float, float, float, float]
     zoom_min: int
     zoom_max: int
     tile_size: int
     padding: int
-    tiles: tuple[MbtilesTile, ...]
+    tile_count: int
+    base_percent: int = 15
+    span_percent: int = 80
 
     @property
-    def tile_count(self) -> int:
-        return len(self.tiles)
+    def tiles(self) -> Iterator[MbtilesTile]:
+        """Return a fresh generator; never hold all tile extents in memory."""
+        return self._iter_tiles()
+
+    def _iter_tiles(self) -> Iterator[MbtilesTile]:
+        done = 0
+        for z in range(self.zoom_min, self.zoom_max + 1):
+            x_min, x_max, y_min, y_max = tile_range_for_bounds(
+                self.bounds_4326, z, padding=self.padding
+            )
+            for y in range(y_min, y_max + 1):
+                for x in range(x_min, x_max + 1):
+                    done += 1
+                    percent = self.base_percent + (done * self.span_percent) // self.tile_count
+                    yield MbtilesTile(
+                        zoom=z,
+                        x=x,
+                        y=y,
+                        tms_y=(1 << z) - 1 - y,
+                        extent_3857=tile_bounds_3857(x, y, z),
+                        percent=percent,
+                    )
 
     @property
     def estimated_bytes(self) -> int:
-        return estimate_mbtiles_size(self.tile_count)
+        return estimate_mbtiles_size(self.tile_count, tile_size=self.tile_size)
 
 
 def clamp_lat(lat: float) -> float:
@@ -157,8 +189,33 @@ def count_tiles(
     return total
 
 
-def estimate_mbtiles_size(tile_count: int, *, avg_tile_bytes: int = DEFAULT_AVG_TILE_BYTES) -> int:
-    return max(0, int(tile_count)) * max(0, int(avg_tile_bytes))
+def estimate_mbtiles_size(
+    tile_count: int, *, tile_size: int = 256, avg_tile_bytes: int = DEFAULT_AVG_TILE_BYTES
+) -> int:
+    """Rough PNG-data estimate scaled from the 256-pixel reference tile.
+
+    The pixel-area factor captures the main impact of configurable tile
+    dimensions, but PNG compressibility remains content-dependent.
+    """
+    count = max(0, int(tile_count))
+    size = max(0, int(tile_size))
+    return count * max(0, int(avg_tile_bytes)) * size * size // (256 * 256)
+
+
+def mbtiles_export_risk(tile_count: int, estimated_bytes: int) -> str:
+    """Return the advisory risk tier: normal, large or extreme.
+
+    These are usability triggers, not export restrictions. A tile count and a
+    compressed-size estimate address two independent sources of excessive work.
+    """
+    if (
+        tile_count >= MBTILES_EXTREME_TILE_COUNT
+        or estimated_bytes >= MBTILES_EXTREME_ESTIMATED_BYTES
+    ):
+        return "extreme"
+    if tile_count >= MBTILES_LARGE_TILE_COUNT or estimated_bytes >= MBTILES_LARGE_ESTIMATED_BYTES:
+        return "large"
+    return "normal"
 
 
 def auto_detect_min_zoom(
@@ -195,57 +252,65 @@ def build_mbtiles_plan(
         raise ValueError("Invalid MBTiles tile size.")
 
     pad = max(0, min(5, int(padding)))
+    # Count with integer arithmetic only; a world-sized high-zoom plan
+    # must not allocate tiles or lose precision in progress calculations.
     total = count_tiles(bounds, z_min, z_max, padding=pad)
-    done = 0
-    tiles: list[MbtilesTile] = []
-
-    for z in range(z_min, z_max + 1):
-        x_min, x_max, y_min, y_max = tile_range_for_bounds(bounds, z, padding=pad)
-        for y in range(y_min, y_max + 1):
-            for x in range(x_min, x_max + 1):
-                done += 1
-                percent = base_percent + int((done / float(total)) * span_percent)
-                tms_y = (1 << z) - 1 - y
-                tiles.append(
-                    MbtilesTile(
-                        zoom=z,
-                        x=x,
-                        y=y,
-                        tms_y=tms_y,
-                        extent_3857=tile_bounds_3857(x, y, z),
-                        percent=percent,
-                    )
-                )
-
     return MbtilesPlan(
         bounds_4326=bounds,
         zoom_min=z_min,
         zoom_max=z_max,
         tile_size=size,
         padding=pad,
-        tiles=tuple(tiles),
+        tile_count=total,
+        base_percent=int(base_percent),
+        span_percent=int(span_percent),
     )
+
+
+@contextmanager
+def staged_mbtiles_path(output_path: str | Path) -> Iterator[Path]:
+    """Stage an MBTiles export beside its destination and replace only on success.
+
+    The exporter must close its SQLite connection before leaving this context.
+    os.replace is atomic on the same filesystem and preserves the previous
+    output when rendering, cancellation, or SQLite writing fails.
+    """
+    destination = Path(output_path)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{destination.stem}.", dir=destination.parent
+    ) as temp_dir:
+        staged_path = Path(temp_dir) / destination.name
+        yield staged_path
+        os.replace(staged_path, destination)
 
 
 def create_mbtiles_database(path: str | Path) -> sqlite3.Connection:
     db_path = Path(path)
+    # Never overwrite a pre-existing database here. Use staged_mbtiles_path()
+    # for exporting and replace the destination only after a successful commit.
     if db_path.exists():
-        db_path.unlink()
+        raise FileExistsError(f"MBTiles database already exists: {db_path}")
     conn = sqlite3.connect(str(db_path))
-    conn.executescript(
-        """
-        CREATE TABLE metadata (name TEXT, value TEXT);
-        CREATE TABLE tiles (
-            zoom_level INTEGER NOT NULL,
-            tile_column INTEGER NOT NULL,
-            tile_row INTEGER NOT NULL,
-            tile_data BLOB NOT NULL,
-            PRIMARY KEY (zoom_level, tile_column, tile_row)
-        );
-        CREATE UNIQUE INDEX tile_index
-            ON tiles (zoom_level, tile_column, tile_row);
-        """
-    )
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE metadata (name TEXT, value TEXT);
+            CREATE TABLE tiles (
+                zoom_level INTEGER NOT NULL,
+                tile_column INTEGER NOT NULL,
+                tile_row INTEGER NOT NULL,
+                tile_data BLOB NOT NULL,
+                PRIMARY KEY (zoom_level, tile_column, tile_row)
+            );
+            CREATE UNIQUE INDEX tile_index
+                ON tiles (zoom_level, tile_column, tile_row);
+            """
+        )
+    except Exception:
+        # Particularly important on Windows: a leaked connection can prevent
+        # the staged SQLite database from being removed on export failure.
+        conn.close()
+        raise
     return conn
 
 

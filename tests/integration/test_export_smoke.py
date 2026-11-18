@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 import warnings
@@ -52,6 +53,9 @@ try:
 
     HAS_QGIS = True
 except Exception:
+    # CI must not confuse missing/broken QGIS bindings with successful skipped tests.
+    if os.environ.get("CMD_REQUIRE_QGIS") == "1":
+        raise
     HAS_QGIS = False
     OGC_STANDARD_DPI = 0.0  # type: ignore
     gsd_to_scale_denominator = None  # type: ignore

@@ -78,6 +78,8 @@ def compare_against_expected(
             status = "error"
         elif not result:
             status = "missing"
+        elif result.get("result") != "ok" or not actual_hash:
+            status = "error"
         elif expected_hash and expected_hash != actual_hash:
             status = "drift"
         elif expected_hash:
@@ -103,7 +105,7 @@ def render_markdown(group_name: str, rows: list[dict[str, Any]]) -> str:
     header = [
         f"## Network Scenario Report: `{group_name}`",
         "",
-        "| Scenario | Status | Exit | Size | Hash |",
+        "| Scenario | Hash reference | Exit | Size | Hash |",
         "| --- | --- | ---: | --- | --- |",
     ]
     body = []
@@ -153,10 +155,17 @@ def main() -> int:
             with open(summary_path, "a", encoding="utf-8") as fh:
                 fh.write(markdown)
 
-    bad_rows = [row for row in rows if row["status"] in {"drift", "missing", "error"}]
-    if bad_rows:
-        for row in bad_rows:
-            print(f"{row['status'].upper()}: {row['scenario']} " f"(exit={row['exit_code']})")
+    # Public services can legitimately change their imagery over time.
+    # Hash drift is a diagnostic, never a technical export failure.
+    errors = [row for row in rows if row["status"] in {"missing", "error"}]
+    notices = [row for row in rows if row["status"] in {"drift", "untracked"}]
+    for row in notices:
+        print(f"NOTICE {row['status'].upper()}: {row['scenario']} (historical hash)")
+    if errors or not rows:
+        for row in errors:
+            print(f"ERROR {row['status'].upper()}: {row['scenario']} (exit={row['exit_code']})")
+        if not rows:
+            print("ERROR: no scenario results available")
         return 1
 
     print(f"Network scenario report written to {json_path}")

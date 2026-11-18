@@ -1,0 +1,47 @@
+name: Official WMS scale matrix (opt-in)
+
+on:
+  pull_request:
+    types: [edited]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-scale:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.body, '[run-live-scale]')
+    name: WMS scale matrix / QGIS ${{ matrix.major }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - major: 3
+            image: 3.44.15-noble
+          - major: 4
+            image: 4.2.3-resolute
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run all configured WMS scale cases
+        env:
+          IMAGE: ${{ matrix.image }}
+          MAJOR: ${{ matrix.major }}
+        run: |
+          mkdir -p "artifacts/live-scale-qgis-${MAJOR}"
+          docker run --rm --entrypoint /bin/bash \
+            -e QT_QPA_PLATFORM=offscreen -e CMD_REQUIRE_QGIS=1 -e MAJOR \
+            -v "$PWD:/workspace:rw" -w /workspace \
+            "qgis/qgis:$IMAGE" -lc '
+              set -euo pipefail
+              python3 scripts/check_qgis_runtime.py --major "$MAJOR"
+              python3 -m scripts.run_live_scale_matrix \
+                --matrix-key scale_matrix --timeout 240 \
+                --max-pixels 8000000 \
+                --report-dir "artifacts/live-scale-qgis-$MAJOR"
+            '
+      - name: Print diagnostic report
+        if: always()
+        run: |
+          cat "artifacts/live-scale-qgis-${{ matrix.major }}/live_scale_summary.json" || true

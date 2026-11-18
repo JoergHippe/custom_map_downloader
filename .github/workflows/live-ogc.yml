@@ -1,0 +1,62 @@
+name: Official OGC live smoke (opt-in)
+
+# A PR-body marker enables a one-off live probe before this workflow reaches
+# the default branch. Ordinary PR pushes never contact public services.
+on:
+  pull_request:
+    types: [edited]
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Configured public WMS scenario to test"
+        required: true
+        type: choice
+        options:
+          - bkg_dgm200_relief_tif
+          - basemap_gray_tif
+          - nrw_dtk_color_tif
+          - basemap_wmts_gray_tif
+
+permissions:
+  contents: read
+
+jobs:
+  live-wms:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.body, '[run-live-wms:') || contains(github.event.pull_request.body, '[run-live-wmts]')
+    name: Public OGC / QGIS ${{ matrix.major }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - major: 3
+            image: 3.44.15-noble
+          - major: 4
+            image: 4.2.3-resolute
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run bounded strict public service smoke
+        env:
+          IMAGE: ${{ matrix.image }}
+          MAJOR: ${{ matrix.major }}
+          SCENARIO: ${{ github.event_name == 'workflow_dispatch' && inputs.scenario || (contains(github.event.pull_request.body, '[run-live-wmts]') && 'basemap_wmts_gray_tif' || contains(github.event.pull_request.body, '[run-live-wms:basemap_gray_tif]') && 'basemap_gray_tif' || contains(github.event.pull_request.body, '[run-live-wms:nrw_dtk_color_tif]') && 'nrw_dtk_color_tif' || 'bkg_dgm200_relief_tif') }}
+        run: |
+          mkdir -p "artifacts/live-wms-qgis-${MAJOR}"
+          docker run --rm --entrypoint /bin/bash \
+            -e QT_QPA_PLATFORM=offscreen \
+            -e CMD_REQUIRE_QGIS=1 \
+            -e SCENARIO \
+            -e MAJOR \
+            -v "$PWD:/workspace:rw" -w /workspace \
+            "qgis/qgis:$IMAGE" -lc '
+              set -euo pipefail
+              python3 scripts/check_qgis_runtime.py --major "$MAJOR"
+              python3 scripts/run_live_ogc_smoke.py \
+                --scenario "$SCENARIO" --timeout 240 --max-pixels 2000000 \
+                --report-dir "artifacts/live-wms-qgis-$MAJOR"
+            '
+      - name: Show service report for diagnosis
+        if: always()
+        run: |
+          cat "artifacts/live-wms-qgis-${{ matrix.major }}/live_smoke_summary.json" || true

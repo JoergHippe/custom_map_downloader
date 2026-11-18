@@ -5,7 +5,7 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 ## What It Does
 
 - exports visible QGIS layers including WMS, WMTS, XYZ, raster and vector sources
-- uses the native QGIS extent widget for extent selection
+- uses the native QGIS extent widget with [documented dialog-state safeguards](docs/EXTENT_SELECTION.md)
 - supports two resolution modes:
   - `Ground resolution (m/px)`
   - `Target scale (1:n)` for scale-dependent WMS portrayal
@@ -30,8 +30,14 @@ Custom Map Downloader is a QGIS plugin for exporting map content from raster, ve
 
 ## Compatibility
 
+> QGIS 3.44.15 and 4.2.3 pass automated native Windows and Linux integration tests,
+> including Qt dialogs, local WMS/WMTS, raster and MBTiles export. Full release
+> acceptance against official OSGeo4W/Desktop installations and public services is
+> still outstanding. Metadata declares QGIS 3.34+ without a QGIS 4 release claim.
+> See [test strategy](docs/TESTING.md).
+
 - supported QGIS baseline: `3.34+`
-- developed and repeatedly validated with real Windows/QGIS runtime checks
+- tested on GitHub-hosted native Windows/QGIS 3 and 4 (conda-forge) and Linux/QGIS 3 and 4 (Docker)
 - public WMS/XYZ services can still change portrayal, availability or response behavior upstream
 - scale-dependent web-layer validation is covered by the maintained Windows/QGIS `scale_matrix`
 - for scale-sensitive exports, prefer a projected CRS with meter units
@@ -64,7 +70,8 @@ Some WMS services change portrayal depending on scale. For those services, `Targ
 - `GeoTIFF`: internal georeferencing plus world file
 - `PNG` / `JPEG`: world file plus `.prj` sidecar
 - `VRT`: tiled GeoTIFF output plus a `.vrt` mosaic
-- `MBTiles`: SQLite tile pyramid with PNG tiles in Web Mercator (`EPSG:3857`)
+- `MBTiles`: SQLite tile pyramid with PNG tiles in Web Mercator
+  - shows estimated tile count/data volume before export; extremely large exports require explicit confirmation (`EPSG:3857`)
 
 ### MBTiles
 
@@ -108,7 +115,8 @@ Translations are maintained via the standard Qt Linguist workflow under `custom_
 ## Documentation
 
 - user operations and support: `docs/TROUBLESHOOTING.md`
-- validation status and verified service coverage: `docs/VALIDATION_STATUS.md`
+- validation status (historical March 2026 evidence): `docs/VALIDATION_STATUS.md`
+- current test strategy and release criteria: `docs/TESTING.md`
 - development workflow: `docs/DEVELOPING.md`
 - release process: `docs/RELEASING.md`
 - integration test details: `tests/integration/README.md`

@@ -1,0 +1,72 @@
+name: Windows QGIS runtime
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-qgis-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-qgis:
+    name: Windows QGIS ${{ matrix.major }} / Qt GUI and OGC exports
+    runs-on: windows-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - major: 3
+            version: "3.44.15"
+            channel: conda-forge/label/qgis_ltr
+          - major: 4
+            version: "4.2.3"
+            channel: conda-forge
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      QT_QPA_PLATFORM: offscreen
+      CMD_REQUIRE_QGIS: "1"
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Prepare isolated conda-forge Python
+        uses: conda-incubator/setup-miniconda@bce0bd83659520ccaf4925e604d458d512f7df37 # v4.0.0
+        with:
+          miniforge-version: latest
+          activate-environment: qgis-tests
+          python-version: "3.12"
+          channels: conda-forge
+          channel-priority: strict
+      - name: Install actual Windows QGIS ${{ matrix.version }} bindings
+        run: |
+          conda install -y -n qgis-tests -c "${{ matrix.channel }}" -c conda-forge "qgis=${{ matrix.version }}" "python=3.12"
+      - name: Verify native QGIS and Qt environment
+        run: |
+          conda run -n qgis-tests python scripts/check_qgis_runtime.py --major ${{ matrix.major }}
+      - name: Native Windows Qt GUI, raster, WMS and WMTS regressions
+        run: |
+          $ErrorActionPreference = "Stop"
+          $patterns = @(
+            "test_extent_dialog.py",
+            "test_qimage_memory.py",
+            "test_export_smoke.py",
+            "test_mbtiles_export.py",
+            "test_mbtiles_preflight.py",
+            "test_local_wms.py",
+            "test_raster_diagnostics.py",
+            "test_local_wmts.py"
+          )
+          foreach ($pattern in $patterns) {
+            Write-Host "Running $pattern on Windows QGIS ${{ matrix.version }}"
+            conda run --no-capture-output -n qgis-tests python -m unittest discover -s tests/integration -p $pattern -v
+            if ($LASTEXITCODE -ne 0) {
+              throw "Windows QGIS test failed: $pattern (exit $LASTEXITCODE)"
+            }
+          }

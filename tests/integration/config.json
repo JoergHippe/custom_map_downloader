@@ -8,7 +8,7 @@
       "south": 5657000,
       "north": 5661000
     },
-    "gsd": 1.0,
+    "gsd": 1,
     "create_vrt": false,
     "output_extension": ".tif"
   },
@@ -36,7 +36,7 @@
         "south": 5658500,
         "north": 5659500
       },
-      "gsd": 2.0
+      "gsd": 2
     },
     {
       "name": "geosn_ortho_gray",
@@ -49,7 +49,7 @@
         "south": 5658500,
         "north": 5659500
       },
-      "gsd": 2.0
+      "gsd": 2
     },
     {
       "name": "osm_xyz",
@@ -74,7 +74,7 @@
         "south": 5648500,
         "north": 5650500
       },
-      "gsd": 2.0
+      "gsd": 2
     },
     {
       "name": "bayern_dop40_color",
@@ -100,7 +100,13 @@
         "south": 5332000,
         "north": 5333000
       },
-      "gsd": 2.0
+      "gsd": 2
+    },
+    {
+      "name": "basemap_wmts_gray",
+      "provider": "wms",
+      "uri": "url=https://sgx.geodatenzentrum.de/wmts_basemapde/1.0.0/WMTSCapabilities.xml&layers=de_basemapde_web_raster_grau&styles=default&format=image/png&crs=EPSG:25833&tileMatrixSet=DE_EPSG_25833_ADV",
+      "default_crs": "EPSG:25833"
     }
   ],
   "scenarios": [
@@ -114,7 +120,7 @@
         "south": 5658000,
         "north": 5660000
       },
-      "gsd": 2.0,
+      "gsd": 2,
       "create_vrt": false,
       "output_extension": ".tif",
       "expected_sha256": "60f9f19c8757aad1b0d9f354f81033fd740822b2d44c39b243a31bbe7bf9f4f4"
@@ -158,10 +164,10 @@
       "extent": {
         "west": 13.68,
         "east": 13.78,
-        "south": 51.0,
+        "south": 51,
         "north": 51.08
       },
-      "gsd": 5.0,
+      "gsd": 5,
       "create_vrt": false,
       "output_extension": ".tif"
     },
@@ -175,7 +181,7 @@
         "south": 5658200,
         "north": 5659800
       },
-      "gsd": 2.0,
+      "gsd": 2,
       "create_vrt": false,
       "output_extension": ".tif"
     },
@@ -203,7 +209,7 @@
         "south": 5658000,
         "north": 5660000
       },
-      "gsd": 10.0,
+      "gsd": 10,
       "create_vrt": false,
       "output_extension": ".tif",
       "expected_sha256": "a03d06bd4c2c55bb7ff5e908eb742198ed9371ea3e7293976bac0e7850655a7a"
@@ -212,7 +218,7 @@
       "name": "nrw_dtk_color_tif",
       "source": "nrw_dtk_color",
       "crs": "EPSG:25832",
-      "gsd": 2.0,
+      "gsd": 2,
       "create_vrt": false,
       "output_extension": ".tif",
       "expected_sha256": "aac68ebef8537087edf05251b617732af96bd582e814b32254debb7ee8d0c1d0"
@@ -230,10 +236,25 @@
       "name": "bayern_relief_tif",
       "source": "bayern_relief",
       "crs": "EPSG:25832",
-      "gsd": 2.0,
+      "gsd": 2,
       "create_vrt": false,
       "output_extension": ".tif",
       "expected_sha256": "0299bb2651063ca34a7d01bc7ae0b967475a820f29798a4be4e67791bf7122a9"
+    },
+    {
+      "name": "basemap_wmts_gray_tif",
+      "source": "basemap_wmts_gray",
+      "service_type": "wmts",
+      "crs": "EPSG:25833",
+      "extent": {
+        "west": 459000,
+        "east": 460000,
+        "south": 5658500,
+        "north": 5659500
+      },
+      "gsd": 2,
+      "create_vrt": false,
+      "output_extension": ".tif"
     }
   ],
   "scale_matrix": [

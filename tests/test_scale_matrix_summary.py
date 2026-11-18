@@ -37,6 +37,13 @@ class ScaleMatrixSummaryTests(unittest.TestCase):
         self.assertEqual(status_by_key[("case_ok", "large")], "drift")
         self.assertEqual(status_by_key[("case_missing", "-")], "missing")
 
+    def test_missing_entire_expected_case_is_reported(self):
+        rows = summarize_scale_matrix.compare_against_expected(
+            {}, {"expected_case": {"small": "old"}}
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["status"], "missing")
+
     def test_collect_case_results_reads_scale_matrix_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

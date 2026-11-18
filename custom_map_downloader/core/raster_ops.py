@@ -16,15 +16,16 @@ from .errors import ExportError
 
 def qimage_to_rgba_array(rendered_image: QImage, *, width: int, height: int) -> np.ndarray:
     """Convert a QImage into an RGBA numpy array."""
-    rendered_image = rendered_image.convertToFormat(QImage.Format_RGBA8888)
-    ptr = rendered_image.bits()
-    byte_count = (
-        rendered_image.sizeInBytes()
-        if hasattr(rendered_image, "sizeInBytes")
-        else rendered_image.byteCount()
-    )
-    ptr.setsize(byte_count)
-    return np.frombuffer(ptr, dtype=np.uint8).reshape(height, width, 4)
+    rendered_image = rendered_image.convertToFormat(QImage.Format.Format_RGBA8888)
+    # Copy Qt-owned pixel data before the temporary QImage is released.
+    # bytesPerLine() handles any row padding; sip.voidptr.asstring() works
+    # under both PyQt5 and PyQt6 without the removed setsize() method.
+    ptr = rendered_image.constBits()
+    byte_count = rendered_image.sizeInBytes()
+    row_bytes = rendered_image.bytesPerLine()
+    rgba = np.frombuffer(ptr.asstring(byte_count), dtype=np.uint8)
+    pixels = rgba.reshape(height, row_bytes)[:, : width * 4]
+    return np.array(pixels.reshape(height, width, 4), copy=True)
 
 
 def ensure_not_fully_transparent(arr_rgba: np.ndarray, *, height: int, width: int) -> None:

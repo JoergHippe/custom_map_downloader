@@ -69,6 +69,7 @@ from .mbtiles import (
     build_mbtiles_plan,
     create_mbtiles_database,
     insert_tile,
+    staged_mbtiles_path,
     write_metadata,
 )
 from .models import CancelToken, ExportParams
@@ -678,7 +679,7 @@ class GeoTiffExporter:
         self._check_cancel(cancel_token)
         self._report(progress_cb, 8, "STEP_PREPARE", {"step": 2, "total": 6})
 
-        bounds_4326 = self._mbtiles_bounds_4326(params)
+        bounds_4326 = self.mbtiles_bounds_4326(params)
         plan = build_mbtiles_plan(
             bounds_4326,
             zoom_min=params.mbtiles_zoom_min,
@@ -689,61 +690,65 @@ class GeoTiffExporter:
         render_crs = QgsCoordinateReferenceSystem(WEB_MERCATOR_AUTHID)
         layer_extent_render = layer_extent_in_render_crs(params.layer, render_crs=render_crs)
 
-        conn = create_mbtiles_database(params.output_path)
-        blank_tiles = 0
-        try:
-            write_metadata(
-                conn,
-                name=Path(params.output_path).stem,
-                description="Exported by Custom Map Downloader QGIS plugin",
-                bounds_4326=plan.bounds_4326,
-                zoom_min=plan.zoom_min,
-                zoom_max=plan.zoom_max,
-            )
-            self._report(progress_cb, 15, "STEP_RENDER", {"step": 3, "total": 6})
+        # Stage next to the destination, then publish only after commit/close.
+        # This protects an existing MBTiles file on errors and cancellation.
+        with staged_mbtiles_path(params.output_path) as staged_path:
+            conn = create_mbtiles_database(staged_path)
+            blank_tiles = 0
+            try:
+                write_metadata(
+                    conn,
+                    name=Path(params.output_path).stem,
+                    description="Exported by Custom Map Downloader QGIS plugin",
+                    bounds_4326=plan.bounds_4326,
+                    zoom_min=plan.zoom_min,
+                    zoom_max=plan.zoom_max,
+                )
+                self._report(progress_cb, 15, "STEP_RENDER", {"step": 3, "total": 6})
 
-            for tile in plan.tiles:
+                for tile in plan.tiles:
+                    self._check_cancel(cancel_token)
+                    arr, was_blank = render_tile_with_retry(
+                        tile=self._mbtiles_tile_to_render_spec(tile, plan),
+                        layer=params.layer,
+                        render_crs=render_crs,
+                        output_dpi=params.output_dpi,
+                        cancel_token=cancel_token,
+                        layer_extent_render=layer_extent_render,
+                        progress_cb=progress_cb,
+                        report=self._report,
+                        wait_fn=self._wait_with_events,
+                        render_fn=self._render_tile_rgba,
+                        check_cancel=self._check_cancel,
+                    )
+                    if was_blank:
+                        blank_tiles += 1
+                    insert_tile(conn, tile, self._rgba_to_png_bytes(arr))
+                    self._report(
+                        progress_cb,
+                        tile.percent,
+                        "STEP_WRITE_MBTILES",
+                        {"step": 4, "total": 6},
+                    )
+
+                if blank_tiles == plan.tile_count:
+                    raise ExportError(
+                        "ERR_RENDER_EMPTY",
+                        "All MBTiles tiles rendered fully transparent.",
+                    )
                 self._check_cancel(cancel_token)
-                arr, was_blank = render_tile_with_retry(
-                    tile=self._mbtiles_tile_to_render_spec(tile, plan),
-                    layer=params.layer,
-                    render_crs=render_crs,
-                    output_dpi=params.output_dpi,
-                    cancel_token=cancel_token,
-                    layer_extent_render=layer_extent_render,
-                    progress_cb=progress_cb,
-                    report=self._report,
-                    wait_fn=self._wait_with_events,
-                    render_fn=self._render_tile_rgba,
-                    check_cancel=self._check_cancel,
-                )
-                if was_blank:
-                    blank_tiles += 1
-                insert_tile(conn, tile, self._rgba_to_png_bytes(arr))
-                self._report(
-                    progress_cb,
-                    tile.percent,
-                    "STEP_WRITE_MBTILES",
-                    {"step": 4, "total": 6},
-                )
-
-            if blank_tiles == plan.tile_count:
-                raise ExportError(
-                    "ERR_RENDER_EMPTY",
-                    "All MBTiles tiles rendered fully transparent.",
-                )
-            self._check_cancel(cancel_token)
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
 
         self._report(progress_cb, 100, "STEP_DONE", {"step": 6, "total": 6})
         return params.output_path
 
-    def _mbtiles_bounds_4326(self, params: ExportParams) -> tuple[float, float, float, float]:
+    def mbtiles_bounds_4326(self, params: ExportParams) -> tuple[float, float, float, float]:
+        """Resolve the exact WGS84 export bounds for preflight and rendering."""
         ext = params.extent
         if ext is None:
             raise ValidationError("ERR_VALIDATION_EXTENT_INVALID", "Invalid MBTiles extent.")
@@ -790,7 +795,7 @@ class GeoTiffExporter:
             int(width),
             int(height),
             int(arr.strides[0]),
-            QImage.Format_RGBA8888,
+            QImage.Format.Format_RGBA8888,
         )
         buffer = QBuffer()
         write_only = getattr(QIODevice, "WriteOnly", None)

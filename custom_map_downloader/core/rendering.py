@@ -95,13 +95,15 @@ def render_tile_rgba(
 
     job.waitForFinished()
 
-    img = job.renderedImage().convertToFormat(QImage.Format_RGBA8888)
-    ptr = img.bits()
-    byte_count = img.sizeInBytes() if hasattr(img, "sizeInBytes") else img.byteCount()
-    ptr.setsize(byte_count)
-
-    buf = np.frombuffer(ptr, dtype=np.uint8).copy()
-    return buf.reshape(height_px, width_px, 4)
+    img = job.renderedImage().convertToFormat(QImage.Format.Format_RGBA8888)
+    # asstring() copies from the Qt-owned buffer: the returned array remains
+    # valid after QImage is destroyed. Qt6 no longer supports ptr.setsize().
+    ptr = img.constBits()
+    byte_count = img.sizeInBytes()
+    row_bytes = img.bytesPerLine()
+    buf = np.frombuffer(ptr.asstring(byte_count), dtype=np.uint8)
+    pixels = buf.reshape(height_px, row_bytes)[:, : width_px * 4]
+    return np.array(pixels.reshape(height_px, width_px, 4), copy=True)
 
 
 def render_tile_with_retry(

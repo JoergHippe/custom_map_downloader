@@ -1,7 +1,10 @@
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
+from itertools import islice
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from tests.test_exporter_validation import install_qgis_stubs
 
@@ -12,7 +15,10 @@ from custom_map_downloader.core.mbtiles import (  # noqa: E402
     build_mbtiles_plan,
     count_tiles,
     create_mbtiles_database,
+    estimate_mbtiles_size,
     insert_tile,
+    mbtiles_export_risk,
+    staged_mbtiles_path,
     tile_bounds_4326,
     tile_range_for_bounds,
     write_metadata,
@@ -62,6 +68,116 @@ class MbtilesCoreTests(unittest.TestCase):
         self.assertIn((1, 1, 2), rows)
         self.assertIn((2, 2, 1), rows)
 
+    def test_advisory_export_risk_thresholds(self):
+        """Large exports are warnings, not hard errors."""
+        gib = 1024**3
+        cases = (
+            (9_999, 0, "normal"),
+            (10_000, 0, "large"),
+            (100_000, 0, "extreme"),
+            (100, gib, "large"),
+            (100, 10 * gib, "extreme"),
+        )
+        for tiles, bytes_estimate, expected in cases:
+            with self.subTest(tiles=tiles, estimated_bytes=bytes_estimate):
+                self.assertEqual(mbtiles_export_risk(tiles, bytes_estimate), expected)
+
+    def test_estimated_size_matches_count(self):
+        reference = 10_000 * 50 * 1024
+        self.assertEqual(estimate_mbtiles_size(10_000), reference)
+        self.assertEqual(estimate_mbtiles_size(10_000, tile_size=512), 4 * reference)
+        self.assertEqual(estimate_mbtiles_size(10_000, tile_size=128), reference // 4)
+
+    def test_tile_plan_is_lazy_and_repeatable(self):
+        bounds = (-180.0, -85.0, 180.0, 85.0)
+        plan = build_mbtiles_plan(bounds, zoom_min=0, zoom_max=22, tile_size=256, padding=0)
+        # The full world through z22 represents trillions of tiles. The
+        # plan must remain cheap; only the first few objects get created.
+        self.assertGreater(plan.tile_count, 1_000_000_000)
+        first = list(islice(plan.tiles, 3))
+        self.assertEqual(
+            [(tile.zoom, tile.x, tile.y) for tile in first], [(0, 0, 0), (1, 0, 0), (1, 1, 0)]
+        )
+        self.assertEqual(
+            [(tile.zoom, tile.x, tile.y) for tile in islice(plan.tiles, 3)],
+            [(tile.zoom, tile.x, tile.y) for tile in first],
+        )
+        self.assertNotIsInstance(plan.tiles, (tuple, list))
+
+    def test_tile_progress_has_stable_final_percent(self):
+        plan = build_mbtiles_plan(
+            (-1.0, -1.0, 1.0, 1.0),
+            zoom_min=0,
+            zoom_max=3,
+            tile_size=256,
+            padding=1,
+            base_percent=15,
+            span_percent=80,
+        )
+        tiles = list(plan.tiles)
+        self.assertEqual(len(tiles), plan.tile_count)
+        percents = [tile.percent for tile in tiles]
+        self.assertEqual(percents[-1], 95)
+        self.assertEqual(percents, sorted(percents))
+
+    def test_staged_export_preserves_existing_file_on_failure(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "existing.mbtiles"
+            target.write_bytes(b"prior successful export")
+
+            with self.assertRaisesRegex(RuntimeError, "render failed"):
+                with staged_mbtiles_path(target) as staged:
+                    conn = create_mbtiles_database(staged)
+                    try:
+                        conn.execute("INSERT INTO metadata VALUES (?, ?)", ("key", "val"))
+                        conn.commit()
+                    finally:
+                        conn.close()
+                    raise RuntimeError("render failed")
+
+            self.assertEqual(target.read_bytes(), b"prior successful export")
+            self.assertEqual(sorted(p.name for p in Path(tmp_dir).iterdir()), [target.name])
+
+    def test_staged_export_replaces_destination_after_success(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "existing.mbtiles"
+            target.write_bytes(b"prior successful export")
+
+            with staged_mbtiles_path(target) as staged:
+                conn = create_mbtiles_database(staged)
+                try:
+                    conn.execute("INSERT INTO metadata VALUES (?, ?)", ("name", "new"))
+                    conn.commit()
+                finally:
+                    conn.close()
+                self.assertEqual(target.read_bytes(), b"prior successful export")
+
+            with closing(sqlite3.connect(target)) as conn:
+                self.assertEqual(conn.execute("SELECT value FROM metadata").fetchone(), ("new",))
+            self.assertEqual(sorted(p.name for p in Path(tmp_dir).iterdir()), [target.name])
+
+    def test_create_database_rejects_existing_file(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "existing.mbtiles"
+            target.write_bytes(b"do not touch")
+            with self.assertRaises(FileExistsError):
+                create_mbtiles_database(target)
+            self.assertEqual(target.read_bytes(), b"do not touch")
+
+    def test_schema_creation_failure_closes_sqlite_connection(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            target = Path(tmp_dir) / "new.mbtiles"
+            connection = Mock()
+            connection.executescript.side_effect = sqlite3.OperationalError("disk full")
+
+            # Patch the shared sqlite3 module directly; the unit-test QGIS
+            # stubs do not always attach submodules as package attributes.
+            with patch.object(sqlite3, "connect", return_value=connection):
+                with self.assertRaises(sqlite3.OperationalError):
+                    create_mbtiles_database(target)
+
+            connection.close.assert_called_once_with()
+
     def test_database_schema_metadata_and_tile_insert(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             path = Path(tmp_dir) / "out.mbtiles"
@@ -82,7 +198,7 @@ class MbtilesCoreTests(unittest.TestCase):
                     zoom_min=plan.zoom_min,
                     zoom_max=plan.zoom_max,
                 )
-                insert_tile(conn, plan.tiles[0], b"png")
+                insert_tile(conn, next(iter(plan.tiles)), b"png")
                 conn.commit()
             finally:
                 conn.close()
