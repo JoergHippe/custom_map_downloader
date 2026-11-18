@@ -75,7 +75,6 @@ class NetworkCatalogReportCheckTests(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn("error", proc.stderr)
 
-
     def test_rejects_malformed_rows(self):
         # A malformed row must fail closed instead of raising an unhandled exception.
         payload = {"group_name": "official_webmaps_catalog", "rows": ["invalid"]}
@@ -88,6 +87,7 @@ class NetworkCatalogReportCheckTests(unittest.TestCase):
             "rows": [{"scenario": "sample", "status": "ok", "exit_code": 1}],
         }
         self.assertNotEqual(self._run(payload).returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
