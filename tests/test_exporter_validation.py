@@ -357,6 +357,19 @@ class ExporterValidationTests(unittest.TestCase):
                     GeoTiffExporter().export(params)
                 self.assertEqual(ctx.exception.code, "ERR_VALIDATION_CRS_INVALID")
 
+    def test_rejects_invalid_explicit_extent_source_crs(self):
+        """A raster extent without a valid source CRS cannot be reprojected."""
+
+        class InvalidCrs:
+            def isValid(self):
+                return False
+
+        base = self._base_params()
+        params = replace(base, extent=replace(base.extent, crs=InvalidCrs()))
+        with self.assertRaises(ValidationError) as ctx:
+            GeoTiffExporter()._resolve_extent(params, render_crs=base.render_crs)
+        self.assertEqual(ctx.exception.code, "ERR_VALIDATION_CRS_INVALID")
+
     def test_rejects_invalid_mbtiles_extent_crs(self):
         """An invalid source CRS cannot be interpreted as WGS84."""
 
