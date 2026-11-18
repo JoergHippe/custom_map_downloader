@@ -11,6 +11,7 @@ from tests.test_exporter_validation import install_qgis_stubs
 
 install_qgis_stubs()
 
+from custom_map_downloader.core.errors import ExportError  # noqa: E402
 from custom_map_downloader.core.mbtiles import (  # noqa: E402
     auto_detect_min_zoom,
     build_mbtiles_plan,
@@ -156,9 +157,10 @@ class MbtilesCoreTests(unittest.TestCase):
                     side_effect=OSError("network copy interrupted"),
                 ),
             ):
-                with self.assertRaises(Exception):
+                with self.assertRaises(ExportError) as ctx:
                     with staged_mbtiles_path(target, prefer_local=True) as staged:
                         staged.write_bytes(b"complete-local-db")
+            self.assertEqual(ctx.exception.code, "ERR_EXPORT_TRANSFER_FAILED")
             self.assertEqual(target.read_bytes(), b"previous")
 
     def test_staged_export_preserves_existing_file_on_failure(self):
