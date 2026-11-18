@@ -33,6 +33,12 @@ The format follows a pragmatic Keep a Changelog style.
 - unified output-file selection for raster and MBTiles exports
 
 ### Fixed
+- Restore GSD/target-scale profiles and QSettings using the active
+  resolution mode as the authoritative value, not incidental Qt signal
+  ordering. Refresh dependent previews only once per change.
+- Batch VRT preset updates with Qt signal blocking; avoid recalculating
+  MBTiles coverage on unrelated GSD/scale changes and reuse already
+  computed metric extent dimensions in the raster size preview.
 - Restore the last selected project layer after reading saved QSettings, and
   preserve subsequent manual layer changes when refreshing the layer list.
 - Restore VRT output profiles and saved `.vrt` paths consistently even when
