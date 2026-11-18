@@ -120,9 +120,7 @@ class GeoTiffExporter:
         # Validate the real target first. QGIS' slow-device check is a
         # heuristic; a same-volume local rename also avoids extra copies.
         validate_output_path(params.output_path)
-        local_work = should_use_local_work(
-            params.output_path, QgsFileUtils.pathIsSlowDevice
-        )
+        local_work = should_use_local_work(params.output_path, QgsFileUtils.pathIsSlowDevice)
         log_event("export_workspace", output_path=params.output_path, local_work=local_work)
 
         def staged_progress(percent: int, key: str, args: dict[str, Any]) -> None:
