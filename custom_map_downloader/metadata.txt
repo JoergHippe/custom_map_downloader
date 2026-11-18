@@ -19,7 +19,7 @@ repository=https://github.com/JoergHippe/custom_map_downloader
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=0.5.0: added exact-extent MBTiles export with zoom range, auto min zoom, padding and tile estimates. 0.4.0: validated Windows/QGIS runtime, strict scale and WMS catalog gates, stabilized web map export path and German validation status.
+changelog=0.5.0 (unreleased): MBTiles export and safety checks, QGIS 3/4 integration coverage, WMS/WMTS live diagnostics, extent/profile fixes; historical service-hash drift is advisory. 0.4.0: earlier Windows/QGIS validation and strict historical hash gates.
 
 # Tags are comma separated with spaces allowed
 tags=raster,export,geotiff,mbtiles,tiles,offline,satellite,imagery,download,georeferencing,map
