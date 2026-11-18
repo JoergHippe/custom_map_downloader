@@ -114,12 +114,12 @@ Translations are maintained via the standard Qt Linguist workflow under `custom_
 
 ## Documentation
 
-- user operations and support: `docs/TROUBLESHOOTING.md`
-- validation status (historical March 2026 evidence): `docs/VALIDATION_STATUS.md`
-- current test strategy and release criteria: `docs/TESTING.md`
-- development workflow: `docs/DEVELOPING.md`
-- release process: `docs/RELEASING.md`
-- integration test details: `tests/integration/README.md`
+- user operations and support: [Troubleshooting](docs/TROUBLESHOOTING.md)
+- dated validation results and history: [Validation status](docs/VALIDATION_STATUS.md)
+- current test strategy and release criteria: [Testing](docs/TESTING.md)
+- development workflow: [Development](docs/DEVELOPING.md)
+- release process: [Releasing](docs/RELEASING.md)
+- integration test details: [Integration tests](tests/integration/README.md)
 
 ## License
 
