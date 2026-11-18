@@ -100,6 +100,7 @@ def create_local_work_directory(
         # Fall back before rendering; never switch workspace mid-export.
         return None
 
+
 @contextmanager
 def staged_raster_output(
     output_path: str | Path,
@@ -147,7 +148,7 @@ def staged_raster_output(
         staged_files = [file for file in staging_dir.iterdir() if file.is_file()]
         # Publish the VRT last, after all the referenced tiles and sidecars.
         # An already-open VRT can still observe intermediate tile updates.
-        staged_files.sort(key=lambda file: (file == staged_path, file.name))
+        staged_files.sort(key=lambda file: (file.name == destination.name, file.name))
         backup_dir = staging_dir / ".backups"
         backup_dir.mkdir()
         backed_up: list[Path] = []
