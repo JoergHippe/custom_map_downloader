@@ -8,7 +8,8 @@ dokumentiert. Diese Liste begründet keine Release-Freigabe.
 
 - [ ] Offizielle Windows-QGIS-/OSGeo4W-Desktop-Installation mit sichtbarer GUI
   prüfen: Ausdehnungswahl, manuelle Eingabe mit deutscher Locale,
-  Zeichnen/Abbrechen, CRS-Änderungen und Profilwiederherstellung.
+  Zeichnen/Abbrechen, CRS-Änderungen und Profilwiederherstellung;
+  siehe [manuelle Windows-Abnahme](docs/TESTING.md#manuelle-abnahme-windows-desktop-und-netzlaufwerk).
 - [ ] Freizugebende QGIS-Versionen und Formatpfade (GeoTIFF, PNG, JPEG,
   VRT, MBTiles) am Release-Paket abnehmen.
 - [ ] Breiten amtlichen WMS-Katalog erneut prüfen; technische Ausfälle strikt
