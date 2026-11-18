@@ -66,9 +66,7 @@ class StagedRasterOutputTests(unittest.TestCase):
 
             def replace_with_failure(src, dst):
                 # Fail only the new VRT publication, not rollback of its backup.
-                if Path(src).name == "map.vrt" and Path(src).parent.name.startswith(
-                    ".map.stage-"
-                ):
+                if Path(src).name == "map.vrt" and Path(src).parent.name.startswith(".map.stage-"):
                     raise OSError("simulated publish failure")
                 return original_replace(src, dst)
 
