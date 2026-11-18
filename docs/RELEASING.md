@@ -97,23 +97,23 @@ A VRT with invalid or nonportable source paths fails the export. Before
 release, validate overwrite, cancellation, sidecar failure and VRT path
 portability using the actual Windows QGIS distribution.
 
-## Planned temporary-workspace architecture
+## Temporary workspace and target publication
 
-**Planned, not yet implemented:** Prefer the local user's temporary
-directory for computational intermediate files regardless of whether the
-destination is local or on a network share. Stage completed outputs on
-the target filesystem before replacing published files. Avoid a full
-extra copy when the work and destination staging locations are demonstrably
-on the same filesystem.
+GeoTIFF/PNG/JPEG/VRT rendering and MBTiles SQLite writing now prefer the
+local user's temporary directory when QGIS' `QgsFileUtils.pathIsSlowDevice()`
+indicates a slow target or when local temp and destination share a filesystem.
+If local temp is unsuitable or lacks estimated free space, the existing
+target-side staging path is used before rendering begins.
 
-The current target-directory staging behavior described above remains
-authoritative until the migration is implemented and tested. MBTiles'
-existing atomic publishing is unchanged for now, although local SQLite
-working data is part of the future evaluation.
+Completed files are moved to target staging if possible, or copied there in
+cancellable chunks; **only completed target-staging files are published**.
+MBTiles retains a single atomic `os.replace()` for its final file.
+Multi-file VRT publication is still rollback-based, not group-atomic.
+The plugin does not modify the process-wide temp configuration.
 
-See [EXPORT_STAGING.md](EXPORT_STAGING.md) for the architecture,
-capacity/fallback requirements, filesystem constraints and tests.
-No release may assume this planned optimization is already available.
+Before release, test real Windows file locks, SMB interruptions and
+the full export duration on representative sizes; CI alone cannot confirm
+a performance improvement. See [EXPORT_STAGING.md](EXPORT_STAGING.md).
 
 ## Package Output
 
